@@ -14,8 +14,9 @@ type ReceptionHospital struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 
-	DoctorID  uint    `gorm:"not null;index" json:"doctor_id" example:"1"`
-	Doctor    Doctor  `gorm:"foreignKey:DoctorID" json:"-"`
+	DoctorID uint   `gorm:"not null;index" json:"doctor_id" example:"1"`
+	Doctor   Doctor `gorm:"foreignKey:DoctorID" json:"-"`
+
 	PatientID uint    `gorm:"not null;index" json:"patient_id" example:"1"`
 	Patient   Patient `gorm:"foreignKey:PatientID" json:"-"`
 

@@ -19,6 +19,10 @@ type Usecases interface {
 	ReceptionSmpUsecase
 	MedCardUsecase
 	AuthUsecase
+	OrganizationUseCase
+}
+
+type OrganizationUseCase interface {
 }
 
 type ReceptionHospitalUsecase interface {

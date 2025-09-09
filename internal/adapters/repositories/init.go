@@ -8,6 +8,7 @@ import (
 	"os"
 	"time"
 
+	organization "github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/Organization"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/contactInfo"
 	EmergencyCall "github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/emergency_call"
 	medService "github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/med_service"
@@ -42,6 +43,7 @@ type Repository struct {
 	interfaces.ReceptionHospitalRepository
 	interfaces.ReceptionSmpRepository
 	interfaces.TxRepository
+	interfaces.OrganizationRepository
 }
 
 func NewRepository(cfg *config.Config) (interfaces.Repository, error) {
@@ -89,6 +91,7 @@ func NewRepository(cfg *config.Config) (interfaces.Repository, error) {
 		receptionHospital.NewReceptionRepository(db),
 		receptionSmp.NewReceptionSmpRepository(db),
 		tx.NewTxRepository(db),
+		organization.NewOrganizationRepository(db),
 	}, nil
 
 }

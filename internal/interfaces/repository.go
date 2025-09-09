@@ -20,6 +20,11 @@ type Repository interface {
 	ReceptionHospitalRepository
 	ReceptionSmpRepository
 	TxRepository
+	OrganizationRepository
+}
+type OrganizationRepository interface {
+	GetAllOrganizations(page, perPage int) ([]entities.Organization, int64, error)
+	GetByTitleOrCodeOrganizations(search string, page, perPage int) ([]entities.Organization, int64, error)
 }
 
 type TxRepository interface {
