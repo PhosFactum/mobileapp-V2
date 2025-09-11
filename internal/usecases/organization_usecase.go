@@ -17,10 +17,10 @@ func NewOrganizationUsecase(repo interfaces.OrganizationRepository) interfaces.O
 		repo: repo}
 }
 
-func (u *OrganizationUsecase) GetAllOrganizations(page, perPage int,
+func (u *OrganizationUsecase) GetAllOrganizations(doctorID uint, page, perPage int,
 ) (*models.FilterResponse[[]models.OrganizationShortResponse], error) {
 	// Получаем данные из репозитория
-	organizations, total, err := u.repo.GetAllOrganizations(page, perPage)
+	organizations, total, err := u.repo.GetAllOrganizations(doctorID, page, perPage)
 	if err != nil {
 		return nil, errors.NewAppError(
 			errors.InternalServerErrorCode,

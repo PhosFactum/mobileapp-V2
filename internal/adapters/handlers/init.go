@@ -120,5 +120,14 @@ func ProvideRouter(h *Handler, cfg *config.Config, swagCfg *swagger.Config) http
 	// TODO: Обновление статусов у Reception Hospital (PUT запрос)
 	// Поправить пациента на транзакцию
 
+	// Руты рабочие для новго проекта
+
+	// Скорая медицинская помощь
+	organizationGroup := protected.Group("/organization")
+	organizationGroup.GET("/", h.GetAllOrganizations)
+
+	//Подписи пациентов
+	patientGroupsGroup := protected.Group("/groups")
+	patientGroupsGroup.GET("/", h.GetPatientGroupsByCodeOrOrgTitle)
 	return r
 }

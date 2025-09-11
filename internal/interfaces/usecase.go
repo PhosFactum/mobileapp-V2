@@ -24,11 +24,12 @@ type Usecases interface {
 }
 
 type PatientGroupUseCase interface {
-	GetPatientGroupsByOrganization(search string, page, perPage int) (*models.FilterResponse[[]models.PatientGroupShortResponse], error)
+	GetPatientGroupsByCodeOrOrgTitle(search string, page, perPage int) (*models.FilterResponse[[]models.PatientGroupShortResponse], error)
+	GetPatientGroupsByOrganizationID(orgID uint, page, perPage int) (*models.FilterResponse[[]models.PatientGroupShortResponse], error)
 }
 
 type OrganizationUseCase interface {
-	GetAllOrganizations(page, perPage int) (*models.FilterResponse[[]models.OrganizationShortResponse], error)
+	GetAllOrganizations(doctorID uint, page, perPage int) (*models.FilterResponse[[]models.OrganizationShortResponse], error)
 }
 
 type ReceptionHospitalUsecase interface {

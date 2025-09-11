@@ -104,6 +104,8 @@ func autoMigrate(db *gorm.DB) error {
 
 	// Удаляем таблицы в правильном порядке зависимостей
 	tables := []string{
+		"doctor_organizations",
+		"patients_patient_groups",
 		"reception_smp_med_services",
 		"patient_allergy",
 		"receptions_smp_patient",
@@ -117,6 +119,9 @@ func autoMigrate(db *gorm.DB) error {
 		"med_services",
 		"allergies",
 		"specializations",
+		"organizations",
+		"managers",
+		"patient_groups",
 	}
 
 	for _, table := range tables {
@@ -125,10 +130,12 @@ func autoMigrate(db *gorm.DB) error {
 		}
 	}
 
-	// Создаем таблицы
 	models := []interface{}{
 		&entities.Specialization{},
 		&entities.Doctor{},
+		&entities.Manager{},
+		&entities.Organization{},
+		&entities.PatientGroup{},
 		&entities.Patient{},
 		&entities.ContactInfo{},
 		&entities.PersonalInfo{},
@@ -241,8 +248,76 @@ func seedTestData(db *gorm.DB) error {
 		}
 	}
 
+	// 2. Создаем менеджеров
+	managers := []*entities.Manager{
+		{FullName: "Иванов Иван Иванович", Phone: "+79991111111"},
+		{FullName: "Петров Петр Петрович", Phone: "+79992222222"},
+		{FullName: "Сидоров Сидор Сидорович", Phone: "+79993333333"},
+	}
+
+	for _, manager := range managers {
+		if err := db.Create(manager).Error; err != nil {
+			return fmt.Errorf("failed to create manager %s: %w", manager.FullName, err)
+		}
+	}
+
+	// 3. Создаем организации с привязкой к менеджерам
+	organizations := []*entities.Organization{
+		{
+			Title:     "Медицинская клиника №1",
+			ManagerID: 1,
+			Manager:   entities.Manager{ID: 1, FullName: "Иванов Иван Иванович", Phone: "+79991111111"},
+		},
+		{
+			Title:     "Городская поликлиника",
+			ManagerID: 2,
+			Manager:   entities.Manager{ID: 2, FullName: "Петров Петр Петрович", Phone: "+79992222222"},
+		},
+		{
+			Title:     "Частная клиника 'Здоровье'",
+			ManagerID: 3,
+			Manager:   entities.Manager{ID: 3, FullName: "Сидоров Сидор Сидорович", Phone: "+79993333333"},
+		},
+	}
+
+	for _, org := range organizations {
+		if err := db.Create(org).Error; err != nil {
+			return fmt.Errorf("failed to create organization %s: %w", org.Title, err)
+		}
+	}
+
+	// 4. Создаем группы пациентов
+	patientGroups := []*entities.PatientGroup{
+		{
+			Code:           "GRP001",
+			OrganizationID: 1,
+			Organization:   &entities.Organization{ID: 1, Title: "Медицинская клиника №1"},
+		},
+		{
+			Code:           "GRP002",
+			OrganizationID: 1,
+			Organization:   &entities.Organization{ID: 1, Title: "Медицинская клиника №1"},
+		},
+		{
+			Code:           "GRP003",
+			OrganizationID: 2,
+			Organization:   &entities.Organization{ID: 2, Title: "Городская поликлиника"},
+		},
+		{
+			Code:           "GRP004",
+			OrganizationID: 3,
+			Organization:   &entities.Organization{ID: 3, Title: "Частная клиника 'Здоровье'"},
+		},
+	}
+
+	for _, group := range patientGroups {
+		if err := db.Create(group).Error; err != nil {
+			return fmt.Errorf("failed to create patient group %s: %w", group.Code, err)
+		}
+	}
+
 	// Остальной код остается без изменений...
-	// 3. Создаем медицинские услуги
+	// 5. Создаем медицинские услуги
 	services := []*entities.MedService{
 		{Name: "ЭКГ", Price: 500},
 		{Name: "Рентген", Price: 1500},
@@ -258,18 +333,18 @@ func seedTestData(db *gorm.DB) error {
 		}
 	}
 
-	// 4. Создаем пациентов
+	// 6. Создаем пациентов - поля с default:null будут NULL по умолчанию
 	patients := []*entities.Patient{
-		{LastName: "Смирнов", FirstName: "Алексей", MiddleName: "Петрович", BirthDate: parseDate("1980-05-15"), IsMale: true},
-		{LastName: "Кузнецова", FirstName: "Анна", MiddleName: "Владимировна", BirthDate: parseDate("1992-08-21"), IsMale: false},
-		{LastName: "Попов", FirstName: "Дмитрий", MiddleName: "Игоревич", BirthDate: parseDate("1975-11-03"), IsMale: true},
-		{LastName: "Васильева", FirstName: "Елена", MiddleName: "Александровна", BirthDate: parseDate("1988-07-14"), IsMale: false},
-		{LastName: "Новиков", FirstName: "Сергей", MiddleName: "Олегович", BirthDate: parseDate("1995-02-28"), IsMale: true},
-		{LastName: "Морозова", FirstName: "Ольга", MiddleName: "Дмитриевна", BirthDate: parseDate("1983-09-17"), IsMale: false},
-		{LastName: "Лебедев", FirstName: "Андрей", MiddleName: "Николаевич", BirthDate: parseDate("1978-12-05"), IsMale: true},
-		{LastName: "Соколова", FirstName: "Татьяна", MiddleName: "Викторовна", BirthDate: parseDate("1990-04-30"), IsMale: false},
-		{LastName: "Козлов", FirstName: "Артем", MiddleName: "Сергеевич", BirthDate: parseDate("1987-06-22"), IsMale: true},
-		{LastName: "Павлова", FirstName: "Наталья", MiddleName: "Игоревна", BirthDate: parseDate("1993-03-11"), IsMale: false},
+		{LastName: "Смирнов", FirstName: "Алексей", MiddleName: "Петрович", BirthDate: parseDate("1980-05-15"), IsMale: true, OnTreatment: true},
+		{LastName: "Кузнецова", FirstName: "Анна", MiddleName: "Владимировна", BirthDate: parseDate("1992-08-21"), IsMale: false, OnTreatment: false},
+		{LastName: "Попов", FirstName: "Дмитрий", MiddleName: "Игоревич", BirthDate: parseDate("1975-11-03"), IsMale: true, OnTreatment: true},
+		{LastName: "Васильева", FirstName: "Елена", MiddleName: "Александровна", BirthDate: parseDate("1988-07-14"), IsMale: false, OnTreatment: false},
+		{LastName: "Новиков", FirstName: "Сергей", MiddleName: "Олегович", BirthDate: parseDate("1995-02-28"), IsMale: true, OnTreatment: true},
+		{LastName: "Морозова", FirstName: "Ольга", MiddleName: "Дмитриевна", BirthDate: parseDate("1983-09-17"), IsMale: false, OnTreatment: false},
+		{LastName: "Лебедев", FirstName: "Андрей", MiddleName: "Николаевич", BirthDate: parseDate("1978-12-05"), IsMale: true, OnTreatment: true},
+		{LastName: "Соколова", FirstName: "Татьяна", MiddleName: "Викторовна", BirthDate: parseDate("1990-04-30"), IsMale: false, OnTreatment: false},
+		{LastName: "Козлов", FirstName: "Артем", MiddleName: "Сергеевич", BirthDate: parseDate("1987-06-22"), IsMale: true, OnTreatment: true},
+		{LastName: "Павлова", FirstName: "Наталья", MiddleName: "Игоревна", BirthDate: parseDate("1993-03-11"), IsMale: false, OnTreatment: false},
 	}
 
 	for _, pat := range patients {
@@ -323,6 +398,63 @@ func seedTestData(db *gorm.DB) error {
 
 		if err := db.Model(patient).Association("Allergy").Append(allergies[i%len(allergies)]); err != nil {
 			return fmt.Errorf("failed to add allergies to patient %d: %w", patient.ID, err)
+		}
+	}
+
+	// 6. Привязываем пациентов к группам
+	patientGroupAssociations := []struct {
+		PatientIndex int
+		GroupIndex   int
+	}{
+		{0, 0}, {1, 0}, {5, 0}, // Пациенты 1, 2, 6 в группе 1
+		{2, 1}, {6, 1}, {8, 1}, // Пациенты 3, 7, 9 в группе 2
+		{3, 2}, {4, 2}, {9, 2}, // Пациенты 4, 5, 10 в группе 3
+		{7, 3}, // Пациент 8 в группе 4
+	}
+
+	for _, assoc := range patientGroupAssociations {
+		if assoc.PatientIndex < len(patients) && assoc.GroupIndex < len(patientGroups) {
+			patient := patients[assoc.PatientIndex]
+			group := patientGroups[assoc.GroupIndex]
+
+			if err := db.Model(patient).Association("PatientGroup").Append(group); err != nil {
+				return fmt.Errorf("failed to associate patient %d with group %d: %w", patient.ID, group.ID, err)
+			}
+		}
+	}
+
+	// 6.1 Создаем связи между докторами и организациями (Many-to-Many)
+	doctorOrganizationAssociations := []struct {
+		DoctorID uint
+		OrgID    uint
+	}{
+		{1, 1}, // Иванов Иван Иванович работает в Медицинской клинике №1
+		{1, 2}, // Иванов Иван Иванович также работает в Городской поликлинике
+		{2, 1}, // Петрова Мария Сергеевна работает в Медицинской клинике №1
+		{3, 2}, // Сидоров Алексей Дмитриевич работает в Городской поликлинике
+		{4, 3}, // Кузнецова Елена Викторовна работает в Частной клинике 'Здоровье'
+		{5, 1}, // Смирнов Дмитрий Олегович работает в Медицинской клинике №1
+		{6, 2}, // Васильев Андрей Николаевич работает в Городской поликлинике
+		{7, 3}, // Попов Сергей Иванович работает в Частной клинике 'Здоровье'
+		{8, 1}, // Морозова Ольга Дмитриевна работает в Медицинской клинике №1
+	}
+
+	// Создаем связи через GORM associations
+	for _, assoc := range doctorOrganizationAssociations {
+		var doctor entities.Doctor
+		var org entities.Organization
+
+		if err := db.First(&doctor, assoc.DoctorID).Error; err != nil {
+			return fmt.Errorf("failed to find doctor %d: %w", assoc.DoctorID, err)
+		}
+
+		if err := db.First(&org, assoc.OrgID).Error; err != nil {
+			return fmt.Errorf("failed to find organization %d: %w", assoc.OrgID, err)
+		}
+
+		// Связываем доктора с организацией
+		if err := db.Model(&doctor).Association("Organizations").Append(&org); err != nil {
+			return fmt.Errorf("failed to associate doctor %d with organization %d: %w", assoc.DoctorID, assoc.OrgID, err)
 		}
 	}
 

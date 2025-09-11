@@ -5,7 +5,7 @@ import (
 	"github.com/AlexanderMorozov1919/mobileapp/pkg/errors"
 )
 
-func (r *OrganizationRepositoryImpl) GetAllOrganizations(page, perPage int) ([]entities.Organization, int64, error) {
+func (r *OrganizationRepositoryImpl) GetAllOrganizations(doctorID uint, page, perPage int) ([]entities.Organization, int64, error) {
 	op := "repo.Organization.GetAllOrganizations"
 	var organizations []entities.Organization
 	var total int64
@@ -18,12 +18,14 @@ func (r *OrganizationRepositoryImpl) GetAllOrganizations(page, perPage int) ([]e
 	}
 
 	offset := (page - 1) * perPage
-	err := baseQuery.
-		Preload("Manager").
+
+	err := r.db.
+		Table("organizations").
+		Joins("JOIN doctor_organizations ON doctor_organizations.organization_id = organizations.id").
+		Where("doctor_organizations.doctor_id = ?", doctorID).
 		Offset(offset).
 		Limit(perPage).
-		Find(&organizations).
-		Error
+		Find(&organizations).Error
 
 	if err != nil {
 		return nil, 0, errors.NewDBError(op, err)

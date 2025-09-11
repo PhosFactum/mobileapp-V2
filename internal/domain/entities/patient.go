@@ -22,13 +22,13 @@ type Patient struct {
 	ContactInfo   *ContactInfo `gorm:"foreignKey:ContactInfoID" json:"-"`
 	ContactInfoID *uint        `gorm:"default:null" json:"-"`
 
-	OrganizationID uint         `gorm:"not null;index" json:"organization_id" example:"1"`
-	Organization   Organization `gorm:"foreignKey:OrganizationID" json:"-"`
+	OrganizationID *uint         `gorm:"default:null;index" json:"organization_id,omitempty" example:"1"`
+	Organization   *Organization `gorm:"foreignKey:OrganizationID" json:"-"`
 
 	ReceptionsHospital []ReceptionHospital `gorm:"foreignKey:PatientID" json:"-"`
 
 	ReceptionSMP []ReceptionSMP `gorm:"many2many:receptions_smp_patients;" json:"-"`
 
 	Allergy      []Allergy      `gorm:"many2many:patient_allergy; default:null;" json:"-"`
-	PatientGroup []PatientGroup `gorm:"many2many:patient_groups; default:null;" json:"-"`
+	PatientGroup []PatientGroup `gorm:"many2many:patients_patient_groups; default:null;" json:"-"`
 }

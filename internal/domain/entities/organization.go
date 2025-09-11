@@ -14,4 +14,5 @@ type Organization struct {
 	Manager   Manager `gorm:"foreignKey:ManagerID" json:"Manager"`
 
 	PatientGroups []PatientGroup `gorm:"foreignKey:OrganizationID" json:"receptions"`
+	Doctor        []Doctor       `gorm:"many2many:doctor_organizations" json:"-"`
 }

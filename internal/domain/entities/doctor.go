@@ -9,7 +9,7 @@ type Doctor struct {
 	ID        uint      `gorm:"primarykey" json:"id"`
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
-  
+
 	FullName     string `gorm:"not null" json:"full_name" example:"Иванов Иван Иванович"`
 	Phone        string `gorm:"unique;not null" json:"phone" example:"+79991234567"`
 	PasswordHash string `gorm:"not null" json:"-"`
@@ -19,4 +19,5 @@ type Doctor struct {
 
 	ReceptionsHospital []ReceptionHospital `gorm:"foreignKey:DoctorID" json:"receptions"`
 	EmergencyCall      []EmergencyCall     `gorm:"foreignKey:DoctorID" json:"emergency_calls"`
+	Organizations      []Organization      `gorm:"many2many:doctor_organizations" json:"-"`
 }

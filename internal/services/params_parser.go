@@ -2,11 +2,12 @@ package services
 
 import (
 	"fmt"
-	"github.com/AlexanderMorozov1919/mobileapp/internal/interfaces"
 	"regexp"
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/AlexanderMorozov1919/mobileapp/internal/interfaces"
 )
 
 const (
@@ -76,4 +77,28 @@ func (s *ParamsParser) FormatDateToString(t time.Time) string {
 
 func (s *ParamsParser) FormatTimeToString(t time.Time) string {
 	return t.Format(TIME_LAYOUT)
+}
+
+func ParseUint(value interface{}) (uint, error) {
+	switch v := value.(type) {
+	case uint:
+		return v, nil
+	case int:
+		if v >= 0 {
+			return uint(v), nil
+		}
+	case int64:
+		if v >= 0 {
+			return uint(v), nil
+		}
+	case float64:
+		if v >= 0 && v == float64(uint(v)) {
+			return uint(v), nil
+		}
+	case string:
+		if id, err := strconv.ParseUint(v, 10, 32); err == nil {
+			return uint(id), nil
+		}
+	}
+	return 0, fmt.Errorf("cannot convert %v (type %T) to uint", value, value)
 }

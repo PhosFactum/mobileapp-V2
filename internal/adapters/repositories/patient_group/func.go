@@ -5,7 +5,7 @@ import (
 	"github.com/AlexanderMorozov1919/mobileapp/pkg/errors"
 )
 
-func (r *PatientGroupRepositoryImpl) GetByCodeOrOrgTitle(search string, page, perPage int) ([]entities.PatientGroup, int64, error) {
+func (r *PatientGroupRepositoryImpl) GetPatientGroupsByCodeOrOrgTitle(search string, page, perPage int) ([]entities.PatientGroup, int64, error) {
 	op := "repo.PatientGroup.SearchByCodeOrOrgTitle"
 	var patientGroups []entities.PatientGroup
 	var total int64
@@ -13,7 +13,7 @@ func (r *PatientGroupRepositoryImpl) GetByCodeOrOrgTitle(search string, page, pe
 	baseQuery := r.db.
 		Model(&entities.PatientGroup{}).
 		Joins("JOIN organizations ON organizations.id = patient_groups.organization_id").
-		Where("patient_groups.code LIKE ? OR organizations.title LIKE ?",
+		Where("LOWER(patient_groups.code) LIKE LOWER(?) OR LOWER(organizations.title) LIKE LOWER(?)",
 			"%"+search+"%", "%"+search+"%")
 
 	if err := baseQuery.Count(&total).Error; err != nil {
@@ -22,6 +22,7 @@ func (r *PatientGroupRepositoryImpl) GetByCodeOrOrgTitle(search string, page, pe
 
 	offset := (page - 1) * perPage
 	err := baseQuery.
+		Preload("Organization").
 		Offset(offset).
 		Limit(perPage).
 		Find(&patientGroups).
