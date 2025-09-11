@@ -9,10 +9,9 @@ type Organization struct {
 	UpdatedAt time.Time `json:"updated_at"`
 
 	Title string `gorm:"not null" json:"title" example:"Med_Clinic"`
-	Code  string `gorm:"not null" json:"code" example:"89371943"`
 
-	DoctorID uint    `gorm:"not null;index" json:"-"`
-	Doctor   *Doctor `gorm:"foreignKey:DoctorID" json:"Doctor"`
+	ManagerID uint    `gorm:"not null;index" json:"-"`
+	Manager   Manager `gorm:"foreignKey:ManagerID" json:"Manager"`
 
-	Patients []Patient `gorm:"foreignKey:OrganizationID" json:"patients"`
+	PatientGroups []PatientGroup `gorm:"foreignKey:OrganizationID" json:"receptions"`
 }

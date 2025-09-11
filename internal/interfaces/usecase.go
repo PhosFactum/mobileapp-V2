@@ -20,9 +20,15 @@ type Usecases interface {
 	MedCardUsecase
 	AuthUsecase
 	OrganizationUseCase
+	PatientGroupUseCase
+}
+
+type PatientGroupUseCase interface {
+	GetPatientGroupsByOrganization(search string, page, perPage int) (*models.FilterResponse[[]models.PatientGroupShortResponse], error)
 }
 
 type OrganizationUseCase interface {
+	GetAllOrganizations(page, perPage int) (*models.FilterResponse[[]models.OrganizationShortResponse], error)
 }
 
 type ReceptionHospitalUsecase interface {

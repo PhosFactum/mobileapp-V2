@@ -29,5 +29,6 @@ type Patient struct {
 
 	ReceptionSMP []ReceptionSMP `gorm:"many2many:receptions_smp_patients;" json:"-"`
 
-	Allergy []Allergy `gorm:"many2many:patient_allergy;default:null;" json:"-"`
+	Allergy      []Allergy      `gorm:"many2many:patient_allergy; default:null;" json:"-"`
+	PatientGroup []PatientGroup `gorm:"many2many:patient_groups; default:null;" json:"-"`
 }

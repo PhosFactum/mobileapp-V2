@@ -1,8 +1,9 @@
 package models
 
+import "github.com/AlexanderMorozov1919/mobileapp/internal/domain/entities"
+
 type OrganizationShortResponse struct {
-	ID             uint   `json:"id"`
-	Title          string `json:"title"`
-	Code           string `json:"code"`
-	DoctorFullName string `json:"doctor_full_name"`
+	ID      uint             `json:"id"`
+	Title   string           `json:"title"`
+	Manager entities.Manager `json:"manager"`
 }

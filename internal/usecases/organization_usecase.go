@@ -17,16 +17,14 @@ func NewOrganizationUsecase(repo interfaces.OrganizationRepository) interfaces.O
 		repo: repo}
 }
 
-func (u *OrganizationUsecase) GetAllOrganizations(
-	call_id uint,
-	page, perPage int,
+func (u *OrganizationUsecase) GetAllOrganizations(page, perPage int,
 ) (*models.FilterResponse[[]models.OrganizationShortResponse], error) {
 	// Получаем данные из репозитория
 	organizations, total, err := u.repo.GetAllOrganizations(page, perPage)
 	if err != nil {
 		return nil, errors.NewAppError(
 			errors.InternalServerErrorCode,
-			"Failed to get receptions",
+			"Failed to get organizations",
 			err,
 			false,
 		)
@@ -36,47 +34,9 @@ func (u *OrganizationUsecase) GetAllOrganizations(
 	response := make([]models.OrganizationShortResponse, len(organizations))
 	for i, org := range organizations {
 		response[i] = models.OrganizationShortResponse{
-			ID:             org.ID,
-			Title:          org.Title,
-			Code:           org.Code,
-			DoctorFullName: org.Doctor.FullName,
-		}
-	}
-
-	totalPages := int(math.Ceil(float64(total) / float64(perPage)))
-
-	return &models.FilterResponse[[]models.OrganizationShortResponse]{
-		Hits:        response,
-		CurrentPage: page,
-		TotalPages:  totalPages,
-		TotalHits:   int(total),
-		HitsPerPage: perPage,
-	}, nil
-}
-
-func (u *OrganizationUsecase) GetByTitleOrCodeOrganizations(search string,
-	call_id uint,
-	page, perPage int,
-) (*models.FilterResponse[[]models.OrganizationShortResponse], error) {
-	// Получаем данные из репозитория
-	organizations, total, err := u.repo.GetByTitleOrCodeOrganizations(search, page, perPage)
-	if err != nil {
-		return nil, errors.NewAppError(
-			errors.InternalServerErrorCode,
-			"Failed to get receptions",
-			err,
-			false,
-		)
-	}
-
-	// Преобразуем в DTO
-	response := make([]models.OrganizationShortResponse, len(organizations))
-	for i, org := range organizations {
-		response[i] = models.OrganizationShortResponse{
-			ID:             org.ID,
-			Title:          org.Title,
-			Code:           org.Code,
-			DoctorFullName: org.Doctor.FullName,
+			ID:      org.ID,
+			Title:   org.Title,
+			Manager: org.Manager,
 		}
 	}
 
