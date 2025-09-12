@@ -20,6 +20,17 @@ type Repository interface {
 	ReceptionHospitalRepository
 	ReceptionSmpRepository
 	TxRepository
+	OrganizationRepository
+	PatientGroupRepository
+}
+
+type PatientGroupRepository interface {
+	GetPatientGroupsByCodeOrOrgTitle(search string, page, perPage int) ([]entities.PatientGroup, int64, error)
+	GetPatientGroupsByOrganizationID(orgID uint, page, perPage int) ([]entities.PatientGroup, int64, error)
+}
+
+type OrganizationRepository interface {
+	GetAllOrganizations(doctorID uint, page, perPage int) ([]entities.Organization, int64, error)
 }
 
 type TxRepository interface {

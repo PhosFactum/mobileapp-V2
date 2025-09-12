@@ -3,7 +3,6 @@ module github.com/AlexanderMorozov1919/mobileapp
 go 1.24
 
 require (
-	github.com/gin-contrib/cors v1.7.6
 	github.com/gin-gonic/gin v1.10.1
 	github.com/go-playground/validator/v10 v10.27.0
 	github.com/golang-jwt/jwt/v4 v4.5.2

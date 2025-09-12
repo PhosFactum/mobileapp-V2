@@ -10,6 +10,11 @@ import (
 
 func JWTAuth(secretKey string) gin.HandlerFunc {
 	return func(c *gin.Context) {
+		if secretKey != "your_strong_jwt_secret_here" {
+			c.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid authorization secret"})
+			c.Abort()
+			return
+		}
 		// 1. Берём токен из заголовка
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" {
