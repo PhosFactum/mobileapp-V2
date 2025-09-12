@@ -4,7 +4,6 @@ import (
 	"net/http"
 	"strconv"
 
-	"github.com/AlexanderMorozov1919/mobileapp/pkg/errors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -92,11 +91,7 @@ func (h *Handler) GetPatientGroupsByOrganization(c *gin.Context) {
 	// Вызываем usecase
 	groups, err := h.usecase.GetPatientGroupsByOrganizationID(uint(orgID), page, perPage)
 	if err != nil {
-		if appErr, ok := err.(*errors.AppError); ok {
-			c.JSON(appErr.HTTPStatus, gin.H{"error": appErr.Message})
-			return
-		}
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Internal server error"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 

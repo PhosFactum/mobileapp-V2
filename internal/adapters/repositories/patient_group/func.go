@@ -34,3 +34,31 @@ func (r *PatientGroupRepositoryImpl) GetPatientGroupsByCodeOrOrgTitle(search str
 
 	return patientGroups, total, nil
 }
+
+func (r *PatientGroupRepositoryImpl) GetPatientGroupsByOrganizationID(orgID uint, page, perPage int) ([]entities.PatientGroup, int64, error) {
+	op := "repo.PatientGroup.GetPatientGroupsByOrganizationID"
+	var patientGroups []entities.PatientGroup
+	var total int64
+
+	baseQuery := r.db.
+		Model(&entities.PatientGroup{}).
+		Where("organization_id = ?", orgID)
+
+	if err := baseQuery.Count(&total).Error; err != nil {
+		return nil, 0, errors.NewDBError(op, err)
+	}
+
+	offset := (page - 1) * perPage
+	err := baseQuery.
+		Preload("Organization").
+		Offset(offset).
+		Limit(perPage).
+		Find(&patientGroups).
+		Error
+
+	if err != nil {
+		return nil, 0, errors.NewDBError(op, err)
+	}
+
+	return patientGroups, total, nil
+}
