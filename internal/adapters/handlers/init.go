@@ -62,9 +62,6 @@ func ProvideRouter(h *Handler, cfg *config.Config, swagCfg *swagger.Config) http
 
 	//Версия
 	baseRouter.GET("/version", h.GetVersionProject)
-	// Авторизация
-	authGroup := baseRouter.Group("/auth")
-	authGroup.POST("/", h.LoginDoctor)
 
 	protected := baseRouter.Group("/")
 	protected.Use(middleware.JWTAuth(cfg.JWTSecret))
@@ -120,5 +117,19 @@ func ProvideRouter(h *Handler, cfg *config.Config, swagCfg *swagger.Config) http
 	// TODO: Обновление статусов у Reception Hospital (PUT запрос)
 	// Поправить пациента на транзакцию
 
+	// Руты рабочие для новго проекта
+
+	// Авторизация
+	authGroup := baseRouter.Group("/auth")
+	authGroup.POST("/", h.LoginDoctor)
+
+	// Организации (страховые)
+	organizationGroup := protected.Group("/organization")
+	organizationGroup.GET("/", h.GetAllOrganizations)
+
+	//Списки пациентов
+	patientGroupsGroup := protected.Group("/groups")
+	patientGroupsGroup.GET("/", h.GetPatientGroupsByCodeOrOrgTitle)
+	patientGroupsGroup.GET("/:org_id", h.GetPatientGroupsByOrganization) // arg org_id
 	return r
 }
