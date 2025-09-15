@@ -1296,12 +1296,68 @@ const docTemplate = `{
                     "type": "string",
                     "example": "1980-05-15T00:00:00Z"
                 },
+                "consent_data_processing": {
+                    "description": "СОГЛАСИЕ НА ОБРАБОТКУ ДАННЫХ",
+                    "type": "boolean",
+                    "example": false
+                },
                 "created_at": {
                     "type": "string"
                 },
                 "full_name": {
                     "type": "string",
                     "example": "Смирнов Алексей Петрович"
+                },
+                "has_actual_fluorography": {
+                    "description": "НАЛИЧИЕ ФЛГ\nFluorographyDate      *time.Time ` + "`" + `gorm:\"default:null\" json:\"fluorography_date,omitempty\" example:\"2024-09-15T00:00:00Z\"` + "`" + `",
+                    "type": "boolean",
+                    "example": false
+                },
+                "has_analysis_1": {
+                    "description": "АНАЛИЗЫ (примерно, хз какие анализы)",
+                    "type": "boolean",
+                    "example": false
+                },
+                "has_analysis_2": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "has_analysis_3": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "has_analysis_4": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "has_analysis_5": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "has_ekg_health_passport_response": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "has_medical_commission_response": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "has_neurologist_response": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "has_psychiatrist_narcologist_response": {
+                    "description": "СПЕЦИАЛИСТЫ (СОГЛАСИЙ)",
+                    "type": "boolean",
+                    "example": false
+                },
+                "has_psychiatrist_response": {
+                    "type": "boolean",
+                    "example": false
+                },
+                "has_therapist_response": {
+                    "type": "boolean",
+                    "example": false
                 },
                 "id": {
                     "type": "integer",

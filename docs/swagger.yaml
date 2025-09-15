@@ -103,6 +103,10 @@ definitions:
       birth_date:
         example: "1980-05-15T00:00:00Z"
         type: string
+      consent_data_processing:
+        description: СОГЛАСИЕ НА ОБРАБОТКУ ДАННЫХ
+        example: false
+        type: boolean
       created_at:
         type: string
 <<<<<<< HEAD
@@ -118,6 +122,47 @@ definitions:
         example: Алексей
 >>>>>>> dee09e0 (fix(security): swagger annotations; fix: server running correctly, all handlers work)
         type: string
+      has_actual_fluorography:
+        description: |-
+          НАЛИЧИЕ ФЛГ
+          FluorographyDate      *time.Time `gorm:"default:null" json:"fluorography_date,omitempty" example:"2024-09-15T00:00:00Z"`
+        example: false
+        type: boolean
+      has_analysis_1:
+        description: АНАЛИЗЫ (примерно, хз какие анализы)
+        example: false
+        type: boolean
+      has_analysis_2:
+        example: false
+        type: boolean
+      has_analysis_3:
+        example: false
+        type: boolean
+      has_analysis_4:
+        example: false
+        type: boolean
+      has_analysis_5:
+        example: false
+        type: boolean
+      has_ekg_health_passport_response:
+        example: false
+        type: boolean
+      has_medical_commission_response:
+        example: false
+        type: boolean
+      has_neurologist_response:
+        example: false
+        type: boolean
+      has_psychiatrist_narcologist_response:
+        description: СПЕЦИАЛИСТЫ (СОГЛАСИЙ)
+        example: false
+        type: boolean
+      has_psychiatrist_response:
+        example: false
+        type: boolean
+      has_therapist_response:
+        example: false
+        type: boolean
       id:
         example: 1
         type: integer
