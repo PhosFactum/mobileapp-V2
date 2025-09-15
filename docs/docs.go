@@ -15,7 +15,7 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
-        "/auth": {
+        "/auth/login": {
             "post": {
                 "description": "Аутентифицирует врача по номеру телефона и паролю",
                 "consumes": [
@@ -71,10 +71,10 @@ const docTemplate = `{
             "post": {
                 "security": [
                     {
-                        "ApiKeyAuth": []
+                        "BearerAuth": []
                     }
                 ],
-                "description": "Инвалидирует токен пользователя",
+                "description": "Удаляет токен на клиенте",
                 "produces": [
                     "application/json"
                 ],
@@ -88,17 +88,181 @@ const docTemplate = `{
                         "schema": {
                             "$ref": "#/definitions/handlers.ResultResponse"
                         }
-                    },
-                    "400": {
-                        "description": "Неверный формат запроса",
+                    }
+                }
+            }
+        },
+        "/consent/medical-exam": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Возвращает PDF-файл для ознакомления",
+                "produces": [
+                    "application/pdf"
+                ],
+                "tags": [
+                    "Consent"
+                ],
+                "summary": "Получить PDF согласия на медицинский осмотр",
+                "responses": {
+                    "200": {
+                        "description": "PDF документ",
                         "schema": {
-                            "$ref": "#/definitions/handlers.IncorrectFormatError"
+                            "type": "file"
                         }
                     },
                     "500": {
-                        "description": "Внутренняя ошибка сервера",
+                        "description": "Ошибка при чтении файла",
                         "schema": {
-                            "$ref": "#/definitions/handlers.InternalServerError"
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/consent/personal-data": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Возвращает PDF-файл для ознакомления",
+                "produces": [
+                    "application/pdf"
+                ],
+                "tags": [
+                    "Consent"
+                ],
+                "summary": "Получить PDF согласия на обработку персональных данных",
+                "responses": {
+                    "200": {
+                        "description": "PDF документ",
+                        "schema": {
+                            "type": "file"
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка при чтении файла",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/consent/signature/{recep_id}": {
+            "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Возвращает ранее сохранённую подпись в формате Base64",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Consent"
+                ],
+                "summary": "Получить подпись пациента",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID пациента",
+                        "name": "recep_id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Base64-кодированное изображение",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Неверный ID пациента",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "404": {
+                        "description": "Подпись не найдена",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Принимает изображение подписи и сохраняет его как подтверждение согласия",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Consent"
+                ],
+                "summary": "Сохранить подпись пациента",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID пациента",
+                        "name": "recep_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Изображение подписи (PNG/JPG)",
+                        "name": "signature",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Подпись сохранена",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Неверный ID пациента или отсутствует файл",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Ошибка сервера",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     }
                 }

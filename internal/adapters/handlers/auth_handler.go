@@ -1,3 +1,4 @@
+// internal/adapters/handlers/auth.go
 package handlers
 
 import (
@@ -20,7 +21,7 @@ import (
 // @Failure 400 {object} IncorrectFormatError "Неверный формат запроса"
 // @Failure 401 {object} IncorrectDataError "Неверные учётные данные"
 // @Failure 500 {object} InternalServerError "Внутренняя ошибка сервера"
-// @Router /auth [post]
+// @Router /auth/login [post]
 func (h *Handler) LoginDoctor(c *gin.Context) {
 	body, _ := io.ReadAll(c.Request.Body)
 	c.Request.Body = io.NopCloser(bytes.NewBuffer(body))
@@ -50,43 +51,25 @@ func (h *Handler) LoginDoctor(c *gin.Context) {
 
 // LogoutDoctor осуществляет выход из системы
 // @Summary Выход из системы
-// @Description Инвалидирует токен пользователя
+// @Description Удаляет токен на клиенте
 // @Tags Auth
-// @Security ApiKeyAuth
 // @Produce json
+// @Security BearerAuth
 // @Success 200 {object} ResultResponse "Успешный выход"
-// @Failure 400 {object} IncorrectFormatError "Неверный формат запроса"
-// @Failure 500 {object} InternalServerError "Внутренняя ошибка сервера"
 // @Router /auth/logout [post]
 func (h *Handler) LogoutDoctor(c *gin.Context) {
-	// Получаем токен из заголовка Authorization
-	authHeader := c.GetHeader("Authorization")
-	if authHeader == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Authorization header required"})
-		return
-	}
+	// Просто логируем факт выхода и возвращаем успех
+	// Клиент сам должен удалить токен из localStorage/cookies
 
-	// Обычно формат: "Bearer <token>"
-	token := authHeader
-	if len(authHeader) > 7 && authHeader[:7] == "Bearer " {
-		token = authHeader[7:]
-	}
+	h.logger.Info("User successfully logged out")
 
-	h.logger.Info("Logout attempt", "token", token[:min(10, len(token))]+"...") // Логируем только часть токена
-
-	if err := h.usecase.LogoutDoctor(c.Request.Context(), token); err != nil {
-		h.logger.Error("Logout failed", "error", err)
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Logout failed"})
-		return
-	}
-
-	c.JSON(http.StatusOK, gin.H{"message": "Successfully logged out"})
+	c.JSON(http.StatusOK, gin.H{
+		"message": "Successfully logged out",
+		"action":  "Please remove the token from client storage",
+	})
 }
 
-// Вспомогательная функция для безопасности
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
-}
+// С логаутом такая тема, что это ответственность фронтендера - удалить токен пользователя
+// При тесте в сваггере или постмане логаута не будет - ибо это Stateless JWT
+
+// Ну и в целом токен в JWT хранится на клиенте, потому только клиентская часть может его удалить

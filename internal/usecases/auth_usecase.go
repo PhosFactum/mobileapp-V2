@@ -11,7 +11,7 @@ import (
 )
 
 type AuthUsecase struct {
-	repo      interfaces.AuthRepository
+	repo      interfaces.Repository
 	secretKey string
 }
 
@@ -26,7 +26,7 @@ func (u *AuthUsecase) LoginDoctor(ctx context.Context, phone, password string) (
 	op := "usecase.Auth.LoginDoctor"
 
 	user, err := u.repo.GetByLogin(ctx, phone)
-	if err != nil || user.ID == 0 {
+	if err != nil || user == nil || user.ID == 0 {
 		return 0, "", errors.NewUnauthorizedError(op, "invalid credentials")
 	}
 
@@ -48,11 +48,7 @@ func (u *AuthUsecase) LoginDoctor(ctx context.Context, phone, password string) (
 }
 
 func (u *AuthUsecase) LogoutDoctor(ctx context.Context, token string) *errors.AppError {
-	op := "usecase.Auth.LogoutDoctor"
-
-	if err := u.repo.InvalidateToken(ctx, token); err != nil {
-		return errors.NewInternalError(op, "failed to invalidate token", err)
-	}
-
+	// Просто возвращаем nil - никаких действий не требуется
+	// В stateless JWT клиент сам удаляет токен
 	return nil
 }

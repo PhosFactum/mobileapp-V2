@@ -5,7 +5,7 @@ import (
 
 	"github.com/AlexanderMorozov1919/mobileapp/internal/config"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/interfaces"
-	middleware "github.com/AlexanderMorozov1919/mobileapp/internal/middleware/jwt"
+	jwtMiddleware "github.com/AlexanderMorozov1919/mobileapp/internal/middleware/jwt"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/middleware/logging"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/middleware/swagger"
 	"github.com/gin-gonic/gin"
@@ -63,8 +63,13 @@ func ProvideRouter(h *Handler, cfg *config.Config, swagCfg *swagger.Config) http
 	//Версия
 	baseRouter.GET("/version", h.GetVersionProject)
 
+	// Авторизация
+	authGroup := baseRouter.Group("/auth")
+	authGroup.POST("/login", h.LoginDoctor)
+	authGroup.POST("/logout", jwtMiddleware.JWTAuth(cfg.JWTSecret), h.LogoutDoctor)
+
 	protected := baseRouter.Group("/")
-	protected.Use(middleware.JWTAuth(cfg.JWTSecret))
+	protected.Use(jwtMiddleware.JWTAuth(cfg.JWTSecret))
 
 	// Доктора
 	doctorGroup := protected.Group("/doctors")
@@ -88,10 +93,6 @@ func ProvideRouter(h *Handler, cfg *config.Config, swagCfg *swagger.Config) http
 
 	// Руты рабочие для новго проекта
 
-	// Авторизация
-	authGroup := baseRouter.Group("/auth")
-	authGroup.POST("/", h.LoginDoctor)
-
 	// Организации (страховые)
 	organizationGroup := protected.Group("/organization")
 	organizationGroup.GET("/", h.GetAllOrganizations)
@@ -100,5 +101,13 @@ func ProvideRouter(h *Handler, cfg *config.Config, swagCfg *swagger.Config) http
 	patientGroupsGroup := protected.Group("/groups")
 	patientGroupsGroup.GET("/", h.GetPatientGroupsByCodeOrOrgTitle)
 	patientGroupsGroup.GET("/:org_id", h.GetPatientGroupsByOrganization) // arg org_id
+
+	// Подписи пациентов
+	consentGroup := protected.Group("/consent")
+	consentGroup.GET("/personal-data", h.GetPersonalDataConsent)
+	consentGroup.GET("/medical-exam", h.GetMedicalExamConsent)
+	consentGroup.GET("/signature/:recep_id", h.GetSignature)
+	consentGroup.POST("/signature/:recep_id", h.SaveSignature)
+
 	return r
 }

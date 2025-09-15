@@ -681,7 +681,7 @@ info:
   title: ClinicHub API
   version: 1.0.0
 paths:
-  /auth:
+  /auth/login:
     post:
       consumes:
       - application/json
@@ -717,7 +717,7 @@ paths:
       - Auth
   /auth/logout:
     post:
-      description: Инвалидирует токен пользователя
+      description: Удаляет токен на клиенте
       produces:
       - application/json
       responses:
@@ -725,19 +725,126 @@ paths:
           description: Успешный выход
           schema:
             $ref: '#/definitions/handlers.ResultResponse'
-        "400":
-          description: Неверный формат запроса
-          schema:
-            $ref: '#/definitions/handlers.IncorrectFormatError'
-        "500":
-          description: Внутренняя ошибка сервера
-          schema:
-            $ref: '#/definitions/handlers.InternalServerError'
       security:
-      - ApiKeyAuth: []
+      - BearerAuth: []
       summary: Выход из системы
       tags:
       - Auth
+  /consent/medical-exam:
+    get:
+      description: Возвращает PDF-файл для ознакомления
+      produces:
+      - application/pdf
+      responses:
+        "200":
+          description: PDF документ
+          schema:
+            type: file
+        "500":
+          description: Ошибка при чтении файла
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получить PDF согласия на медицинский осмотр
+      tags:
+      - Consent
+  /consent/personal-data:
+    get:
+      description: Возвращает PDF-файл для ознакомления
+      produces:
+      - application/pdf
+      responses:
+        "200":
+          description: PDF документ
+          schema:
+            type: file
+        "500":
+          description: Ошибка при чтении файла
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получить PDF согласия на обработку персональных данных
+      tags:
+      - Consent
+  /consent/signature/{recep_id}:
+    get:
+      description: Возвращает ранее сохранённую подпись в формате Base64
+      parameters:
+      - description: ID пациента
+        in: path
+        name: recep_id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Base64-кодированное изображение
+          schema:
+            type: string
+        "400":
+          description: Неверный ID пациента
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Подпись не найдена
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Ошибка сервера
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Получить подпись пациента
+      tags:
+      - Consent
+    post:
+      consumes:
+      - multipart/form-data
+      description: Принимает изображение подписи и сохраняет его как подтверждение
+        согласия
+      parameters:
+      - description: ID пациента
+        in: path
+        name: recep_id
+        required: true
+        type: string
+      - description: Изображение подписи (PNG/JPG)
+        in: formData
+        name: signature
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Подпись сохранена
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Неверный ID пациента или отсутствует файл
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Ошибка сервера
+          schema:
+            additionalProperties: true
+            type: object
+      security:
+      - BearerAuth: []
+      summary: Сохранить подпись пациента
+      tags:
+      - Consent
   /doctors/{doc_id}:
     get:
       consumes:
