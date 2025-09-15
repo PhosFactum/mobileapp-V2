@@ -160,21 +160,6 @@ func (r *PatientRepositoryImpl) GetPatientsByFullName(name string) ([]entities.P
 	return patients, nil
 }
 
-func (r *PatientRepositoryImpl) GetPatientAllergiesByID(patientID uint) ([]entities.Allergy, error) {
-	op := "repo.Allergy.GetPatientAllergiesByID"
-
-	var patient entities.Patient
-	err := r.db.
-		Preload("Allergy").
-		First(&patient, patientID).Error
-
-	if err != nil {
-		return nil, errors.NewDBError(op, err)
-	}
-
-	return patient.Allergy, nil
-}
-
 func (r *PatientRepositoryImpl) GetAllPatients(page, count int, queryFilter string, queryOrder string, parameters []interface{}) ([]entities.Patient, int64, error) {
 	op := "repo.Patient.GetAllPatients"
 

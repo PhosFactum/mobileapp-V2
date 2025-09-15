@@ -73,48 +73,17 @@ func ProvideRouter(h *Handler, cfg *config.Config, swagCfg *swagger.Config) http
 
 	// Пациенты
 	patientGroup := protected.Group("/patients")
-	patientGroup.GET("/:doc_id/", h.GetAllPatientsByDoctorID) // Список пациентов доктора
+	// patientGroup.GET("/:doc_id/", h.GetAllPatientsByDoctorID) // Список пациентов доктора
 	patientGroup.GET("/", h.GetAllPatients)
 	patientGroup.POST("/", h.CreatePatient)
 
-	// Медкарты
-	medCardGroup := protected.Group("/medcard")
-	medCardGroup.GET("/:pat_id", h.GetMedCardByPatientID)
-	medCardGroup.PUT("/:pat_id", h.UpdateMedCard)
+	// // Приёмы больницы
+	// hospitalGroup := protected.Group("/hospital")
+	// hospitalGroup.GET("/receptions/patients/:pat_id", h.GetAllReceptionsByPatientID) // Все приемы пациента
+	// hospitalGroup.GET("/receptions/:doc_id", h.GetReceptionsHospitalByDoctorID)      // Все приемы доктора
+	// hospitalGroup.GET("/receptions/:doc_id/:hosp_id", h.GetReceptionHosptalById)
+	// hospitalGroup.PUT("/receptions/:recep_id", h.UpdateReceptionHospitalByReceptionID)
 
-	// Приёмы больницы
-	hospitalGroup := protected.Group("/hospital")
-	hospitalGroup.GET("/receptions/patients/:pat_id", h.GetAllReceptionsByPatientID) // Все приемы пациента
-	hospitalGroup.GET("/receptions/:doc_id", h.GetReceptionsHospitalByDoctorID)      // Все приемы доктора
-	hospitalGroup.GET("/receptions/:doc_id/:hosp_id", h.GetReceptionHosptalById)
-	hospitalGroup.PUT("/receptions/:recep_id", h.UpdateReceptionHospitalByReceptionID)
-	hospitalGroup.PATCH("/receptions/:recep_id", h.UpdateReceptionHospitalStatusByID)
-
-	// Медуслуги
-	medServicesGroup := protected.Group("/medservices")
-	medServicesGroup.GET("/", h.GetAllMedServices)
-
-	// Скорая медицинская помощь
-	emergencyGroup := protected.Group("/emergency")
-	emergencyGroup.POST("/smp", h.CreateSMP)
-	emergencyGroup.POST("/receptions", h.CreateSMPReception)
-	emergencyGroup.PUT("/receptions/:recep_id", h.UpdateReceptionSMPByReceptionID)
-	emergencyGroup.GET("/smps/:call_id/:smp_id", h.GetReceptionWithMedServices)
-
-	//Подписи пациентов
-	emergencyGroup.GET("/signature/:recep_id", h.GetSignature)
-	emergencyGroup.POST("/signature/:recep_id", h.SaveSignature)
-
-	// Звонки (для удобства в тестинге Swagger разделили их)
-	// Маршрут оставляем тот же, просто для удобства
-	emergencyGroup.GET("/calls/:call_id", h.GetReceptionsSMPByCallID)
-	emergencyGroup.GET("/:doc_id", h.GetEmergencyCallsByDoctorAndDate)
-	emergencyGroup.PATCH("/:call_id", h.CloseEmergencyCall)
-
-	emergencyGroup.GET("/pdf/:rec_id", h.GetPdf)
-	// emergencyGroup.POST("/pdf/:rec_id", h.UploadPdf)
-
-	// TODO: Обновление статусов у Reception Hospital (PUT запрос)
 	// Поправить пациента на транзакцию
 
 	// Руты рабочие для новго проекта

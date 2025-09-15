@@ -13,6 +13,6 @@ type Organization struct {
 	ManagerID uint    `gorm:"not null;index" json:"-"`
 	Manager   Manager `gorm:"foreignKey:ManagerID" json:"Manager"`
 
-	PatientGroups []PatientGroup `gorm:"foreignKey:OrganizationID" json:"receptions"`
+	PatientGroups []PatientGroup `gorm:"foreignKey:OrganizationID" json:"patient_groups"`
 	Doctor        []Doctor       `gorm:"many2many:doctor_organizations" json:"-"`
 }

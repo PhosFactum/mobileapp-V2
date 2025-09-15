@@ -1,0 +1,45 @@
+package entities
+
+import "time"
+
+type Analysis struct {
+	ID        uint      `gorm:"primarykey" json:"id" example:"1"`
+	CreatedAt time.Time `json:"-"`
+	UpdatedAt time.Time `json:"-"`
+
+	Name  string `gorm:"not null" json:"name" example:"EKG"`
+	Price uint   `gorm:"not null" json:"price" example:"100"`
+}
+
+type AnalysisOrderItem struct {
+	ID uint `gorm:"primarykey" json:"id"`
+
+	OrderID uint           `gorm:"not null;index" json:"order_id"`
+	Order   *AnalysisOrder `gorm:"foreignKey:OrderID" json:"-"`
+
+	AnalysisID uint      `gorm:"not null;index" json:"analysis_id"`
+	Analysis   *Analysis `gorm:"foreignKey:AnalysisID" json:"analysis"`
+
+	// Статус конкретного анализа
+	IsCompleted bool       `gorm:"default:false" json:"is_completed"` // Сдан или нет
+	CompletedAt *time.Time `json:"completed_at,omitempty"`            // Когда сдан
+
+	PriceAtAssignment uint `gorm:"not null" json:"price_at_assignment"`
+
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+// AnalysisOrder - направление на анализы (промежуточная структура)
+type AnalysisOrder struct {
+	ID          uint   `gorm:"primarykey" json:"id"`
+	OrderNumber string `gorm:"not null;uniqueIndex" json:"order_number"` // Номер направления (уникальный)
+
+	TotalAmount uint `gorm:"not null" json:"total_amount"` // Сумма всех анализов в направлении
+
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+
+	// Связанные анализы
+	OrderItems []AnalysisOrderItem `gorm:"foreignKey:OrderID" json:"order_items"`
+}

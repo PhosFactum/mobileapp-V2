@@ -36,11 +36,9 @@ func (u *PatientUsecase) CreatePatient(input *models.CreatePatientRequest) (enti
 
 	// 1. Создаем пациента без связей
 	patient := entities.Patient{
-		LastName:   input.LastName,
-		FirstName:  input.FirstName,
-		MiddleName: input.MiddleName,
-		BirthDate:  parsedTime,
-		IsMale:     input.IsMale,
+		FullName:  input.FullName,
+		BirthDate: parsedTime,
+		IsMale:    input.IsMale,
 	}
 
 	patientID, err := u.repo.CreatePatient(patient)
@@ -206,11 +204,9 @@ func (u *PatientUsecase) GetAllPatients(page, count int, filter string, order st
 
 func mapPatientEntityToModel(entity entities.Patient) models.ShortPatientResponse {
 	return models.ShortPatientResponse{
-		ID:         entity.ID,
-		LastName:   entity.LastName,
-		FirstName:  entity.FirstName,
-		MiddleName: entity.MiddleName,
-		BirthDate:  entity.BirthDate,
-		IsMale:     entity.IsMale,
+		ID:        entity.ID,
+		FullName:  entity.FullName,
+		BirthDate: entity.BirthDate,
+		IsMale:    entity.IsMale,
 	}
 }

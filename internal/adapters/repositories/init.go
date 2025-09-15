@@ -9,19 +9,15 @@ import (
 	"time"
 
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/contactInfo"
-	EmergencyCall "github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/emergency_call"
-	medService "github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/med_service"
 	organization "github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/organization"
 	patientgroup "github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/patient_group"
 	personalInfo "github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/personal_info"
-	receptionHospital "github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/reception_hospital"
-	receptionSmp "github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/reception_smp"
+	reception "github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/reception"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/tx"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/domain/entities"
 	"github.com/jackc/pgtype"
 	"golang.org/x/crypto/bcrypt"
 
-	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/allergy"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/auth"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/doctor"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/patient"
@@ -34,15 +30,11 @@ import (
 
 type Repository struct {
 	interfaces.AuthRepository
-	interfaces.AllergyRepository
 	interfaces.DoctorRepository
-	interfaces.MedServiceRepository
 	interfaces.PatientRepository
 	interfaces.ContactInfoRepository
-	interfaces.EmergencyCallRepository
 	interfaces.PersonalInfoRepository
-	interfaces.ReceptionHospitalRepository
-	interfaces.ReceptionSmpRepository
+	interfaces.ReceptionRepository
 	interfaces.TxRepository
 	interfaces.OrganizationRepository
 	interfaces.PatientGroupRepository
@@ -83,15 +75,11 @@ func NewRepository(cfg *config.Config) (interfaces.Repository, error) {
 
 	return &Repository{
 		auth.NewAuthRepository(db),
-		allergy.NewAllergyRepository(db),
 		doctor.NewDoctorRepository(db),
-		medService.NewMedServiceRepository(db),
 		patient.NewPatientRepository(db),
 		contactInfo.NewContactInfoRepository(db),
-		EmergencyCall.NewEmergencyCallRepository(db),
 		personalInfo.NewPersonalInfoRepository(db),
-		receptionHospital.NewReceptionRepository(db),
-		receptionSmp.NewReceptionSmpRepository(db),
+		reception.NewReceptionRepository(db),
 		tx.NewTxRepository(db),
 		organization.NewOrganizationRepository(db),
 		patientgroup.NewPatientGroupRepository(db),
@@ -107,17 +95,12 @@ func autoMigrate(db *gorm.DB) error {
 		"doctor_organizations",
 		"patients_patient_groups",
 		"reception_smp_med_services",
-		"patient_allergy",
 		"receptions_smp_patient",
 		"reception_hospitals",
-		"reception_smps",
-		"emergency_calls",
 		"contact_infos",
 		"personal_infos",
 		"patients",
 		"doctors",
-		"med_services",
-		"allergies",
 		"specializations",
 		"organizations",
 		"managers",
@@ -139,11 +122,6 @@ func autoMigrate(db *gorm.DB) error {
 		&entities.Patient{},
 		&entities.ContactInfo{},
 		&entities.PersonalInfo{},
-		&entities.MedService{},
-		&entities.Allergy{},
-		&entities.ReceptionHospital{},
-		&entities.ReceptionSMP{},
-		&entities.EmergencyCall{},
 	}
 
 	if err := db.AutoMigrate(models...); err != nil {

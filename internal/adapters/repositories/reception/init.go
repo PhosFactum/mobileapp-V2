@@ -9,6 +9,6 @@ type ReceptionHospitalRepositoryImpl struct {
 	db *gorm.DB
 }
 
-func NewReceptionRepository(db *gorm.DB) interfaces.ReceptionHospitalRepository {
+func NewReceptionRepository(db *gorm.DB) interfaces.ReceptionRepository {
 	return &ReceptionHospitalRepositoryImpl{db: db}
 }

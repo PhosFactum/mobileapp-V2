@@ -18,11 +18,3 @@ type PatientsListResponse struct {
 	TotalHits   int                `json:"totalHits"`
 	HitsPerPage int                `json:"hitsPerPage"`
 }
-
-type ReceptionSMPResponseList struct {
-	Hits        []ReceptionSMPResponse `json:"hits"`
-	CurrentPage int                    `json:"currentPage"`
-	TotalPages  int                    `json:"totalPages"`
-	TotalHits   int                    `json:"totalHits"`
-	HitsPerPage int                    `json:"hitsPerPage"`
-}

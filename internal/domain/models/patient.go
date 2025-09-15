@@ -16,22 +16,16 @@ type UpdatePatientRequest struct {
 // CreatePatientRequest - запрос на создание пациента
 // @Description Данные для создания нового пациента
 type CreatePatientRequest struct {
-	LastName   string `json:"last_name" example:"Смирнов"`
-	FirstName  string `json:"first_name" example:"Алексей"`
-	MiddleName string `json:"middle_name" example:"Петрович"`
-	// FullName   string `json:"full_name" example:"Смирнов Алексей Петрович"` // ФИО пациента
-	BirthDate string `json:"birth_date" example:"1980-05-15"` // Дата рождения
-	IsMale    bool   `json:"is_male" example:"true"`          // Пол (true - мужской)
+	FullName  string `json:"full_name" example:"Смирнов Алексей Петрович"` // ФИО пациента
+	BirthDate string `json:"birth_date" example:"1980-05-15"`              // Дата рождения
+	IsMale    bool   `json:"is_male" example:"true"`                       // Пол (true - мужской)
 }
 
 // ShortPatientResponse - краткая информация о пациенте
 // @Description Сокращенные данные пациента
 type ShortPatientResponse struct {
-	ID         uint   `json:"id" example:"1"`
-	LastName   string `json:"last_name" example:"Смирнов"`
-	FirstName  string `json:"first_name" example:"Алексей"`
-	MiddleName string `json:"middle_name" example:"Петрович"` // ID пациента
-	// FullName  string    `json:"full_name" example:"Смирнов Алексей Петрович"` // ФИО пациента
+	ID        uint      `json:"id" example:"1"`
+	FullName  string    `json:"full_name" example:"Смирнов Алексей Петрович"`
 	BirthDate time.Time `json:"birth_date" example:"1980-05-15T00:00:00Z"` // Дата рождения
 	IsMale    bool      `json:"is_male" example:"true"`                    // Пол (true - мужской)
 }
