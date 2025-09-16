@@ -1,11 +1,10 @@
 package repositories
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
-	"math/rand"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/contactInfo"
@@ -87,48 +86,124 @@ func NewRepository(cfg *config.Config) (interfaces.Repository, error) {
 
 }
 
-// autoMigrate - выполнение автомиграций для моделей
-func autoMigrate(db *gorm.DB) error {
+// repository/migrations.go
 
-	// Удаляем таблицы в правильном порядке зависимостей
-	tables := []string{
-		"doctor_organizations",
+func autoMigrate(db *gorm.DB) error {
+	// ✅ Правильный порядок удаления таблиц (зависимые первыми)
+	tablesToDelete := []string{
+		// Зависимые таблицы
+		"receptions",
+		"analysis_order_items",
+		"analysis_orders",
+		"vaccines",
+		"fl_gs",
+		"patients_specializations",
 		"patients_patient_groups",
-		"reception_smp_med_services",
-		"receptions_smp_patient",
-		"reception_hospitals",
+		"doctor_specializations",
+		"doctor_organizations",
 		"contact_infos",
 		"personal_infos",
+		"patient_statistics",
+
+		// Родительские таблицы
 		"patients",
+		"patient_groups",
 		"doctors",
 		"specializations",
 		"organizations",
 		"managers",
-		"patient_groups",
+
+		// Справочники
+		"document_types",
+		"examination_types",
+		"examination_views",
+		"harm_points",
+		"analyses",
+		"titles",
+		"medications",
+		"doses",
+		"numbers",
+		"certificate_numbers",
+		"body_parts",
+		"methods",
+		"places",
 	}
 
-	for _, table := range tables {
-		if err := db.Migrator().DropTable(table); err != nil {
-			return fmt.Errorf("failed to drop table %s: %w", table, err)
+	// Удаляем таблицы в правильном порядке
+	for _, table := range tablesToDelete {
+		if db.Migrator().HasTable(table) {
+			if err := db.Migrator().DropTable(table); err != nil {
+				return fmt.Errorf("failed to drop table %s: %w", table, err)
+			}
 		}
 	}
 
+	// ✅ Создаем таблицы в правильном порядке (зависимости первыми)
 	models := []interface{}{
+		// Справочники (без внешних ключей)
+		&entities.DocumentType{},
+		&entities.ExaminationType{},
+		&entities.ExaminationView{},
+		&entities.HarmPoint{},
+		&entities.Title{},
+		&entities.Medication{},
+		&entities.Dose{},
+		&entities.Number{},
+		&entities.CertificateNumber{},
+		&entities.BodyPart{},
+		&entities.Method{},
+		&entities.Place{},
+		&entities.Manager{},
+		&entities.Analysis{},
+
+		// Основные сущности
 		&entities.Specialization{},
 		&entities.Doctor{},
-		&entities.Manager{},
 		&entities.Organization{},
 		&entities.PatientGroup{},
-		&entities.Patient{},
-		&entities.ContactInfo{},
-		&entities.PersonalInfo{},
+
+		// Зависимые сущности
+		&entities.ContactInfo{},  // Без внешних ключей
+		&entities.PersonalInfo{}, // Без внешних ключей
+		&entities.Patient{},      // После справочников и ContactInfo/PersonalInfo
+
+		// Связующие таблицы (many2many)
+		&entities.doctor_specializations{}, // doctor_specializations
+		&entities.DoctorOrganization{},     // doctor_organizations
+		&entities.PatientSpecialization{},  // patients_specializations
+		&entities.PatientPatientGroup{},    // patients_patient_groups
+
+		// Зависимые от Patient
+		&entities.Flg{},               // После Patient
+		&entities.AnalysisOrder{},     // После Patient и Analysis
+		&entities.AnalysisOrderItem{}, // После AnalysisOrder и Analysis
+		&entities.Vaccine{},           // После Patient
+		&entities.Reception{},         // После Patient и Specialization
+		&entities.PatientStatistics{}, // После Patient
 	}
 
 	if err := db.AutoMigrate(models...); err != nil {
 		return fmt.Errorf("failed to auto-migrate: %w", err)
 	}
 
-	// Заполняем тестовыми данными
+	// ✅ Добавляем уникальные индексы
+	indexes := []struct {
+		model interface{}
+		index string
+	}{
+		{&entities.Reception{}, "idx_patient_specialization"},                // Уникальный индекс для Reception
+		{&entities.PatientStatistics{}, "idx_patient_statistics_patient_id"}, // Уникальный индекс для статистики
+	}
+
+	for _, idx := range indexes {
+		if !db.Migrator().HasIndex(idx.model, idx.index) {
+			if err := db.Migrator().CreateIndex(idx.model, idx.index); err != nil {
+				return fmt.Errorf("failed to create unique index %s: %w", idx.index, err)
+			}
+		}
+	}
+
+	// ✅ Заполняем тестовыми данными
 	if err := seedTestData(db); err != nil {
 		return fmt.Errorf("failed to seed test data: %w", err)
 	}
@@ -136,101 +211,78 @@ func autoMigrate(db *gorm.DB) error {
 	return nil
 }
 
+// seed/test_data.go
+
 func seedTestData(db *gorm.DB) error {
-	// 1. Создаем специализации
-	specializations := []*entities.Specialization{
-		{Title: "Невролог"},
-		{Title: "Травматолог"},
-		{Title: "Психиатр"},
-		{Title: "Уролог"},
-		{Title: "Оториноларинголог"},
-		{Title: "Аллерголог"},
-		{Title: "Проктолог"},
-	}
-	for _, spec := range specializations {
-		if err := db.Create(spec).Error; err != nil {
-			return fmt.Errorf("failed to create specialization %s: %w", spec.Title, err)
-		}
+	// 1. Создаем менеджеров
+	if err := seedManagers(db); err != nil {
+		return fmt.Errorf("failed to seed managers: %w", err)
 	}
 
-	hashPass123 := hashPassword("123")
-	// 1.2 Создаем докторов с привязкой к специализациям
-	doctors := []*entities.Doctor{
-		// Неврологи
-		{
-			FullName:         "Иванов Иван Иванович",
-			Phone:            "+79622840765",
-			PasswordHash:     hashPass123,
-			SpecializationID: 1,
-			Specialization:   &entities.Specialization{ID: 1, Title: "Невролог"},
-		},
-		{
-			FullName:         "Петрова Мария Сергеевна",
-			Phone:            "+79161234561",
-			PasswordHash:     hashPass123,
-			SpecializationID: 1,
-			Specialization:   &entities.Specialization{ID: 1, Title: "Невролог"},
-		},
-		// Травматологи
-		{
-			FullName:         "Сидоров Алексей Дмитриевич",
-			Phone:            "+79161234562",
-			PasswordHash:     hashPass123,
-			SpecializationID: 2,
-			Specialization:   &entities.Specialization{ID: 2, Title: "Травматолог"},
-		},
-		{
-			FullName:         "Кузнецова Елена Викторовна",
-			Phone:            "+79161234563",
-			PasswordHash:     hashPass123,
-			SpecializationID: 2,
-			Specialization:   &entities.Specialization{ID: 2, Title: "Травматолог"},
-		},
-		// Кардиологи
-		{
-			FullName:         "Смирнов Дмитрий Олегович",
-			Phone:            "+79161234564",
-			PasswordHash:     hashPass123,
-			SpecializationID: 3,
-			Specialization:   &entities.Specialization{ID: 3, Title: "Психиатр"},
-		},
-		// Неврологи
-		{
-			FullName:         "Васильев Андрей Николаевич",
-			Phone:            "+79161234565",
-			PasswordHash:     hashPass123,
-			SpecializationID: 4,
-			Specialization:   &entities.Specialization{ID: 4, Title: "Уролог"},
-		},
-		// Травматологи
-		{
-			FullName:         "Попов Сергей Иванович",
-			Phone:            "+79161234566",
-			PasswordHash:     hashPass123,
-			SpecializationID: 6,
-			Specialization:   &entities.Specialization{ID: 6, Title: "Аллерголог"},
-		},
-		// Психиатры
-		{
-			FullName:         "Морозова Ольга Дмитриевна",
-			Phone:            "+79161234567",
-			PasswordHash:     hashPass123,
-			SpecializationID: 7,
-			Specialization:   &entities.Specialization{ID: 7, Title: "Проктолог"},
-		},
+	// 2. Создаем специализации
+	if err := seedSpecializations(db); err != nil {
+		return fmt.Errorf("failed to seed specializations: %w", err)
 	}
 
-	for _, doc := range doctors {
-		if err := db.Create(doc).Error; err != nil {
-			return fmt.Errorf("failed to create doctor %s: %w", doc.FullName, err)
-		}
+	// 3. Создаем организации
+	if err := seedOrganizations(db); err != nil {
+		return fmt.Errorf("failed to seed organizations: %w", err)
 	}
 
-	// 2. Создаем менеджеров
+	// 4. Создаем группы пациентов
+	if err := seedPatientGroups(db); err != nil {
+		return fmt.Errorf("failed to seed patient groups: %w", err)
+	}
+
+	// 5. Создаем докторов
+	if err := seedDoctors(db); err != nil {
+		return fmt.Errorf("failed to seed doctors: %w", err)
+	}
+
+	// 6. Создаем справочники для вакцин
+	if err := seedVaccineDictionaries(db); err != nil {
+		return fmt.Errorf("failed to seed vaccine dictionaries: %w", err)
+	}
+
+	// 7. Создаем справочники для пациентов
+	if err := seedPatientDictionaries(db); err != nil {
+		return fmt.Errorf("failed to seed patient dictionaries: %w", err)
+	}
+
+	// 8. Создаем анализы
+	if err := seedAnalyses(db); err != nil {
+		return fmt.Errorf("failed to seed analyses: %w", err)
+	}
+
+	// 9. Создаем пациентов
+	if err := seedPatients(db); err != nil {
+		return fmt.Errorf("failed to seed patients: %w", err)
+	}
+
+	// 10. Создаем статистику пациентов
+	if err := seedPatientStatistics(db); err != nil {
+		return fmt.Errorf("failed to seed patient statistics: %w", err)
+	}
+
+	// 11. Создаем направления на анализы
+	if err := seedAnalysisOrders(db); err != nil {
+		return fmt.Errorf("failed to seed analysis orders: %w", err)
+	}
+
+	// 12. Создаем приемы
+	if err := seedReceptions(db); err != nil {
+		return fmt.Errorf("failed to seed receptions: %w", err)
+	}
+
+	return nil
+}
+
+// seed/managers.go
+func seedManagers(db *gorm.DB) error {
 	managers := []*entities.Manager{
-		{FullName: "Иванов Иван Иванович", Phone: "+79991111111"},
-		{FullName: "Петров Петр Петрович", Phone: "+79992222222"},
-		{FullName: "Сидоров Сидор Сидорович", Phone: "+79993333333"},
+		{FullName: "Иванов Иван Петрович", Phone: "+79001111111"},
+		{FullName: "Петров Петр Иванович", Phone: "+79002222222"},
+		{FullName: "Сидоров Сидор Петрович", Phone: "+79003333333"},
 	}
 
 	for _, manager := range managers {
@@ -238,24 +290,43 @@ func seedTestData(db *gorm.DB) error {
 			return fmt.Errorf("failed to create manager %s: %w", manager.FullName, err)
 		}
 	}
+	return nil
+}
 
-	// 3. Создаем организации с привязкой к менеджерам
+// seed/specializations.go
+func seedSpecializations(db *gorm.DB) error {
+	specializations := []*entities.Specialization{
+		{Title: "Терапевт"},
+		{Title: "Невролог"},
+		{Title: "Травматолог"},
+		{Title: "Психиатр"},
+		{Title: "Уролог"},
+		{Title: "Оториноларинголог"},
+		{Title: "Аллерголог"},
+		{Title: "Проктолог"},
+		{Title: "Кардиолог"},
+		{Title: "Хирург"},
+	}
+
+	for _, spec := range specializations {
+		if err := db.Create(spec).Error; err != nil {
+			return fmt.Errorf("failed to create specialization %s: %w", spec.Title, err)
+		}
+	}
+	return nil
+}
+
+// seed/organizations.go
+func seedOrganizations(db *gorm.DB) error {
+	var managers []entities.Manager
+	if err := db.Find(&managers).Error; err != nil {
+		return fmt.Errorf("failed to get managers: %w", err)
+	}
+
 	organizations := []*entities.Organization{
-		{
-			Title:     "Медицинская клиника №1",
-			ManagerID: 1,
-			Manager:   entities.Manager{ID: 1, FullName: "Иванов Иван Иванович", Phone: "+79991111111"},
-		},
-		{
-			Title:     "Городская поликлиника",
-			ManagerID: 2,
-			Manager:   entities.Manager{ID: 2, FullName: "Петров Петр Петрович", Phone: "+79992222222"},
-		},
-		{
-			Title:     "Частная клиника 'Здоровье'",
-			ManagerID: 3,
-			Manager:   entities.Manager{ID: 3, FullName: "Сидоров Сидор Сидорович", Phone: "+79993333333"},
-		},
+		{Title: "Городская поликлиника №1", ManagerID: managers[0].ID},
+		{Title: "Областная больница", ManagerID: managers[1].ID},
+		{Title: "Частная клиника МедСервис", ManagerID: managers[2].ID},
 	}
 
 	for _, org := range organizations {
@@ -263,29 +334,21 @@ func seedTestData(db *gorm.DB) error {
 			return fmt.Errorf("failed to create organization %s: %w", org.Title, err)
 		}
 	}
+	return nil
+}
 
-	// 4. Создаем группы пациентов
+// seed/patient_groups.go
+func seedPatientGroups(db *gorm.DB) error {
+	var organizations []entities.Organization
+	if err := db.Find(&organizations).Error; err != nil {
+		return fmt.Errorf("failed to get organizations: %w", err)
+	}
+
 	patientGroups := []*entities.PatientGroup{
-		{
-			Code:           "GRP001",
-			OrganizationID: 1,
-			Organization:   &entities.Organization{ID: 1, Title: "Медицинская клиника №1"},
-		},
-		{
-			Code:           "GRP002",
-			OrganizationID: 1,
-			Organization:   &entities.Organization{ID: 1, Title: "Медицинская клиника №1"},
-		},
-		{
-			Code:           "GRP003",
-			OrganizationID: 2,
-			Organization:   &entities.Organization{ID: 2, Title: "Городская поликлиника"},
-		},
-		{
-			Code:           "GRP004",
-			OrganizationID: 3,
-			Organization:   &entities.Organization{ID: 3, Title: "Частная клиника 'Здоровье'"},
-		},
+		{Code: "PG001", OrganizationID: organizations[0].ID},
+		{Code: "PG002", OrganizationID: organizations[0].ID},
+		{Code: "PG003", OrganizationID: organizations[1].ID},
+		{Code: "PG004", OrganizationID: organizations[2].ID},
 	}
 
 	for _, group := range patientGroups {
@@ -293,675 +356,628 @@ func seedTestData(db *gorm.DB) error {
 			return fmt.Errorf("failed to create patient group %s: %w", group.Code, err)
 		}
 	}
+	return nil
+}
 
-	// Остальной код остается без изменений...
-	// 5. Создаем медицинские услуги
-	services := []*entities.MedService{
-		{Name: "ЭКГ", Price: 500},
-		{Name: "Рентген", Price: 1500},
-		{Name: "УЗИ", Price: 1000},
-		{Name: "Анализ крови", Price: 300},
-		{Name: "КТ", Price: 2500},
-		{Name: "МРТ", Price: 3000},
+// seed/doctors.go
+func seedDoctors(db *gorm.DB) error {
+	var specializations []entities.Specialization
+	var organizations []entities.Organization
+
+	if err := db.Find(&specializations).Error; err != nil {
+		return fmt.Errorf("failed to get specializations: %w", err)
 	}
 
-	for _, serv := range services {
-		if err := db.Create(serv).Error; err != nil {
-			return fmt.Errorf("failed to create service %s: %w", serv.Name, err)
+	if err := db.Find(&organizations).Error; err != nil {
+		return fmt.Errorf("failed to get organizations: %w", err)
+	}
+
+	hashPass123 := hashPassword("123")
+
+	doctors := []*entities.Doctor{
+		{
+			FullName:     "Смирнова Анна Михайловна",
+			Phone:        "+79161111111",
+			PasswordHash: hashPass123,
+		},
+		{
+			FullName:     "Козлов Владимир Петрович",
+			Phone:        "+79162222222",
+			PasswordHash: hashPass123,
+		},
+		{
+			FullName:     "Иванов Иван Иванович",
+			Phone:        "+79163333333",
+			PasswordHash: hashPass123,
+		},
+		{
+			FullName:     "Петрова Мария Сергеевна",
+			Phone:        "+79164444444",
+			PasswordHash: hashPass123,
+		},
+		{
+			FullName:     "Сидоров Алексей Дмитриевич",
+			Phone:        "+79165555555",
+			PasswordHash: hashPass123,
+		},
+	}
+
+	for _, doctor := range doctors {
+		if err := db.Create(doctor).Error; err != nil {
+			return fmt.Errorf("failed to create doctor %s: %w", doctor.FullName, err)
+		}
+
+		// Связываем докторов со специализациями
+		if strings.Contains(doctor.FullName, "Смирнова") {
+			db.Model(doctor).Association("Specializations").Append(&specializations[0]) // Терапевт
+		} else if strings.Contains(doctor.FullName, "Козлов") {
+			db.Model(doctor).Association("Specializations").Append(&specializations[0]) // Терапевт
+		} else if strings.Contains(doctor.FullName, "Иванов") {
+			db.Model(doctor).Association("Specializations").Append(&specializations[1]) // Невролог
+		} else if strings.Contains(doctor.FullName, "Петрова") {
+			db.Model(doctor).Association("Specializations").Append(&specializations[2]) // Травматолог
+		} else if strings.Contains(doctor.FullName, "Сидоров") {
+			db.Model(doctor).Association("Specializations").Append(&specializations[3]) // Психиатр
+		}
+
+		// Связываем докторов с организациями
+		db.Model(doctor).Association("Organizations").Append(&organizations[0])
+	}
+	return nil
+}
+
+// seed/vaccine_dictionaries.go
+func seedVaccineDictionaries(db *gorm.DB) error {
+	// Titles
+	titles := []*entities.Title{
+		{Value: "COVID-19 Vaccine"},
+		{Value: "Гриппозная вакцина"},
+		{Value: "Вакцина против гепатита B"},
+		{Value: "Вакцина АКДС"},
+	}
+	for _, title := range titles {
+		if err := db.Create(title).Error; err != nil {
+			return fmt.Errorf("failed to create title %s: %w", title.Value, err)
 		}
 	}
 
-	// 6. Создаем пациентов - поля с default:null будут NULL по умолчанию
+	// Medications
+	medications := []*entities.Medication{
+		{Value: "Pfizer-BioNTech"},
+		{Value: "Moderna"},
+		{Value: "ГамКовидВак"},
+		{Value: "Совигрипп"},
+	}
+	for _, med := range medications {
+		if err := db.Create(med).Error; err != nil {
+			return fmt.Errorf("failed to create medication %s: %w", med.Value, err)
+		}
+	}
+
+	// Doses
+	doses := []*entities.Dose{
+		{Value: 0.3},
+		{Value: 0.5},
+		{Value: 1.0},
+	}
+	for _, dose := range doses {
+		if err := db.Create(dose).Error; err != nil {
+			return fmt.Errorf("failed to create dose %f: %w", dose.Value, err)
+		}
+	}
+
+	// Numbers
+	numbers := []*entities.Number{
+		{Value: 1},
+		{Value: 2},
+		{Value: 3},
+	}
+	for _, num := range numbers {
+		if err := db.Create(num).Error; err != nil {
+			return fmt.Errorf("failed to create number %d: %w", num.Value, err)
+		}
+	}
+
+	// CertificateNumbers
+	certNumbers := []*entities.CertificateNumber{
+		{Value: 1001},
+		{Value: 1002},
+		{Value: 1003},
+		{Value: 1004},
+	}
+	for _, cn := range certNumbers {
+		if err := db.Create(cn).Error; err != nil {
+			return fmt.Errorf("failed to create certificate number %d: %w", cn.Value, err)
+		}
+	}
+
+	// BodyParts
+	bodyParts := []*entities.BodyPart{
+		{Value: "Правая рука"},
+		{Value: "Левая рука"},
+		{Value: "Правая нога"},
+		{Value: "Левая нога"},
+		{Value: "Ягодица"},
+	}
+	for _, bp := range bodyParts {
+		if err := db.Create(bp).Error; err != nil {
+			return fmt.Errorf("failed to create body part %s: %w", bp.Value, err)
+		}
+	}
+
+	// Methods
+	methods := []*entities.Method{
+		{Value: "Внутримышечный"},
+		{Value: "Подкожный"},
+		{Value: "Внутривенный"},
+	}
+	for _, method := range methods {
+		if err := db.Create(method).Error; err != nil {
+			return fmt.Errorf("failed to create method %s: %w", method.Value, err)
+		}
+	}
+
+	// Places
+	places := []*entities.Place{
+		{Value: "Поликлиника"},
+		{Value: "Стационар"},
+		{Value: "Выездной пункт"},
+	}
+	for _, place := range places {
+		if err := db.Create(place).Error; err != nil {
+			return fmt.Errorf("failed to create place %s: %w", place.Value, err)
+		}
+	}
+
+	return nil
+}
+
+// seed/patient_dictionaries.go
+func seedPatientDictionaries(db *gorm.DB) error {
+	documentTypes := []*entities.DocumentType{
+		{Value: "Паспорт РФ"},
+		{Value: "Заграничный паспорт"},
+		{Value: "Водительское удостоверение"},
+		{Value: "Военный билет"},
+		{Value: "Свидетельство о рождении"},
+	}
+
+	for _, docType := range documentTypes {
+		if err := db.Create(docType).Error; err != nil {
+			return fmt.Errorf("failed to create document type %s: %w", docType.Value, err)
+		}
+	}
+
+	examinationTypes := []*entities.ExaminationType{
+		{Value: "Предварительный"},
+		{Value: "Периодический"},
+		{Value: "Внеочередной"},
+	}
+
+	for _, examType := range examinationTypes {
+		if err := db.Create(examType).Error; err != nil {
+			return fmt.Errorf("failed to create examination type %s: %w", examType.Value, err)
+		}
+	}
+
+	examinationViews := []*entities.ExaminationView{
+		{Value: "Осмотр терапевта"},
+		{Value: "Осмотр хирурга"},
+		{Value: "Осмотр невролога"},
+		{Value: "Осмотр офтальмолога"},
+		{Value: "Осмотр отоларинголога"},
+	}
+
+	for _, examView := range examinationViews {
+		if err := db.Create(examView).Error; err != nil {
+			return fmt.Errorf("failed to create examination view %s: %w", examView.Value, err)
+		}
+	}
+
+	harmPoints := []*entities.HarmPoint{
+		{Value: 1.0},
+		{Value: 2.0},
+		{Value: 3.0},
+		{Value: 3.1},
+		{Value: 3.2},
+		{Value: 3.3},
+		{Value: 4.0},
+	}
+
+	for _, harmPoint := range harmPoints {
+		if err := db.Create(harmPoint).Error; err != nil {
+			return fmt.Errorf("failed to create harm point %f: %w", harmPoint.Value, err)
+		}
+	}
+
+	return nil
+}
+
+// seed/analyses.go
+func seedAnalyses(db *gorm.DB) error {
+	analyses := []*entities.Analysis{
+		{Name: "Общий анализ крови", Price: 500},
+		{Name: "Биохимический анализ крови", Price: 1200},
+		{Name: "Анализ мочи", Price: 300},
+		{Name: "ЭКГ", Price: 400},
+		{Name: "Флюрография", Price: 800},
+		{Name: "УЗИ брюшной полости", Price: 1500},
+		{Name: "Анализ на глюкозу", Price: 200},
+		{Name: "Анализ на холестерин", Price: 250},
+	}
+
+	for _, analysis := range analyses {
+		if err := db.Create(analysis).Error; err != nil {
+			return fmt.Errorf("failed to create analysis %s: %w", analysis.Name, err)
+		}
+	}
+	return nil
+}
+
+// seed/patients.go
+func seedPatients(db *gorm.DB) error {
+	var organizations []entities.Organization
+	if err := db.Find(&organizations).Error; err != nil {
+		return fmt.Errorf("failed to get organizations: %w", err)
+	}
+
+	var patientGroups []entities.PatientGroup
+	if err := db.Find(&patientGroups).Error; err != nil {
+		return fmt.Errorf("failed to get patient groups: %w", err)
+	}
+
+	var flgs []entities.Flg
+	flg := &entities.Flg{
+		IsCompleted:  false,
+		Organization: "Городская поликлиника",
+		Number:       12345,
+		Result:       "Норма",
+		Date:         time.Now(),
+	}
+	if err := db.Create(flg).Error; err != nil {
+		return fmt.Errorf("failed to create flg: %w", err)
+	}
+	flgs = append(flgs, *flg)
+
 	patients := []*entities.Patient{
-		{LastName: "Смирнов", FirstName: "Алексей", MiddleName: "Петрович", BirthDate: parseDate("1980-05-15"), IsMale: true, OnTreatment: true},
-		{LastName: "Кузнецова", FirstName: "Анна", MiddleName: "Владимировна", BirthDate: parseDate("1992-08-21"), IsMale: false, OnTreatment: false},
-		{LastName: "Попов", FirstName: "Дмитрий", MiddleName: "Игоревич", BirthDate: parseDate("1975-11-03"), IsMale: true, OnTreatment: true},
-		{LastName: "Васильева", FirstName: "Елена", MiddleName: "Александровна", BirthDate: parseDate("1988-07-14"), IsMale: false, OnTreatment: false},
-		{LastName: "Новиков", FirstName: "Сергей", MiddleName: "Олегович", BirthDate: parseDate("1995-02-28"), IsMale: true, OnTreatment: true},
-		{LastName: "Морозова", FirstName: "Ольга", MiddleName: "Дмитриевна", BirthDate: parseDate("1983-09-17"), IsMale: false, OnTreatment: false},
-		{LastName: "Лебедев", FirstName: "Андрей", MiddleName: "Николаевич", BirthDate: parseDate("1978-12-05"), IsMale: true, OnTreatment: true},
-		{LastName: "Соколова", FirstName: "Татьяна", MiddleName: "Викторовна", BirthDate: parseDate("1990-04-30"), IsMale: false, OnTreatment: false},
-		{LastName: "Козлов", FirstName: "Артем", MiddleName: "Сергеевич", BirthDate: parseDate("1987-06-22"), IsMale: true, OnTreatment: true},
-		{LastName: "Павлова", FirstName: "Наталья", MiddleName: "Игоревна", BirthDate: parseDate("1993-03-11"), IsMale: false, OnTreatment: false},
+		{
+			FullName:       "Иванов Петр Сергеевич",
+			BirthDate:      time.Date(1985, 5, 15, 0, 0, 0, 0, time.UTC),
+			IsMale:         true,
+			Position:       "Программист",
+			Division:       "IT отдел",
+			OrganizationID: &organizations[0].ID,
+			FlgID:          &flgs[0].ID,
+		},
+		{
+			FullName:       "Петрова Мария Ивановна",
+			BirthDate:      time.Date(1990, 8, 22, 0, 0, 0, 0, time.UTC),
+			IsMale:         false,
+			Position:       "Дизайнер",
+			Division:       "Дизайн отдел",
+			OrganizationID: &organizations[1].ID,
+			FlgID:          &flgs[0].ID,
+		},
+		{
+			FullName:       "Сидоров Алексей Петрович",
+			BirthDate:      time.Date(1978, 12, 3, 0, 0, 0, 0, time.UTC),
+			IsMale:         true,
+			Position:       "Менеджер",
+			Division:       "Управление",
+			OrganizationID: &organizations[2].ID,
+			FlgID:          &flgs[0].ID,
+		},
 	}
 
-	for _, pat := range patients {
-		if err := db.Create(pat).Error; err != nil {
-			return fmt.Errorf("failed to create patient %s: %w", pat.LastName, err)
+	for _, patient := range patients {
+		if err := db.Create(patient).Error; err != nil {
+			return fmt.Errorf("failed to create patient %s: %w", patient.FullName, err)
+		}
+
+		// Создаем контактную информацию
+		contactInfo := &entities.ContactInfo{
+			Phone:   "+79001111111",
+			Email:   "patient@example.com",
+			Address: "г. Москва, ул. Ленина, д. 1",
+		}
+		if err := db.Create(contactInfo).Error; err != nil {
+			return fmt.Errorf("failed to create contact info for patient %s: %w", patient.FullName, err)
+		}
+
+		// Создаем персональную информацию
+		personalInfo := &entities.PersonalInfo{
+			DocNumber: "4510 123456",
+			SNILS:     "123-456-789 00",
+			OMS:       "1234567890123456",
+		}
+		if err := db.Create(personalInfo).Error; err != nil {
+			return fmt.Errorf("failed to create personal info for patient %s: %w", patient.FullName, err)
+		}
+
+		// Обновляем пациента с ссылками на информацию
+		patient.ContactInfoID = &contactInfo.ID
+		patient.PersonalInfoID = &personalInfo.ID
+		if err := db.Save(patient).Error; err != nil {
+			return fmt.Errorf("failed to update patient %s with info IDs: %w", patient.FullName, err)
+		}
+
+		// Связываем пациента с группами
+		if len(patientGroups) > 0 {
+			db.Model(patient).Association("PatientGroup").Append(&patientGroups[0])
+		}
+
+		// Связываем пациента со специализациями
+		var specializations []entities.Specialization
+		db.Limit(3).Find(&specializations)
+		db.Model(patient).Association("Specialization").Append(&specializations)
+	}
+
+	return nil
+}
+
+// seed/patient_statistics.go
+func seedPatientStatistics(db *gorm.DB) error {
+	var patients []entities.Patient
+	if err := db.Find(&patients).Error; err != nil {
+		return fmt.Errorf("failed to get patients: %w", err)
+	}
+
+	for _, patient := range patients {
+		stats := &entities.PatientStatistics{
+			PatientID:              patient.ID,
+			TotalReceptions:        0,
+			CompletedReceptions:    0,
+			TotalAnalysisOrders:    0,
+			CompletedAnalysisItems: 0,
+			CreatedAt:              time.Now(),
+			UpdatedAt:              time.Now(),
+		}
+
+		if err := db.Create(stats).Error; err != nil {
+			if !strings.Contains(err.Error(), "duplicate") {
+				return fmt.Errorf("failed to create stats for patient %d: %w", patient.ID, err)
+			}
 		}
 	}
 
-	// 5. Создаем аллергии
-	allergies := []*entities.Allergy{
-		{Name: "Сыр"},
-		{Name: "Пыльца"},
-		{Name: "Орехи"},
+	return nil
+}
+
+// seed/analysis_orders.go
+func seedAnalysisOrders(db *gorm.DB) error {
+	var patients []entities.Patient
+	var analyses []entities.Analysis
+
+	if err := db.Find(&patients).Error; err != nil {
+		return fmt.Errorf("failed to get patients: %w", err)
 	}
 
-	for _, allergy := range allergies {
-		if err := db.Create(allergy).Error; err != nil {
-			return fmt.Errorf("failed to create allergy %s: %w", allergy.Name, err)
-		}
+	if err := db.Find(&analyses).Error; err != nil {
+		return fmt.Errorf("failed to get analyses: %w", err)
 	}
 
-	// 6. Создаем контактную информацию и персональные данные для пациентов
 	for i, patient := range patients {
-		contactInfo := entities.ContactInfo{
-			Phone:   fmt.Sprintf("+7915%07d", 1000000+i),
-			Email:   fmt.Sprintf("patient%d@example.com", i+1),
-			Address: fmt.Sprintf("Москва, ул. Тестовая, д. %d", i+1),
+		specCount := 2
+		if i%2 == 0 {
+			specCount = 3
 		}
 
-		if err := db.Create(&contactInfo).Error; err != nil {
-			return fmt.Errorf("failed to create contact info for patient %d: %w", patient.ID, err)
-		}
+		for j := 0; j < specCount && j < len(analyses); j++ {
+			specIndex := (i + j) % len(analyses)
+			analysis := analyses[specIndex]
 
-		personalInfo := entities.PersonalInfo{
-			PatientID:      patient.ID,
-			PassportSeries: fmt.Sprintf("4510 %06d", 100000+i),
-			SNILS:          fmt.Sprintf("123-456-789 %02d", i),
-			OMS:            fmt.Sprintf("1234567890%d", i),
-		}
+			totalAmount := analysis.Price
 
-		if err := db.Create(&personalInfo).Error; err != nil {
-			return fmt.Errorf("failed to create personal info for patient %d: %w", patient.ID, err)
-		}
+			order := &entities.AnalysisOrder{
+				OrderNumber: fmt.Sprintf("ORD-%06d", patient.ID),
+				PatientID:   &patient.ID,
+				TotalAmount: totalAmount,
+				CreatedAt:   time.Now().Add(-time.Duration(i*24) * time.Hour),
+				UpdatedAt:   time.Now().Add(-time.Duration(i*12) * time.Hour),
+			}
 
-		if err := db.Model(patient).Updates(map[string]interface{}{
-			"ContactInfoID":  contactInfo.ID,
-			"PersonalInfoID": personalInfo.ID,
-		}).Error; err != nil {
-			return fmt.Errorf("failed to update patient %d: %w", patient.ID, err)
-		}
-
-		if err := db.Model(patient).Association("Allergy").Append(allergies[i%len(allergies)]); err != nil {
-			return fmt.Errorf("failed to add allergies to patient %d: %w", patient.ID, err)
-		}
-	}
-
-	// 6. Привязываем пациентов к группам
-	patientGroupAssociations := []struct {
-		PatientIndex int
-		GroupIndex   int
-	}{
-		{0, 0}, {1, 0}, {5, 0}, // Пациенты 1, 2, 6 в группе 1
-		{2, 1}, {6, 1}, {8, 1}, // Пациенты 3, 7, 9 в группе 2
-		{3, 2}, {4, 2}, {9, 2}, // Пациенты 4, 5, 10 в группе 3
-		{7, 3}, // Пациент 8 в группе 4
-	}
-
-	for _, assoc := range patientGroupAssociations {
-		if assoc.PatientIndex < len(patients) && assoc.GroupIndex < len(patientGroups) {
-			patient := patients[assoc.PatientIndex]
-			group := patientGroups[assoc.GroupIndex]
-
-			if err := db.Model(patient).Association("PatientGroup").Append(group); err != nil {
-				return fmt.Errorf("failed to associate patient %d with group %d: %w", patient.ID, group.ID, err)
+			if err := db.Create(order).Error; err != nil {
+				return fmt.Errorf("failed to create analysis order: %w", err)
 			}
 		}
 	}
 
-	// 6.1 Создаем связи между докторами и организациями (Many-to-Many)
-	doctorOrganizationAssociations := []struct {
-		DoctorID uint
-		OrgID    uint
-	}{
-		{1, 1}, // Иванов Иван Иванович работает в Медицинской клинике №1
-		{1, 2}, // Иванов Иван Иванович также работает в Городской поликлинике
-		{2, 1}, // Петрова Мария Сергеевна работает в Медицинской клинике №1
-		{3, 2}, // Сидоров Алексей Дмитриевич работает в Городской поликлинике
-		{4, 3}, // Кузнецова Елена Викторовна работает в Частной клинике 'Здоровье'
-		{5, 1}, // Смирнов Дмитрий Олегович работает в Медицинской клинике №1
-		{6, 2}, // Васильев Андрей Николаевич работает в Городской поликлинике
-		{7, 3}, // Попов Сергей Иванович работает в Частной клинике 'Здоровье'
-		{8, 1}, // Морозова Ольга Дмитриевна работает в Медицинской клинике №1
-	}
-
-	// Создаем связи через GORM associations
-	for _, assoc := range doctorOrganizationAssociations {
-		var doctor entities.Doctor
-		var org entities.Organization
-
-		if err := db.First(&doctor, assoc.DoctorID).Error; err != nil {
-			return fmt.Errorf("failed to find doctor %d: %w", assoc.DoctorID, err)
-		}
-
-		if err := db.First(&org, assoc.OrgID).Error; err != nil {
-			return fmt.Errorf("failed to find organization %d: %w", assoc.OrgID, err)
-		}
-
-		// Связываем доктора с организацией
-		if err := db.Model(&doctor).Association("Organizations").Append(&org); err != nil {
-			return fmt.Errorf("failed to associate doctor %d with organization %d: %w", assoc.DoctorID, assoc.OrgID, err)
-		}
-	}
-
-	// 7. Создаем обычные приемы в больнице с детализированными JSONB данными
-	now := time.Now()
-	dates := []time.Time{
-		time.Date(now.Year(), now.Month(), now.Day()+1, 0, 0, 0, 0, time.UTC),
-		time.Date(now.Year(), now.Month(), now.Day()+2, 0, 0, 0, 0, time.UTC),
-		time.Date(now.Year(), now.Month(), now.Day()+3, 0, 0, 0, 0, time.UTC),
-	}
-
-	statuses := []entities.HospitalReceptionStatus{
-		entities.HospitalReceptionStatusScheduled,
-		entities.HospitalReceptionStatusCompleted,
-		entities.HospitalReceptionStatusCancelled,
-		entities.HospitalReceptionStatusNoShow,
-	}
-	addresses := []string{
-		"Москва, ул. Ленина, д. 15",
-		"Москва, ул. Пушкина, д. 10",
-		"Москва, пр. Вернадского, д. 25",
-	}
-	// В месте где раньше был ваш цикл for, теперь просто вызов:
-	if err := createHospitalReceptions(db, doctors, patients, dates, statuses, addresses); err != nil {
-		return fmt.Errorf("failed to create hospital receptions: %w", err)
-	}
-
-	// 8. SMPS
-
-	// В месте где раньше был ваш цикл for, теперь просто вызов:
-	if err := createEmergencyCallsAndSMPReceptions(db, doctors, patients, services, addresses); err != nil {
-		return fmt.Errorf("failed to create emergency calls and SMP receptions: %w", err)
-	}
 	return nil
 }
 
-func parseDate(dateStr string) time.Time {
-	t, err := time.Parse("2006-01-02", dateStr)
-	if err != nil {
-		panic(fmt.Sprintf("invalid date format: %s", dateStr))
+// seed/receptions.go
+func seedReceptions(db *gorm.DB) error {
+	var patients []entities.Patient
+	var specializations []entities.Specialization
+
+	if err := db.Find(&patients).Error; err != nil {
+		return fmt.Errorf("failed to get patients: %w", err)
 	}
-	return t
+
+	if err := db.Find(&specializations).Error; err != nil {
+		return fmt.Errorf("failed to get specializations: %w", err)
+	}
+
+	for i, patient := range patients {
+		specCount := 2
+		if i%2 == 0 {
+			specCount = 3
+		}
+
+		for j := 0; j < specCount && j < len(specializations); j++ {
+			specIndex := (i + j) % len(specializations)
+			specialization := specializations[specIndex]
+
+			var rawData []byte
+			var rawSchema []byte
+
+			switch specialization.Title {
+			case "Травматолог":
+				rawData = []byte(`{
+                    "injury_type": "Перелом",
+                    "injury_mechanism": "Падение с высоты",
+                    "localization": "Правая нога, большеберцовая кость",
+                    "xray_results": "Перелом без смещения",
+                    "fracture": true,
+                    "treatment_plan": "Иммобилизация, повторный осмотр через 2 недели",
+                    "surgeon_name": "Др. Сидоров А.В.",
+                    "operation_date": "2024-02-15"
+                }`)
+
+				rawSchema = []byte(`[
+                    {
+                        "name": "injury_type",
+                        "type": "string",
+                        "required": true,
+                        "description": "Тип травмы",
+                        "example": "Перелом",
+                        "min_length": 1,
+                        "max_length": 100
+                    },
+                    {
+                        "name": "injury_mechanism",
+                        "type": "string",
+                        "required": true,
+                        "description": "Механизм получения травмы",
+                        "min_length": 1
+                    },
+                    {
+                        "name": "fracture",
+                        "type": "boolean",
+                        "required": true,
+                        "description": "Наличие перелома"
+                    },
+                    {
+                        "name": "treatment_plan",
+                        "type": "string",
+                        "required": true,
+                        "description": "План лечения"
+                    },
+                    {
+                        "name": "surgeon_name",
+                        "type": "string",
+                        "required": false,
+                        "description": "Имя хирурга"
+                    }
+                ]`)
+
+			case "Невролог":
+				rawData = []byte(`{
+                    "mental_status": "ясное сознание",
+                    "motor_function": "слабость в правой руке",
+                    "diagnosis": "ДЦП",
+                    "treatment_plan": "физиотерапия, ЛФК",
+                    "eeg_results": "норма",
+                    "mri_scan": "есть отклонения"
+                }`)
+
+				rawSchema = []byte(`[
+                    {
+                        "name": "mental_status",
+                        "type": "string",
+                        "required": true,
+                        "description": "Сознание пациента"
+                    },
+                    {
+                        "name": "diagnosis",
+                        "type": "string",
+                        "required": true,
+                        "description": "Диагноз"
+                    },
+                    {
+                        "name": "eeg_results",
+                        "type": "string",
+                        "required": false,
+                        "description": "Результаты ЭЭГ"
+                    }
+                ]`)
+
+			case "Психиатр":
+				rawData = []byte(`{
+                    "mental_status": "ясное сознание",
+                    "mood": "подавленное",
+                    "risk_assessment": {
+                        "suicide": false,
+                        "self_harm": false,
+                        "violence": false
+                    },
+                    "diagnosis_icd": "F32.0",
+                    "therapy_plan": "Психотерапия"
+                }`)
+
+				rawSchema = []byte(`[
+                    {
+                        "name": "mental_status",
+                        "type": "string",
+                        "required": true,
+                        "description": "Психическое состояние"
+                    },
+                    {
+                        "name": "mood",
+                        "type": "string",
+                        "required": true,
+                        "description": "Настроение"
+                    },
+                    {
+                        "name": "risk_assessment",
+                        "type": "object",
+                        "required": true,
+                        "description": "Оценка рисков"
+                    }
+                ]`)
+
+			default:
+				rawData = []byte(`{
+                    "complaints": "общие жалобы",
+                    "diagnosis": "наблюдение",
+                    "recommendations": "наблюдение у специалиста"
+                }`)
+
+				rawSchema = []byte(`[
+                    {
+                        "name": "complaints",
+                        "type": "string",
+                        "required": true,
+                        "description": "Жалобы пациента"
+                    },
+                    {
+                        "name": "diagnosis",
+                        "type": "string",
+                        "required": true,
+                        "description": "Диагноз"
+                    }
+                ]`)
+			}
+
+			var jsonb pgtype.JSONB
+			if err := jsonb.Set(rawData); err != nil {
+				return fmt.Errorf("failed to set JSONB: %w", err)
+			}
+
+			reception := &entities.Reception{
+				PatientID:          patient.ID,
+				SpecializationID:   specialization.ID,
+				IsCompleted:        i%3 != 0,
+				SpecializationData: jsonb,
+				CustomFieldsSchema: rawSchema,
+				CreatedAt:          time.Now().Add(-time.Duration(i*24) * time.Hour),
+				UpdatedAt:          time.Now().Add(-time.Duration(i*12) * time.Hour),
+			}
+
+			if err := db.Create(reception).Error; err != nil {
+				if !strings.Contains(err.Error(), "duplicate") &&
+					!strings.Contains(err.Error(), "idx_patient_specialization") {
+					return fmt.Errorf("failed to create reception: %w", err)
+				}
+			}
+		}
+	}
+
+	return nil
 }
 
-// Временно, для теста
+// helpers.go
 func hashPassword(password string) string {
-	hashed, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		panic(fmt.Sprintf("failed to hash password: %v", err))
-	}
-	return string(hashed)
-}
-
-// 7. Создаем обычные приемы в больнице с детализированными JSONB данными
-func createHospitalReceptions(db *gorm.DB,
-	doctors []*entities.Doctor,
-	patients []*entities.Patient,
-	dates []time.Time,
-	statuses []entities.HospitalReceptionStatus,
-	addresses []string) error {
-
-	for i := 0; i < 50; i++ {
-		doctor := doctors[i%len(doctors)]
-		patient := patients[i%len(patients)]
-		date := dates[i%len(dates)]
-		hour := 9 + i%8
-		date = date.Add(time.Hour * time.Duration(hour))
-
-		// Создаем специализированные данные в зависимости от специализации врача
-		var specDocument entities.SpecializationDataDocument
-
-		switch doctor.Specialization.Title {
-		case "Невролог":
-			neuroData := entities.NeurologistData{
-				Reflexes: map[string]string{
-					"knee":    []string{"норма", "повышен", "снижен"}[rand.Intn(3)],
-					"biceps":  []string{"норма", "повышен", "снижен"}[rand.Intn(3)],
-					"plantar": []string{"норма", "патологический"}[rand.Intn(2)],
-				},
-				MuscleStrength: map[string]int{
-					"right_arm": 3 + rand.Intn(3),
-					"left_arm":  3 + rand.Intn(3),
-				},
-				Sensitivity:      []string{"норма", "гипестезия", "гиперстезия"}[rand.Intn(3)],
-				CoordinationTest: []string{"норма", "атаксия", "дисметрия"}[rand.Intn(3)],
-				Gait:             []string{"нормальная", "атактическая", "спастическая"}[rand.Intn(3)],
-				Diagnosis:        []string{"Остеохондроз", "ДЭП", "Последствия ОНМК"}[rand.Intn(3)],
-				Recommendations:  "МРТ головного мозга, консультация сосудистого хирурга",
-			}
-			specDocument = neuroData.ToDocumentWithValues()
-
-		case "Травматолог":
-			injuryType := []string{"перелом", "ушиб", "растяжение", "вывих"}[rand.Intn(4)]
-			traumaData := entities.TraumatologistData{
-				InjuryType:      injuryType,
-				InjuryMechanism: []string{"падение", "ДТП", "спортивная травма", "бытовая травма"}[rand.Intn(4)],
-				Localization:    []string{"кисть", "плечо", "голень", "позвоночник"}[rand.Intn(4)],
-				XRayResults:     fmt.Sprintf("%s не обнаружен", injuryType),
-				Fracture:        injuryType == "перелом",
-				Dislocation:     injuryType == "вывих",
-				Sprain:          injuryType == "растяжение",
-				TreatmentPlan:   []string{"гипс", "фиксатор", "операция", "физиотерапия"}[rand.Intn(4)],
-			}
-			specDocument = traumaData.ToDocumentWithValues()
-
-		case "Психиатр":
-			risk := rand.Intn(2) == 1
-			psychData := entities.PsychiatristData{
-				MentalStatus:   []string{"ясное", "помраченное", "делирий"}[rand.Intn(3)],
-				Mood:           []string{"нормальное", "депрессивное", "эйфоричное"}[rand.Intn(3)],
-				ThoughtProcess: []string{"логичное", "разорванное", "замедленное"}[rand.Intn(3)],
-				RiskAssessment: struct {
-					Suicide  bool `json:"suicide"`
-					SelfHarm bool `json:"self_harm"`
-					Violence bool `json:"violence"`
-				}{
-					Suicide:  risk,
-					SelfHarm: risk,
-					Violence: rand.Intn(2) == 1,
-				},
-				DiagnosisICD: fmt.Sprintf("F%02d.%d", 20+rand.Intn(30), rand.Intn(5)),
-				TherapyPlan:  []string{"амбулаторное наблюдение", "стационар", "медикаментозная терапия"}[rand.Intn(3)],
-			}
-			specDocument = psychData.ToDocumentWithValues()
-
-		case "Уролог":
-			uroData := entities.UrologistData{
-				Complaints: []string{"боли", "дизурия", "гематурия", "отеки"},
-				Urinalysis: struct {
-					Color        string `json:"color"`
-					Transparency string `json:"transparency"`
-					Protein      string `json:"protein"`
-					Glucose      string `json:"glucose"`
-					Leukocytes   string `json:"leukocytes"`
-					Erythrocytes string `json:"erythrocytes"`
-				}{
-					Color:      []string{"светло-желтый", "темный", "мутный"}[rand.Intn(3)],
-					Protein:    []string{"отсутствует", "следы", "1+"}[rand.Intn(3)],
-					Leukocytes: []string{"0-1", "10-15", "50-100"}[rand.Intn(3)],
-				},
-				Diagnosis: []string{"Цистит", "Пиелонефрит", "МКБ"}[rand.Intn(3)],
-				Treatment: "Антибиотикотерапия, обильное питье",
-			}
-			specDocument = uroData.ToDocumentWithValues()
-
-		case "Проктолог":
-			proctoData := entities.ProctologistData{
-				Complaints:         []string{"боль", "кровотечение", "зуд"},
-				DigitalExamination: []string{"без патологии", "геморроидальные узлы", "трещина"}[rand.Intn(3)],
-				Hemorrhoids:        rand.Intn(2) == 1,
-				AnalFissure:        rand.Intn(2) == 1,
-				Diagnosis:          []string{"Геморрой", "Анальная трещина", "Проктит"}[rand.Intn(3)],
-				Recommendations:    "Венотоники, ректальные свечи",
-			}
-			specDocument = proctoData.ToDocumentWithValues()
-
-		case "Оториноларинголог":
-			entData := entities.OtolaryngologistData{
-				Complaints:        []string{"боль в горле", "заложенность носа", "снижение слуха"},
-				NoseExamination:   []string{"норма", "отек", "гнойное отделяемое"}[rand.Intn(3)],
-				ThroatExamination: []string{"гиперемия", "налеты", "норма"}[rand.Intn(3)],
-				Diagnosis:         []string{"Острый фарингит", "Отит", "Гайморит"}[rand.Intn(3)],
-				Recommendations:   "Антисептики, антибиотики местно",
-			}
-			specDocument = entData.ToDocumentWithValues()
-
-		case "Аллерголог":
-			allergoData := entities.AllergologistData{
-				Complaints:      []string{"зуд кожи", "ринит", "конъюнктивит"},
-				AllergenHistory: []string{"пыльца", "домашняя пыль", "пищевые аллергены"}[rand.Intn(3)],
-				SkinTests: []struct {
-					Allergen string `json:"allergen"`
-					Reaction string `json:"reaction"`
-				}{
-					{Allergen: "пыльца", Reaction: []string{"+", "++", "-"}[rand.Intn(3)]},
-				},
-				IgELevel:        float32(50 + rand.Intn(300)),
-				Immunotherapy:   rand.Intn(2) == 1,
-				Diagnosis:       []string{"Аллергический ринит", "Атопический дерматит"}[rand.Intn(2)],
-				Recommendations: "Избегать аллергенов, СЗП",
-			}
-			specDocument = allergoData.ToDocumentWithValues()
-
-		default:
-			// Для неизвестных специализаций создаем базовый документ
-			specDocument = entities.SpecializationDataDocument{
-				DocumentType: "general",
-				Fields: []entities.CustomField{
-					{
-						Name:         "notes",
-						Type:         "string",
-						Required:     false,
-						Description:  "Заметки",
-						DefaultValue: "",
-						Value:        "Проведен общий осмотр",
-					},
-					{
-						Name:         "diagnosis",
-						Type:         "string",
-						Required:     false,
-						Description:  "Диагноз",
-						DefaultValue: "",
-						Value:        "Практически здоров",
-					},
-					{
-						Name:         "recommendations",
-						Type:         "string",
-						Required:     false,
-						Description:  "Рекомендации",
-						DefaultValue: "",
-						Value:        "Плановое наблюдение",
-					},
-				},
-			}
-		}
-
-		// Преобразуем документ в JSON для сохранения
-		jsonData, err := json.Marshal(specDocument)
-		if err != nil {
-			return fmt.Errorf("failed to marshal specialization data: %w", err)
-		}
-
-		// Определяем диагноз и рекомендации из специализированных данных
-		diagnosis := "Общий диагноз"
-		recommendations := "Общие рекомендации"
-
-		// Ищем диагноз и рекомендации в полях
-		for _, field := range specDocument.Fields {
-			if field.Name == "diagnosis" && field.Value != nil {
-				if diagStr, ok := field.Value.(string); ok && diagStr != "" {
-					diagnosis = diagStr
-				}
-			}
-			if field.Name == "recommendations" && field.Value != nil {
-				if recStr, ok := field.Value.(string); ok && recStr != "" {
-					recommendations = recStr
-				}
-			}
-		}
-
-		reception := entities.ReceptionHospital{
-			DoctorID:             doctor.ID,
-			PatientID:            patient.ID,
-			Date:                 date,
-			Diagnosis:            diagnosis,
-			Recommendations:      recommendations,
-			Status:               statuses[i%len(statuses)],
-			Address:              addresses[i%len(addresses)],
-			CachedSpecialization: doctor.Specialization.Title,
-			SpecializationData: pgtype.JSONB{
-				Bytes:  jsonData,
-				Status: pgtype.Present,
-			},
-		}
-
-		if err := db.Create(&reception).Error; err != nil {
-			return fmt.Errorf("failed to create hospital reception %d: %w", i, err)
-		}
-	}
-
-	return nil
-}
-
-// createEmergencyCallsAndSMPReceptions создает экстренные вызовы и приемы SMP
-// с детализированными JSONB данными, включая описание полей.
-func createEmergencyCallsAndSMPReceptions(
-	db *gorm.DB,
-	doctors []*entities.Doctor,
-	patients []*entities.Patient,
-	services []*entities.MedService,
-	addresses []string,
-) error {
-	for i := 1; i < 50; i++ {
-		doctor := doctors[i%len(doctors)]
-		patient := patients[i%len(patients)]
-		// var priority *uint
-		// if i%5 == 0 {
-		// 	priority = nil
-		// } else {
-		// 	p := uint(i)
-		// 	priority = &p
-		// }
-
-		// Создаем экстренный вызов с уникальным возрастающим приоритетом
-		emergencyCall := entities.EmergencyCall{
-			DoctorID:  doctor.ID,
-			Emergency: i%3 == 0,
-			// Priority:  priority,
-			Address: addresses[i%len(addresses)],
-			Phone:   fmt.Sprintf("+7915%07d", 2000000+i),
-		}
-
-		if err := db.Create(&emergencyCall).Error; err != nil {
-			return fmt.Errorf("failed to create emergency call %d: %w", i, err)
-		}
-
-		// Создаем специализированные данные для приемов SMP
-		// Используем entities.SpecializationDataDocument для включения описания полей
-		var specDocument entities.SpecializationDataDocument
-		log.Printf("DEBUG: Creating SMP reception. Specialization title: '%s'", doctor.Specialization.Title)
-
-		switch doctor.Specialization.Title {
-		case "Невролог":
-			data := entities.NeurologistData{
-				Reflexes: map[string]string{
-					"knee":   []string{"норма", "гиперрефлексия", "гипорефлексия"}[rand.Intn(3)],
-					"biceps": []string{"норма", "гиперрефлексия", "гипорефлексия"}[rand.Intn(3)],
-				},
-				MuscleStrength: map[string]int{
-					"right_arm": 3 + rand.Intn(3),
-					"left_arm":  3 + rand.Intn(3),
-				},
-				Sensitivity:      []string{"сохранена", "гипестезия", "анестезия"}[rand.Intn(3)],
-				CoordinationTest: []string{"норма", "атаксия", "дисметрия"}[rand.Intn(3)],
-				Gait:             []string{"нормальная", "атактическая", "спастическая"}[rand.Intn(3)],
-				Speech:           []string{"норма", "дизартрия", "афазия"}[rand.Intn(3)],
-				Memory:           []string{"сохранена", "снижена", "грубо нарушена"}[rand.Intn(3)],
-				CranialNerves:    "Без патологии",
-				Complaints:       []string{"головная боль", "головокружение", "слабость в конечностях"},
-				Diagnosis:        []string{"ОНМК", "Эпилептический приступ", "Мигрень"}[rand.Intn(3)],
-				Recommendations:  "Экстренная госпитализация",
-			}
-			specDocument = data.ToDocumentWithValues()
-
-		case "Травматолог":
-			injuryType := []string{"перелом", "ушиб", "рана", "ожог"}[rand.Intn(4)]
-			data := entities.TraumatologistData{
-				InjuryType:       injuryType,
-				InjuryMechanism:  []string{"падение", "ДТП", "производственная травма", "спорт"}[rand.Intn(4)],
-				Localization:     []string{"верхняя конечность", "нижняя конечность", "голова", "грудная клетка"}[rand.Intn(4)],
-				XRayResults:      "Требуется выполнение",
-				CTResults:        "Не выполнялось",
-				MRIResults:       "Не выполнялось",
-				Fracture:         rand.Intn(2) == 1,
-				Dislocation:      rand.Intn(2) == 1,
-				Sprain:           rand.Intn(2) == 1,
-				Contusion:        rand.Intn(2) == 1,
-				WoundDescription: []string{"чистая", "загрязненная", "инфицированная"}[rand.Intn(3)],
-				TreatmentPlan:    []string{"гипс", "операция", "консервативное лечение"}[rand.Intn(3)],
-			}
-			specDocument = data.ToDocumentWithValues()
-
-		case "Психиатр":
-			data := entities.PsychiatristData{
-				MentalStatus:   []string{"ясное", "помраченное", "ступор", "кома"}[rand.Intn(4)],
-				Mood:           []string{"нормальное", "депрессивное", "эйфоричное", "дисфоричное"}[rand.Intn(4)],
-				Affect:         []string{"адекватный", "неадекватный", "суженный", "лабильный"}[rand.Intn(4)],
-				ThoughtProcess: []string{"нормальный", "ускоренный", "замедленный", "разорванный"}[rand.Intn(4)],
-				ThoughtContent: "Без бредовых идей",
-				Perception:     "Без галлюцинаций",
-				Cognition:      []string{"сохранено", "снижено", "грубо нарушено"}[rand.Intn(3)],
-				Insight:        []string{"полное", "частичное", "отсутствует"}[rand.Intn(3)],
-				Judgment:       []string{"сохранено", "снижено", "нарушено"}[rand.Intn(3)],
-				RiskAssessment: struct {
-					Suicide  bool `json:"suicide"`
-					SelfHarm bool `json:"self_harm"`
-					Violence bool `json:"violence"`
-				}{
-					Suicide:  rand.Intn(2) == 1,
-					SelfHarm: rand.Intn(2) == 1,
-					Violence: rand.Intn(2) == 1,
-				},
-				DiagnosisICD: fmt.Sprintf("F%02d.%d", 20+rand.Intn(30), rand.Intn(5)),
-				TherapyPlan:  []string{"госпитализация", "амбулаторное лечение", "наблюдение"}[rand.Intn(3)],
-			}
-			specDocument = data.ToDocumentWithValues()
-
-		case "Уролог":
-			data := entities.UrologistData{
-				Complaints: []string{"боль", "дизурия", "гематурия", "отеки"}, // Исправлено: были дубликаты
-				Urinalysis: struct {
-					Color        string `json:"color"`
-					Transparency string `json:"transparency"`
-					Protein      string `json:"protein"`
-					Glucose      string `json:"glucose"`
-					Leukocytes   string `json:"leukocytes"`
-					Erythrocytes string `json:"erythrocytes"`
-				}{
-					Color:        []string{"соломенный", "темный", "красный"}[rand.Intn(3)],
-					Transparency: []string{"прозрачная", "мутная"}[rand.Intn(2)],
-					Protein:      []string{"отсутствует", "следы", "1+"}[rand.Intn(3)],
-					Leukocytes:   []string{"0-1", "10-15", "50-100"}[rand.Intn(3)],
-				},
-				Ultrasound:          "Требуется выполнение",
-				ProstateExamination: "Не выполнялось",
-				Diagnosis:           []string{"МКБ", "Пиелонефрит", "Цистит"}[rand.Intn(3)],
-				Treatment:           []string{"антибиотики", "спазмолитики", "операция"}[rand.Intn(3)],
-			}
-			specDocument = data.ToDocumentWithValues()
-
-		case "Оториноларинголог":
-			data := entities.OtolaryngologistData{
-				Complaints:         []string{"боль в горле", "заложенность носа", "снижение слуха", "головокружение"},
-				NoseExamination:    []string{"норма", "отек", "гнойное отделяемое"}[rand.Intn(3)],
-				ThroatExamination:  []string{"норма", "гиперемия", "налеты"}[rand.Intn(3)],
-				EarExamination:     []string{"норма", "воспаление", "серная пробка"}[rand.Intn(3)],
-				HearingTest:        []string{"норма", "снижен", "значительно снижен"}[rand.Intn(3)],
-				Audiometry:         "Не выполнялась",
-				VestibularFunction: []string{"норма", "нарушена"}[rand.Intn(2)],
-				Endoscopy:          "Не выполнялась",
-				Diagnosis:          []string{"Отит", "Фарингит", "Синусит"}[rand.Intn(3)],
-				Recommendations:    []string{"антибиотики", "промывание", "физиотерапия"}[rand.Intn(3)],
-			}
-			specDocument = data.ToDocumentWithValues()
-
-		case "Проктолог":
-			data := entities.ProctologistData{
-				Complaints:         []string{"боль", "кровотечение", "зуд", "выделения"},
-				DigitalExamination: []string{"без патологии", "геморроидальные узлы", "трещина", "новообразование"}[rand.Intn(4)],
-				Rectoscopy:         "Не выполнялась",
-				Colonoscopy:        "Не выполнялась",
-				Hemorrhoids:        rand.Intn(2) == 1,
-				AnalFissure:        rand.Intn(2) == 1,
-				Paraproctitis:      rand.Intn(2) == 1,
-				Tumor:              rand.Intn(10) == 1, // 10% вероятность
-				Diagnosis:          []string{"Геморрой", "Анальная трещина", "Проктит"}[rand.Intn(3)],
-				Recommendations:    []string{"консервативное лечение", "операция", "наблюдение"}[rand.Intn(3)],
-			}
-			specDocument = data.ToDocumentWithValues()
-
-		case "Аллерголог":
-			data := entities.AllergologistData{
-				Complaints:      []string{"сыпь", "зуд", "отек", "затруднение дыхания"},
-				AllergenHistory: []string{"пищевая", "бытовая", "пыльцевая", "лекарственная"}[rand.Intn(4)] + " аллергия",
-				SkinTests: []struct {
-					Allergen string `json:"allergen"`
-					Reaction string `json:"reaction"`
-				}{
-					{Allergen: "пыльца", Reaction: []string{"+", "++", "-"}[rand.Intn(3)]},
-					// Можно добавить больше тестов при необходимости
-				},
-				IgELevel:        float32(100 + rand.Intn(500)),
-				Immunotherapy:   rand.Intn(2) == 1,
-				Diagnosis:       []string{"Поллиноз", "Крапивница", "Отек Квинке"}[rand.Intn(3)],
-				Recommendations: []string{"антигистаминные", "элиминационная диета", "АСИТ"}[rand.Intn(3)],
-			}
-			specDocument = data.ToDocumentWithValues()
-
-		default:
-			// Для неизвестных специализаций создаем базовый документ с описанием полей
-			specDocument = entities.SpecializationDataDocument{
-				DocumentType: "general_smp",
-				Fields: []entities.CustomField{
-					{
-						Name:         "emergency_notes",
-						Type:         "string",
-						Required:     false,
-						Description:  "Заметки по неотложной помощи",
-						DefaultValue: "",
-						Value:        "Неотложная помощь оказана",
-					},
-					{
-						Name:         "diagnosis",
-						Type:         "string",
-						Required:     false,
-						Description:  "Диагноз",
-						DefaultValue: "",
-						Value:        "Неотложное состояние",
-					},
-					{
-						Name:         "recommendations",
-						Type:         "string",
-						Required:     false,
-						Description:  "Рекомендации",
-						DefaultValue: "",
-						Value:        "Госпитализация",
-					},
-				},
-			}
-		}
-
-		// Преобразуем документ в JSON для сохранения
-		smpJsonData, err := json.Marshal(specDocument)
-		if err != nil {
-			log.Printf("Error marshaling specialization data for SMP reception %d: %v. Using default data.", i, err)
-			// В случае ошибки создаем простой JSON с базовыми данными
-			defaultData := map[string]interface{}{
-				"error":           "marshal_failed",
-				"diagnosis":       "Ошибка формирования данных",
-				"recommendations": "Обратитесь к администратору",
-			}
-			smpJsonData, _ = json.Marshal(defaultData)
-		}
-
-		// // Определяем диагноз и рекомендации из специализированных данных
-		// diagnosis := "Неотложное состояние" // Значения по умолчанию
-		// recommendations := "Госпитализация"
-
-		// // Извлекаем диагноз и рекомендации из полей документа для согласованности
-		// for _, field := range specDocument.Fields {
-		// 	if field.Name == "diagnosis" && field.Value != nil {
-		// 		if diagStr, ok := field.Value.(string); ok && diagStr != "" {
-		// 			diagnosis = diagStr
-		// 		}
-		// 	}
-		// 	if field.Name == "recommendations" && field.Value != nil {
-		// 		if recStr, ok := field.Value.(string); ok && recStr != "" {
-		// 			recommendations = recStr
-		// 		}
-		// 	}
-		// }
-
-		// Создаем прием SMP
-		reception := &entities.ReceptionSMP{
-			EmergencyCallID: emergencyCall.ID,
-			DoctorID:        doctor.ID,
-			PatientID:       patient.ID,
-			// Diagnosis:            diagnosis,
-			// Recommendations:      recommendations,
-			CachedSpecialization: doctor.Specialization.Title,
-			SpecializationData: pgtype.JSONB{
-				Bytes:  smpJsonData,
-				Status: pgtype.Present,
-			},
-		}
-
-		if err := db.Create(reception).Error; err != nil {
-			return fmt.Errorf("failed to create SMP reception %d: %w", i, err)
-		}
-
-		// Добавляем медуслуги (каждому третьему приему)
-		if i%2 == 0 && len(services) > 0 {
-			service := services[rand.Intn(len(services))]
-			if err := db.Model(reception).Association("MedServices").Append(service); err != nil {
-				// Логируем ошибку, но не прерываем весь процесс
-				log.Printf("Warning: failed to add service to SMP reception %d: %v", i, err)
-				// return fmt.Errorf("failed to add service to SMP reception %d: %w", i, err)
-			}
-		}
-	}
-	return nil
+	hash, _ := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	return string(hash)
 }

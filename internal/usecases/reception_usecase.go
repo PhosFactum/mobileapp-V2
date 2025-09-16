@@ -344,3 +344,97 @@ func NewReceptionUsecase(repo interfaces.ReceptionRepository, s interfaces.Servi
 // 	return reception, nil
 
 // }
+
+// Полезная валидация
+
+// // ValidateReceptionData - валидация данных приема по схеме
+// func (s *SchemaService) ValidateReceptionData(rawData []byte, specializationID uint) error {
+//     // Получаем специализацию
+//     var specialization entities.Specialization
+//     if err := s.db.First(&specialization, specializationID).Error; err != nil {
+//         return fmt.Errorf("specialization not found: %w", err)
+//     }
+
+//     // Получаем схему
+//     schema, err := s.GetSpecializationSchema(specialization.Title)
+//     if err != nil {
+//         return fmt.Errorf("failed to get schema: %w", err)
+//     }
+
+//     // Десериализуем данные
+//     var data map[string]interface{}
+//     if err := json.Unmarshal(rawData, &data); err != nil {
+//         return fmt.Errorf("invalid JSON data: %w", err)
+//     }
+
+//     // Валидируем по схеме
+//     for _, field := range schema {
+//         value, exists := data[field.Name]
+
+//         // Проверка обязательных полей
+//         if field.Required && !exists {
+//             return fmt.Errorf("required field '%s' is missing", field.Name)
+//         }
+
+//         if exists {
+//             // Проверка типов
+//             if err := validateFieldType(value, field.Type); err != nil {
+//                 return fmt.Errorf("field '%s': %w", field.Name, err)
+//             }
+
+//             // Проверка ограничений
+//             if err := validateFieldConstraints(value, field); err != nil {
+//                 return fmt.Errorf("field '%s': %w", field.Name, err)
+//             }
+//         }
+//     }
+
+//     return nil
+// }
+
+// // validateFieldType - проверка типа поля
+// func validateFieldType(value interface{}, expectedType string) error {
+//     switch expectedType {
+//     case "string":
+//         if _, ok := value.(string); !ok {
+//             return fmt.Errorf("expected string, got %T", value)
+//         }
+//     case "boolean":
+//         if _, ok := value.(bool); !ok {
+//             return fmt.Errorf("expected boolean, got %T", value)
+//         }
+//     case "number":
+//         switch value.(type) {
+//         case float64, float32, int, int32, int64:
+//             // OK
+//         default:
+//             return fmt.Errorf("expected number, got %T", value)
+//         }
+//     }
+//     return nil
+// }
+
+// // validateFieldConstraints - проверка ограничений поля
+// func validateFieldConstraints(value interface{}, field entities.CustomField) error {
+//     switch field.Type {
+//     case "string":
+//         if str, ok := value.(string); ok {
+//             if field.MinLength != nil && len(str) < *field.MinLength {
+//                 return fmt.Errorf("string too short, min length: %d", *field.MinLength)
+//             }
+//             if field.MaxLength != nil && len(str) > *field.MaxLength {
+//                 return fmt.Errorf("string too long, max length: %d", *field.MaxLength)
+//             }
+//         }
+//     case "array":
+//         if arr, ok := value.([]interface{}); ok {
+//             if field.MinItems != nil && len(arr) < *field.MinItems {
+//                 return fmt.Errorf("array too small, min items: %d", *field.MinItems)
+//             }
+//             if field.MaxItems != nil && len(arr) > *field.MaxItems {
+//                 return fmt.Errorf("array too large, max items: %d", *field.MaxItems)
+//             }
+//         }
+//     }
+//     return nil
+// }

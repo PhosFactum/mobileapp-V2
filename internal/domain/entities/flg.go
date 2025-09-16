@@ -2,7 +2,7 @@ package entities
 
 import "time"
 
-type FlG struct {
+type Flg struct {
 	ID        uint      `gorm:"primarykey" json:"id" example:"1"`
 	CreatedAt time.Time `json:"-"`
 

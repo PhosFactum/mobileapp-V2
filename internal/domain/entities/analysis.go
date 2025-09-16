@@ -32,14 +32,13 @@ type AnalysisOrderItem struct {
 
 // AnalysisOrder - направление на анализы (промежуточная структура)
 type AnalysisOrder struct {
-	ID          uint   `gorm:"primarykey" json:"id"`
-	OrderNumber string `gorm:"not null;uniqueIndex" json:"order_number"` // Номер направления (уникальный)
+	ID          uint      `gorm:"primarykey" json:"id"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+	OrderNumber string    `gorm:"not null;uniqueIndex" json:"order_number"` // Номер направления (уникальный)
+	TotalAmount uint      `gorm:"not null" json:"total_amount"`             // Сумма всех анализов в направлении
 
-	TotalAmount uint `gorm:"not null" json:"total_amount"` // Сумма всех анализов в направлении
+	PatientID *uint `gorm:"not null;index" json:"patient_id"`
 
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-
-	// Связанные анализы
 	OrderItems []AnalysisOrderItem `gorm:"foreignKey:OrderID" json:"order_items"`
 }

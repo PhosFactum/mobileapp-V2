@@ -17,6 +17,7 @@ type Repository interface {
 	OrganizationRepository
 	PatientGroupRepository
 	ReceptionRepository
+	VaccineRepository
 }
 
 type PatientGroupRepository interface {
@@ -61,11 +62,11 @@ type PersonalInfoRepository interface {
 
 // updated to match the new structure
 type ReceptionRepository interface {
-	CreateReceptionHospital(reception entities.Reception) error
-	UpdateReception(id uint, updateMap map[string]interface{}) (uint, error)
-	DeleteReception(id uint) error
-	GetReceptionByID(id uint) (entities.Reception, error)
-	GetReceptionByPatientID(patientID uint) ([]entities.Reception, error)
+	// 	CreateReceptionHospital(reception entities.Reception) error
+	// 	UpdateReception(id uint, updateMap map[string]interface{}) (uint, error)
+	// 	DeleteReception(id uint) error
+	// 	GetReceptionByID(id uint) (entities.Reception, error)
+	// 	GetReceptionByPatientID(patientID uint) ([]entities.Reception, error)
 }
 
 // updated to match the new structured
@@ -78,6 +79,7 @@ type PatientRepository interface {
 	GetPatientsByFullName(name string) ([]entities.Patient, error)
 	GetPatientByIDWithTx(tx *gorm.DB, id uint) (*entities.Patient, error)
 	UpdatePatientWithTx(tx *gorm.DB, id uint, updateMap map[string]interface{}) (uint, error)
+	GetPatientsByGroup(groupID uint, page, pageSize int) ([]entities.Patient, int64, error)
 }
 
 // updated to match the new structure
@@ -96,4 +98,10 @@ type ContactInfoRepository interface {
 
 type AuthRepository interface {
 	GetByLogin(ctx context.Context, login string) (*entities.Doctor, error)
+}
+
+type VaccineRepository interface {
+}
+
+type AnalysisRepository interface {
 }

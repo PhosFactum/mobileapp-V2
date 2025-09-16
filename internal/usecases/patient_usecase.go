@@ -47,25 +47,25 @@ func (u *PatientUsecase) CreatePatient(input *models.CreatePatientRequest) (enti
 	}
 
 	// 2. Создаем ContactInfo и PersonalInfo с привязкой к patientID
-	contactInfo := entities.ContactInfo{}
-	contactID, err := u.contactRepo.CreateContactInfo(contactInfo)
-	if err != nil {
-		return entities.Patient{}, errors.NewAppError(errors.InternalServerErrorCode, "Не удалось создать контактную информацию", err, false)
-	}
+	// contactInfo := entities.ContactInfo{}
+	// contactID, err := u.contactRepo.CreateContactInfo(contactInfo)
+	// if err != nil {
+	// 	return entities.Patient{}, errors.NewAppError(errors.InternalServerErrorCode, "Не удалось создать контактную информацию", err, false)
+	// }
 
-	personalInfo := entities.PersonalInfo{
-		PatientID: patientID,
-	}
-	personalID, err := u.personalRepo.CreatePersonalInfo(personalInfo)
-	if err != nil {
-		return entities.Patient{}, errors.NewAppError(errors.InternalServerErrorCode, "Не удалось создать персональные данные", err, false)
-	}
+	// personalInfo := entities.PersonalInfo{
+	// 	PatientID: patientID,
+	// }
+	// personalID, err := u.personalRepo.CreatePersonalInfo(personalInfo)
+	// if err != nil {
+	// 	return entities.Patient{}, errors.NewAppError(errors.InternalServerErrorCode, "Не удалось создать персональные данные", err, false)
+	// }
 
 	// 3. Обновляем пациента, добавляя ID контактной и персональной информации
-	_, err = u.repo.UpdatePatient(patientID, map[string]interface{}{
-		"ContactInfoID":  contactID,
-		"PersonalInfoID": personalID,
-	})
+	// _, err = u.repo.UpdatePatient(patientID, map[string]interface{}{
+	// 	"ContactInfoID":  contactID,
+	// 	"PersonalInfoID": personalID,
+	// })
 	if err != nil {
 		return entities.Patient{}, errors.NewAppError(errors.InternalServerErrorCode, "Не удалось обновить пациента", err, false)
 	}
