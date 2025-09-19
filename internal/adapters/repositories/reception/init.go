@@ -1,4 +1,4 @@
-package receptionHospital
+package reception
 
 import (
 	"github.com/AlexanderMorozov1919/mobileapp/internal/interfaces"

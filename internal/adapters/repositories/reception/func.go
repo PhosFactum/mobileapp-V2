@@ -1,4 +1,4 @@
-package receptionHospital
+package reception
 
 // // GetDoctorReceptions - получение приемов доступных доктору (по его специализациям)
 // func (r *ReceptionRepositoryImpl) GetDoctorReceptions(doctorID uint) ([]entities.Reception, error) {

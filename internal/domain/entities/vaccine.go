@@ -8,7 +8,7 @@ type Vaccine struct {
 
 	Date        time.Time `json:"date"`
 	IsCompleted bool      `gorm:"default:false" json:"is_completed"`
-	PatientID   *uint     `gorm:"index"`
+	PatientID   uint      `gorm:"index"`
 
 	// Булевые флаги определяют подтип формы
 	IsRefusal   bool `gorm:"default:false" json:"is_refusal"`

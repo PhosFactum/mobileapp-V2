@@ -4,7 +4,6 @@ import (
 	"time"
 )
 
-// Patient представляет информацию о пациенте
 type Patient struct {
 	ID        uint      `gorm:"primarykey" json:"id" example:"1"`
 	CreatedAt time.Time `json:"created_at"`
@@ -15,34 +14,32 @@ type Patient struct {
 	Position  string    `gorm:"not null" json:"position" example:"Прогер"`
 	Division  string    `gorm:"not null" json:"division" example:"Прогер"`
 
+	// ИСПРАВЛЕНО: Убираем обязательные поля, которые могут быть NULL
+	ExaminationTypeID *uint            `gorm:"index" json:"-"` // Может быть NULL
 	ExaminationType   *ExaminationType `gorm:"foreignKey:ExaminationTypeID" json:"-"`
-	ExaminationTypeID *uint            `gorm:"not null;" json:"-"`
 
+	ExaminationViewID *uint            `gorm:"index" json:"-"` // Может быть NULL
 	ExaminationView   *ExaminationView `gorm:"foreignKey:ExaminationViewID" json:"-"`
-	ExaminationViewID *uint            `gorm:"not null;" json:"-"`
 
+	HarmPointID *uint      `gorm:"index" json:"-"` // Может быть NULL
 	HarmPoint   *HarmPoint `gorm:"foreignKey:HarmPointID" json:"-"`
-	HarmPointID *uint      `gorm:"not null;" json:"-"`
 
+	PersonalInfoID *uint         `gorm:"index" json:"-"` // Может быть NULL
 	PersonalInfo   *PersonalInfo `gorm:"foreignKey:PersonalInfoID" json:"-"`
-	PersonalInfoID *uint         `gorm:"not null;" json:"-"`
 
+	ContactInfoID *uint        `gorm:"index" json:"-"` // Может быть NULL
 	ContactInfo   *ContactInfo `gorm:"foreignKey:ContactInfoID" json:"-"`
-	ContactInfoID *uint        `gorm:"not null;" json:"-"`
 
+	OrganizationID *uint         `gorm:"index" json:"organization_id,omitempty" example:"1"`
 	Organization   *Organization `gorm:"foreignKey:OrganizationID" json:"-"`
-	OrganizationID *uint         `gorm:";index" json:"organization_id,omitempty" example:"1"`
-
-	AnalysisOrder   *AnalysisOrder `gorm:"foreignKey:AnalysisOrderID" json:"-"`
-	AnalysisOrderID *uint          `gorm:"index" json:"analysis_order_id,omitempty" example:"1"`
 
 	FlgID *uint `gorm:"index" json:"-"`
 	Flg   *Flg  `gorm:"foreignKey:FlgID" json:"flg"`
 
 	Vaccines []Vaccine `gorm:"foreignKey:PatientID"`
 
-	PatientGroup   []PatientGroup   `gorm:"many2many:patients_patient_groups; not null;" json:"-"`
-	Specialization []Specialization `gorm:"many2many:patients_specializations; not null;" json:"-"`
+	PatientGroups   []PatientGroup   `gorm:"many2many:patients_patient_groups;" json:"-"`
+	Specializations []Specialization `gorm:"many2many:patients_specializations;" json:"-"`
 
 	Statistics *PatientStatistics `gorm:"foreignKey:PatientID" json:"statistics,omitempty"`
 }
@@ -69,7 +66,7 @@ type PersonalInfo struct {
 	SNILS     string `json:"snils" example:"123-456-789 00" rus:"СНИЛС"`
 	OMS       string `json:"oms" example:"1234567890123456" rus:"Полис ОМС"`
 
-	DocumentTypeID *uint         `gorm:"not null; index" json:"document_type_iD" example:"1"`
+	DocumentTypeID *uint         `gorm:"index" json:"document_type_iD" example:"1"`
 	DocumentType   *DocumentType `gorm:"foreignKey:DocumentTypeID" json:"-"`
 }
 

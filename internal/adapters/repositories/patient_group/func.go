@@ -1,4 +1,4 @@
-package patientgroup
+package patient_group
 
 import (
 	"github.com/AlexanderMorozov1919/mobileapp/internal/domain/entities"
