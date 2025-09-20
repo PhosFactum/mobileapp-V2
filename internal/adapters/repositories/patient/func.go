@@ -160,21 +160,6 @@ func (r *PatientRepositoryImpl) GetPatientsByFullName(name string) ([]entities.P
 	return patients, nil
 }
 
-func (r *PatientRepositoryImpl) GetPatientAllergiesByID(patientID uint) ([]entities.Allergy, error) {
-	op := "repo.Allergy.GetPatientAllergiesByID"
-
-	var patient entities.Patient
-	err := r.db.
-		Preload("Allergy").
-		First(&patient, patientID).Error
-
-	if err != nil {
-		return nil, errors.NewDBError(op, err)
-	}
-
-	return patient.Allergy, nil
-}
-
 func (r *PatientRepositoryImpl) GetAllPatients(page, count int, queryFilter string, queryOrder string, parameters []interface{}) ([]entities.Patient, int64, error) {
 	op := "repo.Patient.GetAllPatients"
 
@@ -208,6 +193,47 @@ func (r *PatientRepositoryImpl) GetAllPatients(page, count int, queryFilter stri
 	result := query.Find(&patients)
 	if result.Error != nil {
 		return nil, 0, errors.NewDBError(op, result.Error)
+	}
+
+	return patients, totalRecords, nil
+}
+
+func (r *PatientRepositoryImpl) GetPatientsByGroup(
+	groupID uint,
+	page, pageSize int,
+) ([]entities.Patient, int64, error) {
+	op := "repo.Patient.GetPatientsByGroupWithPagination"
+
+	// Базовый запрос
+	query := r.db.Model(&entities.Patient{}).
+		Joins("JOIN patients_patient_groups ppg ON ppg.patient_id = patients.id").
+		Where("ppg.patient_group_id = ?", groupID)
+
+	// Подсчитываем общее количество
+	var totalRecords int64
+	if err := query.Count(&totalRecords).Error; err != nil {
+		return nil, 0, errors.NewDBError(op, err)
+	}
+
+	// Применяем пагинацию
+	if page > 0 && pageSize > 0 {
+		offset := (page - 1) * pageSize
+		query = query.Offset(offset).Limit(pageSize)
+	}
+
+	// Сортировка и получение записей
+	var patients []entities.Patient
+	result := query.Order("patients.full_name").Find(&patients)
+	if result.Error != nil {
+		return nil, 0, errors.NewDBError(op, result.Error)
+	}
+
+	// Загружаем связанные данные для каждого пациента
+	for i := range patients {
+		r.db.Preload("PersonalInfo").
+			Preload("ContactInfo").
+			Preload("Flg").
+			First(&patients[i], patients[i].ID)
 	}
 
 	return patients, totalRecords, nil

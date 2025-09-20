@@ -13,30 +13,22 @@ import (
 
 type UseCases struct {
 	interfaces.DoctorUsecase
-	interfaces.EmergencyCallUsecase
-	interfaces.MedServiceUsecase
 	interfaces.PatientUsecase
-	interfaces.ReceptionHospitalUsecase
-	interfaces.ReceptionSmpUsecase
-	interfaces.MedCardUsecase
 	interfaces.AuthUsecase
 	interfaces.OrganizationUseCase
 	interfaces.PatientGroupUseCase
+	interfaces.ReceptionUsecase
 }
 
 func NewUsecases(r interfaces.Repository, s interfaces.Service, conf *config.Config) interfaces.Usecases {
 
 	return &UseCases{
 		NewDoctorUsecase(r),
-		NewEmergencyCallUsecase(r),
-		NewMedServiceUsecase(r),
 		NewPatientUsecase(r, r, r, s),
-		NewReceptionHospitalUsecase(r, r, s),
-		NewReceptionSmpUsecase(r, r, r),
-		NewMedCardUsecase(r, r, r, r, r),
 		NewAuthUsecase(r, conf.JWTSecret),
 		NewOrganizationUsecase(r),
 		NewPatientGroupUsecase(r),
+		NewReceptionUsecase(r, s),
 	}
 
 }

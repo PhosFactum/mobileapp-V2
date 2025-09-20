@@ -2,8 +2,6 @@ package models
 
 import (
 	"time"
-
-	"github.com/AlexanderMorozov1919/mobileapp/internal/domain/entities"
 )
 
 type ReceptionHospitalResponse struct {
@@ -18,10 +16,9 @@ type ReceptionHospitalResponse struct {
 }
 
 type UpdateReceptionHospitalRequest struct {
-	Diagnosis          string                   `json:"diagnosis" example:"Грипп" rus:"Диагноз"`
-	Recommendations    string                   `json:"recommendations" example:"Постельный режим" rus:"Рекомендации"`
-	Status             entities.ReceptionStatus `json:"status" example:"scheduled" rus:"Статус госпитализации"`
-	SpecializationData interface{}              `json:"specialization_data"`
+	Diagnosis          string      `json:"diagnosis" example:"Грипп" rus:"Диагноз"`
+	Recommendations    string      `json:"recommendations" example:"Постельный режим" rus:"Рекомендации"`
+	SpecializationData interface{} `json:"specialization_data"`
 }
 
 // ReceptionFullResponse - полная информация о приеме

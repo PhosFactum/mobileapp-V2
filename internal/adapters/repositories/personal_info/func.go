@@ -1,4 +1,4 @@
-package personalInfo
+package personal_info
 
 import (
 	"fmt"
