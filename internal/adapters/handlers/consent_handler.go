@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"os"
@@ -20,22 +21,36 @@ import (
 // @Failure 500 {object} map[string]interface{} "Ошибка при чтении файла"
 // @Router /consent/personal-data [get]
 func (h *Handler) GetPersonalDataConsent(c *gin.Context) {
-	filePath := "static/docs/consent_personal_data.pdf"
+	filePath := "pkg/static/personal_data_consent.pdf"
 
 	file, err := os.Open(filePath)
 	if err != nil {
+		h.logger.Error("Failed to open PDF file", "path", filePath, "error", err)
 		h.ErrorResponse(c, err, http.StatusInternalServerError, "Не удалось открыть документ", false)
 		return
 	}
 	defer file.Close()
 
+	fileInfo, err := file.Stat()
+	if err != nil {
+		h.logger.Error("Failed to get file info", "error", err)
+		h.ErrorResponse(c, err, http.StatusInternalServerError, "Не удалось получить информацию о файле", false)
+		return
+	}
+
+	// ✅ Правильные заголовки для отображения в браузере
 	c.Header("Content-Type", "application/pdf")
-	c.Header("Content-Disposition", "inline; filename=\"consent_personal_data.pdf\"")
+	c.Header("Content-Disposition", "inline; filename=\"personal_data_consent.pdf\"") // inline вместо attachment
+	c.Header("Content-Length", fmt.Sprintf("%d", fileInfo.Size()))
+	c.Header("Cache-Control", "public, max-age=3600") // Кэширование на 1 час
 
 	if _, err := io.Copy(c.Writer, file); err != nil {
+		h.logger.Error("Failed to send PDF file", "error", err)
 		h.ErrorResponse(c, err, http.StatusInternalServerError, "Не удалось отправить документ", false)
 		return
 	}
+
+	h.logger.Info("PDF displayed successfully", "file", filePath)
 }
 
 // GetMedicalExamConsent возвращает PDF согласия на медосмотр
@@ -48,22 +63,36 @@ func (h *Handler) GetPersonalDataConsent(c *gin.Context) {
 // @Failure 500 {object} map[string]interface{} "Ошибка при чтении файла"
 // @Router /consent/medical-exam [get]
 func (h *Handler) GetMedicalExamConsent(c *gin.Context) {
-	filePath := "static/docs/consent_medical_exam.pdf"
+	filePath := "pkg/static/medical_exam_consent.pdf"
 
 	file, err := os.Open(filePath)
 	if err != nil {
+		h.logger.Error("Failed to open PDF file", "path", filePath, "error", err)
 		h.ErrorResponse(c, err, http.StatusInternalServerError, "Не удалось открыть документ", false)
 		return
 	}
 	defer file.Close()
 
+	fileInfo, err := file.Stat()
+	if err != nil {
+		h.logger.Error("Failed to get file info", "error", err)
+		h.ErrorResponse(c, err, http.StatusInternalServerError, "Не удалось получить информацию о файле", false)
+		return
+	}
+
+	// ✅ Правильные заголовки для отображения в браузере
 	c.Header("Content-Type", "application/pdf")
-	c.Header("Content-Disposition", "inline; filename=\"consent_medical_exam.pdf\"")
+	c.Header("Content-Disposition", "inline; filename=\"medical_exam_consent.pdf\"") // inline вместо attachment
+	c.Header("Content-Length", fmt.Sprintf("%d", fileInfo.Size()))
+	c.Header("Cache-Control", "public, max-age=3600") // Кэширование на 1 час
 
 	if _, err := io.Copy(c.Writer, file); err != nil {
+		h.logger.Error("Failed to send PDF file", "error", err)
 		h.ErrorResponse(c, err, http.StatusInternalServerError, "Не удалось отправить документ", false)
 		return
 	}
+
+	h.logger.Info("PDF displayed successfully", "file", filePath)
 }
 
 // SaveSignature сохраняет подпись пациента

@@ -96,6 +96,7 @@ func autoMigrate(db *gorm.DB) error {
 	// ✅ Правильный порядок удаления таблиц (зависимые первыми)
 	tablesToDelete := []string{
 		// Зависимые таблицы
+		"consent_signatures",
 		"receptions",
 		"analysis_order_items",
 		"analysis_orders",
@@ -144,7 +145,7 @@ func autoMigrate(db *gorm.DB) error {
 
 	// ✅ Создание таблиц в правильном порядке (зависимости первыми)
 	models := []interface{}{
-		// Справочники (без внешних ключей)
+		// 1. Справочники (без внешних ключей вообще)
 		&entities.DocumentType{},
 		&entities.ExaminationType{},
 		&entities.ExaminationView{},
@@ -160,27 +161,26 @@ func autoMigrate(db *gorm.DB) error {
 		&entities.Manager{},
 		&entities.Analysis{}, // Справочник анализов
 
-		// Основные сущности
+		// 2. Основные сущности
 		&entities.Specialization{},
 		&entities.Doctor{},
 		&entities.Organization{},
 		&entities.PatientGroup{},
 
-		// Зависимые сущности (без внешних ключей на Patient)
-		&entities.ContactInfo{},  // Без внешних ключей
-		&entities.PersonalInfo{}, // Без внешних ключей
-		&entities.Flg{},          // Без внешних ключей
+		// 3. Сущности, НА КОТОРЫЕ ссылается Patient (должны быть ДО Patient!)
+		&entities.ContactInfo{},  // Patient → ContactInfoID
+		&entities.PersonalInfo{}, // Patient → PersonalInfoID
+		&entities.Flg{},          // Patient → FlgID
 
-		// Зависимые от Patient
-		&entities.Patient{},           // После справочников и ContactInfo/PersonalInfo
-		&entities.PatientStatistics{}, // После Patient (внешний ключ)
-		&entities.AnalysisOrder{},     // После Patient и Analysis
-		&entities.AnalysisOrderItem{}, // После AnalysisOrder и Analysis
-		&entities.Vaccine{},           // После Patient
-		&entities.Reception{},         // После Patient и Specialization
+		// 4. Patient — после всех, на кого он ссылается
 		&entities.Patient{},
-		&entities.ContactInfo{},
-		&entities.PersonalInfo{},
+
+		// 5. Все сущности, которые ссылаются НА Patient
+		&entities.PatientStatistics{},
+		&entities.AnalysisOrder{},
+		&entities.AnalysisOrderItem{},
+		&entities.Vaccine{},
+		&entities.Reception{},
 		&entities.ConsentSignature{},
 	}
 

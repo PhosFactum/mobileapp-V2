@@ -10,20 +10,18 @@ import (
 
 // GetAllPatients godoc
 // @Summary Получить список всех пациентов
-// @Description Возвращает список всех существующих пациентов
-// @Description
-// @Description Работает фильтрация, сортировка и пагинация
+// @Description Возвращает список всех существующих пациентов с пагинацией
 // @Tags Patient
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param page query int false "Номер страницы\n(по умолчанию 1)"
-// @Param count query int false "Количество записей на странице\n(по умолчанию 0 — без ограничения)"
-// @Param filter query string false "Фильтр в формате field.operation.value.\nПримеры:\nfull_name.like.Иван - имя содержит 'Иван',\nbirth_date.eq.1988-07-14 - точная дата рождения"
-// @Param order query string false "Сортировка в формате field.direction.\nПримеры:\nfull_name.asc - по алфавиту,\nid.desc - по убыванию ID пациента"
-// @Success 200 {object} models.PatientsListResponse "Список пациентов"
-// @Failure 400 {object} ResultError "Некорректные данные"
-// @Failure 500 {object} ResultError "Внутренняя ошибка"
+// @Param page query int false "Номер страницы" default(1)
+// @Param count query int false "Количество записей" default(0)
+// @Param filter query string false "Фильтр в формате field.operation.value"
+// @Param order query string false "Сортировка в формате field.direction"
+// @Success 200 {object} models.ShortPatientResponse "Список пациентов"
+// @Failure 400 {object} map[string]string "Некорректные данные"
+// @Failure 500 {object} map[string]string "Внутренняя ошибка"
 // @Router /patients [get]
 func (h *Handler) GetAllPatients(c *gin.Context) {
 	page, err := h.service.ParseIntString(c.DefaultQuery("page", "1"))
@@ -52,16 +50,16 @@ func (h *Handler) GetAllPatients(c *gin.Context) {
 
 // CreatePatient godoc
 // @Summary Создать нового пациента
-// @Description Создает нового пациента с персональными и контактными данными
+// @Description Создает нового пациента
 // @Tags Patient
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param info body models.CreatePatientRequest true "Данные пациента"
+// @Param input body models.CreatePatientRequest true "Данные пациента"
 // @Success 201 {object} entities.Patient "Созданный пациент"
-// @Failure 400 {object} IncorrectFormatError "Неверный формат запроса"
-// @Failure 422 {object} ValidationError "Ошибка валидации"
-// @Failure 500 {object} InternalServerError "Внутренняя ошибка сервера"
+// @Failure 400 {object} map[string]string "Неверный формат"
+// @Failure 422 {object} map[string]string "Ошибка валидации"
+// @Failure 500 {object} map[string]string "Внутренняя ошибка"
 // @Router /patients [post]
 func (h *Handler) CreatePatient(c *gin.Context) {
 	var input models.CreatePatientRequest
