@@ -14,27 +14,26 @@ type Patient struct {
 	Position  string    `gorm:"not null" json:"position" example:"Прогер"`
 	Division  string    `gorm:"not null" json:"division" example:"Прогер"`
 
-	// ИСПРАВЛЕНО: Убираем обязательные поля, которые могут быть NULL
-	ExaminationTypeID *uint            `gorm:"index" json:"-"` // Может быть NULL
+	ExaminationTypeID uint             `gorm:"not null;index" json:"-"`
 	ExaminationType   *ExaminationType `gorm:"foreignKey:ExaminationTypeID" json:"-"`
 
-	ExaminationViewID *uint            `gorm:"index" json:"-"` // Может быть NULL
+	ExaminationViewID uint             `gorm:"not null;index" json:"-"`
 	ExaminationView   *ExaminationView `gorm:"foreignKey:ExaminationViewID" json:"-"`
 
-	HarmPointID *uint      `gorm:"index" json:"-"` // Может быть NULL
+	HarmPointID uint       `gorm:"not null;index" json:"-"`
 	HarmPoint   *HarmPoint `gorm:"foreignKey:HarmPointID" json:"-"`
 
-	PersonalInfoID *uint         `gorm:"index" json:"-"` // Может быть NULL
+	PersonalInfoID uint          `gorm:"not null;index" json:"-"`
 	PersonalInfo   *PersonalInfo `gorm:"foreignKey:PersonalInfoID" json:"-"`
 
-	ContactInfoID *uint        `gorm:"index" json:"-"` // Может быть NULL
+	ContactInfoID uint         `gorm:"not null;index" json:"-"`
 	ContactInfo   *ContactInfo `gorm:"foreignKey:ContactInfoID" json:"-"`
 
-	OrganizationID *uint         `gorm:"index" json:"organization_id,omitempty" example:"1"`
-	Organization   *Organization `gorm:"foreignKey:OrganizationID" json:"-"`
+	FlgID uint `gorm:"not null;index" json:"-"`
+	Flg   *Flg `gorm:"foreignKey:FlgID" json:"flg"`
 
-	FlgID *uint `gorm:"index" json:"-"`
-	Flg   *Flg  `gorm:"foreignKey:FlgID" json:"flg"`
+	OrganizationID uint          `gorm:"not null;index" json:"organization_id,omitempty" example:"1"`
+	Organization   *Organization `gorm:"foreignKey:OrganizationID" json:"-"`
 
 	Vaccines []Vaccine `gorm:"foreignKey:PatientID"`
 
@@ -42,6 +41,46 @@ type Patient struct {
 	Specializations []Specialization `gorm:"many2many:patients_specializations;" json:"-"`
 
 	Statistics *PatientStatistics `gorm:"foreignKey:PatientID" json:"statistics,omitempty"`
+}
+
+type PatientStatistics struct {
+	ID        uint      `gorm:"primarykey" json:"id"`
+	CreatedAt time.Time `json:"-"`
+	UpdatedAt time.Time `json:"updated_at"`
+
+	PatientID uint `gorm:"not null;uniqueIndex" json:"patient_id"`
+
+	TotalReceptions     int64 `gorm:"not null;default:0" json:"total_receptions"`
+	CompletedReceptions int64 `gorm:"not null;default:0" json:"completed_receptions"`
+
+	TotalAnalysisOrders    int64 `gorm:"not null;default:0" json:"total_analysis_orders"`
+	CompletedAnalysisItems int64 `gorm:"not null;default:0" json:"completed_analysis_items"`
+}
+
+type ExaminationType struct {
+	ID    uint   `gorm:"primarykey" json:"id"`
+	Value string `gorm:"not null;" json:"value"`
+}
+
+type ExaminationView struct {
+	ID    uint   `gorm:"primarykey" json:"id"`
+	Value string `gorm:"not null;" json:"value"`
+}
+
+type HarmPoint struct {
+	ID    uint    `gorm:"primarykey" json:"id"`
+	Value float32 `gorm:"not null;" json:"value"`
+}
+
+type Flg struct {
+	ID        uint      `gorm:"primarykey" json:"id" example:"1"`
+	CreatedAt time.Time `json:"-"`
+
+	IsCompleted  bool      `gorm:"default:false" json:"is_completed"`
+	Organization string    `gorm:"not null" json:"organization" example:"Stavropol"`
+	Number       int       `gorm:"not null" json:"number" example:"984212"`
+	Result       string    `gorm:"not null" json:"result" example:"COVID"`
+	Date         time.Time `json:"date" example:"2023-10-15T14:30:00Z"`
 }
 
 // ContactInfo представляет контактную информацию пациента
@@ -66,42 +105,11 @@ type PersonalInfo struct {
 	SNILS     string `json:"snils" example:"123-456-789 00" rus:"СНИЛС"`
 	OMS       string `json:"oms" example:"1234567890123456" rus:"Полис ОМС"`
 
-	DocumentTypeID *uint         `gorm:"index" json:"document_type_iD" example:"1"`
+	DocumentTypeID uint          `gorm:"not null;index" json:"document_type_iD" example:"1"`
 	DocumentType   *DocumentType `gorm:"foreignKey:DocumentTypeID" json:"-"`
 }
 
 type DocumentType struct {
 	ID    uint   `gorm:"primarykey" json:"id"`
 	Value string `gorm:"not null;" json:"value"`
-}
-
-type ExaminationType struct {
-	ID    uint   `gorm:"primarykey" json:"id"`
-	Value string `gorm:"not null;" json:"value"`
-}
-
-type ExaminationView struct {
-	ID    uint   `gorm:"primarykey" json:"id"`
-	Value string `gorm:"not null;" json:"value"`
-}
-
-type HarmPoint struct {
-	ID    uint    `gorm:"primarykey" json:"id"`
-	Value float32 `gorm:"not null;" json:"value"`
-}
-
-type PatientStatistics struct {
-	ID        uint      `gorm:"primarykey" json:"id"`
-	CreatedAt time.Time `json:"-"`
-	UpdatedAt time.Time `json:"updated_at"`
-
-	PatientID uint `gorm:"not null;uniqueIndex" json:"patient_id"`
-
-	// Статистика по приемам
-	TotalReceptions     int64 `gorm:"not null;default:0" json:"total_receptions"`
-	CompletedReceptions int64 `gorm:"not null;default:0" json:"completed_receptions"`
-
-	// Статистика по анализам
-	TotalAnalysisOrders    int64 `gorm:"not null;default:0" json:"total_analysis_orders"`
-	CompletedAnalysisItems int64 `gorm:"not null;default:0" json:"completed_analysis_items"`
 }
