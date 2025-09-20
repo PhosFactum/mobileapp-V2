@@ -98,6 +98,7 @@ type ContactInfoRepository interface {
 
 type AuthRepository interface {
 	GetByLogin(ctx context.Context, login string) (*entities.Doctor, error)
+	InvalidateToken(ctx context.Context, token string) error
 }
 
 type VaccineRepository interface {

@@ -17,6 +17,7 @@ definitions:
     type: object
   entities.Flg:
     properties:
+<<<<<<< HEAD
       date:
         example: "2023-10-15T14:30:00Z"
         type: string
@@ -24,6 +25,24 @@ definitions:
         example: 1
         type: integer
       is_completed:
+=======
+      address:
+        description: Priority      *uint          `gorm:"unique;default:null" json:"priority"
+          example:"1"`
+        example: "+79991234567"
+        type: string
+      created_at:
+        type: string
+      description:
+        example: Пациент жалуется на сильную боль в груди
+        type: string
+      doctor_id:
+        example: 1
+        type: integer
+      emergency:
+        description: отвечает за статус (экстренный/неотложный)
+        example: true
+>>>>>>> dee09e0 (fix(security): swagger annotations; fix: server running correctly, all handlers work)
         type: boolean
       number:
         example: 984212
@@ -45,6 +64,39 @@ definitions:
       phone:
         example: "+79991234567"
         type: string
+<<<<<<< HEAD
+=======
+      receptions:
+        items:
+          $ref: '#/definitions/entities.ReceptionSMP'
+        type: array
+      updated_at:
+        type: string
+    type: object
+  entities.HospitalReceptionStatus:
+    enum:
+    - scheduled
+    - completed
+    - cancelled
+    - no_show
+    type: string
+    x-enum-varnames:
+    - HospitalReceptionStatusScheduled
+    - HospitalReceptionStatusCompleted
+    - HospitalReceptionStatusCancelled
+    - HospitalReceptionStatusNoShow
+  entities.MedService:
+    properties:
+      id:
+        example: 1
+        type: integer
+      name:
+        example: EKG
+        type: string
+      price:
+        example: 100
+        type: integer
+>>>>>>> dee09e0 (fix(security): swagger annotations; fix: server running correctly, all handlers work)
     type: object
   entities.Patient:
     properties:
@@ -53,6 +105,7 @@ definitions:
         type: string
       created_at:
         type: string
+<<<<<<< HEAD
       division:
         example: Прогер
         type: string
@@ -60,6 +113,10 @@ definitions:
         $ref: '#/definitions/entities.Flg'
       full_name:
         example: Иванов Иван Иванович
+=======
+      first_name:
+        example: Алексей
+>>>>>>> dee09e0 (fix(security): swagger annotations; fix: server running correctly, all handlers work)
         type: string
       id:
         example: 1
@@ -67,6 +124,7 @@ definitions:
       is_male:
         example: true
         type: boolean
+<<<<<<< HEAD
       organization_id:
         example: 1
         type: integer
@@ -75,6 +133,17 @@ definitions:
         type: string
       statistics:
         $ref: '#/definitions/entities.PatientStatistics'
+=======
+      last_name:
+        example: Смирнов
+        type: string
+      middle_name:
+        example: Петрович
+        type: string
+      on_treatment:
+        example: false
+        type: boolean
+>>>>>>> dee09e0 (fix(security): swagger annotations; fix: server running correctly, all handlers work)
       updated_at:
         type: string
       vaccines:
@@ -224,6 +293,25 @@ definitions:
         example: error
         type: string
     type: object
+  handlers.ResultResponse:
+    properties:
+      response:
+        properties:
+          data:
+            description: '[AVALIABLE]: object, array of objects, empty'
+          message:
+            example: Success operation
+            type: string
+          type:
+            description: '[AVALIABLE]: object, array, empty'
+            example: object
+            type: string
+        type: object
+      status:
+        description: ok
+        example: ok
+        type: string
+    type: object
   handlers.ValidationError:
     properties:
       response:
@@ -244,17 +332,23 @@ definitions:
     description: Данные для создания нового пациента
     properties:
       birth_date:
-        description: Дата рождения
+        description: FullName   string `json:"full_name" example:"Смирнов Алексей
+          Петрович"` // ФИО пациента
         example: "1980-05-15"
         type: string
-      full_name:
-        description: ФИО пациента
-        example: Смирнов Алексей Петрович
+      first_name:
+        example: Алексей
         type: string
       is_male:
         description: Пол (true - мужской)
         example: true
         type: boolean
+      last_name:
+        example: Смирнов
+        type: string
+      middle_name:
+        example: Петрович
+        type: string
     type: object
   models.DoctorAuthResponse:
     description: Ответ с данными авторизованного врача
@@ -268,6 +362,21 @@ definitions:
         example: eyJhbGciOi...
         type: string
     type: object
+<<<<<<< HEAD
+=======
+  models.DoctorInfoResponse:
+    properties:
+      doctor_id:
+        example: 1
+        type: integer
+      full_name:
+        description: Полное имя врача
+        example: Иванов Иван Иванович
+        type: string
+      specialization:
+        type: string
+    type: object
+>>>>>>> dee09e0 (fix(security): swagger annotations; fix: server running correctly, all handlers work)
   models.DoctorLoginRequest:
     description: Запрос для входа врача в систему
     properties:
@@ -297,6 +406,7 @@ definitions:
       code:
         example: "94928490"
         type: string
+<<<<<<< HEAD
       created_at:
         example: "2023-05-15T14:30:00Z"
         type: string
@@ -305,6 +415,24 @@ definitions:
       organization:
         example: medlab
         type: string
+=======
+      contact_info:
+        allOf:
+        - $ref: '#/definitions/models.ContactInfoData'
+        description: Опциональные контактные данные
+      first_name:
+        example: Алексей
+        type: string
+      is_male:
+        example: true
+        type: boolean
+      last_name:
+        example: Смирнов
+        type: string
+      middle_name:
+        example: Петрович
+        type: string
+>>>>>>> dee09e0 (fix(security): swagger annotations; fix: server running correctly, all handlers work)
     type: object
   models.PatientsListResponse:
     properties:
@@ -321,6 +449,133 @@ definitions:
       totalPages:
         type: integer
     type: object
+<<<<<<< HEAD
+=======
+  models.PersonalInfoResponse:
+    description: Документы и идентификационные данные пациента
+    properties:
+      oms:
+        description: Номер полиса ОМС
+        example: "1234567890123456"
+        type: string
+      passport_series:
+        description: Серия и номер паспорта
+        example: 4510 123456
+        type: string
+      snils:
+        description: Номер СНИЛС
+        example: 123-456-789 00
+        type: string
+    type: object
+  models.ReceptionHospitalListResponse:
+    properties:
+      currentPage:
+        type: integer
+      hits:
+        items:
+          $ref: '#/definitions/models.ReceptionHospitalResponse'
+        type: array
+      hitsPerPage:
+        type: integer
+      totalHits:
+        type: integer
+      totalPages:
+        type: integer
+    type: object
+  models.ReceptionHospitalResponse:
+    properties:
+      date:
+        example: "2023-10-15T14:30:00Z"
+        type: string
+      diagnosis:
+        example: ОРВИ
+        type: string
+      doctor:
+        $ref: '#/definitions/models.DoctorInfoResponse'
+      id:
+        type: integer
+      patient:
+        $ref: '#/definitions/models.ShortPatientResponse'
+      recommendations:
+        example: Постельный режим
+        type: string
+      source:
+        example: scheduled
+        type: string
+      status:
+        example: scheduled
+        type: string
+    type: object
+  models.ReceptionSMPResponse:
+    properties:
+      diagnosis:
+        example: ОРВИ
+        type: string
+      first_name:
+        example: Алексей
+        type: string
+      id:
+        type: integer
+      last_name:
+        example: Смирнов
+        type: string
+      med_services:
+        items:
+          $ref: '#/definitions/models.MedServicesResponse'
+        type: array
+      middle_name:
+        example: Петрович
+        type: string
+      recommendations:
+        example: Постельный режим
+        type: string
+      specialization:
+        example: Терапевт
+        type: string
+      specialization_data: {}
+    type: object
+  models.ReceptionSMPResponseList:
+    properties:
+      currentPage:
+        type: integer
+      hits:
+        items:
+          $ref: '#/definitions/models.ReceptionSMPResponse'
+        type: array
+      hitsPerPage:
+        type: integer
+      totalHits:
+        type: integer
+      totalPages:
+        type: integer
+    type: object
+  models.ShortPatientResponse:
+    description: Сокращенные данные пациента
+    properties:
+      birth_date:
+        description: FullName  string    `json:"full_name" example:"Смирнов Алексей
+          Петрович"` // ФИО пациента
+        example: "1980-05-15T00:00:00Z"
+        type: string
+      first_name:
+        example: Алексей
+        type: string
+      id:
+        example: 1
+        type: integer
+      is_male:
+        description: Пол (true - мужской)
+        example: true
+        type: boolean
+      last_name:
+        example: Смирнов
+        type: string
+      middle_name:
+        description: ID пациента
+        example: Петрович
+        type: string
+    type: object
+>>>>>>> dee09e0 (fix(security): swagger annotations; fix: server running correctly, all handlers work)
   models.UpdateDoctorRequest:
     description: Используется для изменения информации о враче
     properties:
@@ -330,18 +585,53 @@ definitions:
       id:
         example: 1
         type: integer
-      login:
+      phone:
         example: "+79123456789"
         type: string
       specialization_id:
         example: 1
         type: integer
     type: object
+<<<<<<< HEAD
+=======
+  models.UpdateMedCardRequest:
+    description: Содержит всю медицинскую информацию о пациенте
+    properties:
+      allergy:
+        description: Список аллергий
+        items:
+          $ref: '#/definitions/models.AllergyResponse'
+        type: array
+      contact_info:
+        allOf:
+        - $ref: '#/definitions/models.ContactInfoResponse'
+        description: Контактные данные
+      patient:
+        allOf:
+        - $ref: '#/definitions/models.ShortPatientResponse'
+        description: Основные данные пациента
+      personal_info:
+        allOf:
+        - $ref: '#/definitions/models.PersonalInfoResponse'
+        description: Персональная информация
+    type: object
+  models.UpdateReceptionHospitalRequest:
+    properties:
+      diagnosis:
+        example: Грипп
+        type: string
+      recommendations:
+        example: Постельный режим
+        type: string
+      specialization_data: {}
+      status:
+        example: scheduled
+        type: string
+    type: object
+>>>>>>> dee09e0 (fix(security): swagger annotations; fix: server running correctly, all handlers work)
 host: localhost:8080
 info:
-  contact:
-    email: support@example.com
-    name: API Support
+  contact: {}
   description: API для работы с приёмами пациентов
   title: ClinicHub API
   version: 1.0.0
@@ -380,6 +670,29 @@ paths:
       summary: Вход в систему
       tags:
       - Auth
+  /auth/logout:
+    post:
+      description: Инвалидирует токен пользователя
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Успешный выход
+          schema:
+            $ref: '#/definitions/handlers.ResultResponse'
+        "400":
+          description: Неверный формат запроса
+          schema:
+            $ref: '#/definitions/handlers.IncorrectFormatError'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handlers.InternalServerError'
+      security:
+      - ApiKeyAuth: []
+      summary: Выход из системы
+      tags:
+      - Auth
   /doctors/{doc_id}:
     get:
       consumes:
@@ -410,6 +723,8 @@ paths:
           description: Внутренняя ошибка
           schema:
             $ref: '#/definitions/handlers.InternalServerError'
+      security:
+      - BearerAuth: []
       summary: Получить врача по ID
       tags:
       - Doctor
@@ -447,9 +762,47 @@ paths:
           description: Внутренняя ошибка
           schema:
             $ref: '#/definitions/handlers.InternalServerError'
+      security:
+      - BearerAuth: []
       summary: Обновить данные врача
       tags:
       - Doctor
+<<<<<<< HEAD
+=======
+  /emergency/{call_id}:
+    patch:
+      consumes:
+      - application/json
+      description: Возвращает экстренный вызов
+      parameters:
+      - description: ID emergencyCall
+        in: path
+        name: call_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Экстренный вызов
+          schema:
+            items:
+              $ref: '#/definitions/entities.EmergencyCall'
+            type: array
+        "400":
+          description: Некорректный запрос
+          schema:
+            $ref: '#/definitions/handlers.IncorrectFormatError'
+        "500":
+          description: Внутренняя ошибка
+          schema:
+            $ref: '#/definitions/handlers.InternalServerError'
+      security:
+      - BearerAuth: []
+      summary: Закрыть экстренный вызов
+      tags:
+      - Calls
+>>>>>>> dee09e0 (fix(security): swagger annotations; fix: server running correctly, all handlers work)
   /emergency/{doc_id}:
     get:
       consumes:
@@ -493,7 +846,13 @@ paths:
           description: Внутренняя ошибка
           schema:
             $ref: '#/definitions/handlers.InternalServerError'
+<<<<<<< HEAD
       summary: Получить группы пациентов по их коду или названию их организаций
+=======
+      security:
+      - BearerAuth: []
+      summary: Получить экстренные приёмы врача по дате
+>>>>>>> dee09e0 (fix(security): swagger annotations; fix: server running correctly, all handlers work)
       tags:
       - SMP
   /organizations:
@@ -535,7 +894,13 @@ paths:
           description: Внутренняя ошибка сервера
           schema:
             $ref: '#/definitions/handlers.InternalServerError'
+<<<<<<< HEAD
       summary: Получить все организации
+=======
+      security:
+      - BearerAuth: []
+      summary: Получить СМП приём по ID
+>>>>>>> dee09e0 (fix(security): swagger annotations; fix: server running correctly, all handlers work)
       tags:
       - Organizations
   /organizations/{org_id}/groups:
@@ -544,7 +909,43 @@ paths:
       - application/json
       description: Возвращает список групп пациентов конкретной организации с пагинацией
       parameters:
+<<<<<<< HEAD
       - description: ID организации
+=======
+      - description: Данные для создания заключения
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/models.CreateReceptionSmp'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Создание заключения для пациента
+          schema:
+            $ref: '#/definitions/entities.ReceptionSMP'
+        "400":
+          description: Неверный формат запроса
+          schema:
+            $ref: '#/definitions/handlers.IncorrectFormatError'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handlers.InternalServerError'
+      security:
+      - BearerAuth: []
+      summary: Создать заключение на скорой
+      tags:
+      - SMP
+  /emergency/receptions/{recep_id}:
+    put:
+      consumes:
+      - application/json
+      description: Обновляет информацию о приёме скорой
+      parameters:
+      - description: ID приёма
+>>>>>>> dee09e0 (fix(security): swagger annotations; fix: server running correctly, all handlers work)
         in: path
         name: org_id
         required: true
@@ -575,6 +976,7 @@ paths:
         "500":
           description: Internal Server Error
           schema:
+<<<<<<< HEAD
             additionalProperties:
               type: string
             type: object
@@ -583,6 +985,393 @@ paths:
       summary: Получить группы пациентов организации
       tags:
       - PatientGroups
+=======
+            $ref: '#/definitions/handlers.InternalServerError'
+      security:
+      - BearerAuth: []
+      summary: Обновить приём скорой
+      tags:
+      - SMP
+  /emergency/smps/{call_id}/{smp_id}:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает информацию о приёме скорой медицинской помощи вместе
+        со списком медицинских услуг
+      parameters:
+      - description: ID вызова
+        in: path
+        name: call_id
+        required: true
+        type: integer
+      - description: ID приёма СМП
+        in: path
+        name: smp_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Информация о приёме и медуслугах
+          schema:
+            $ref: '#/definitions/models.ReceptionSMPResponse'
+        "400":
+          description: Неверный формат запроса
+          schema:
+            $ref: '#/definitions/handlers.IncorrectFormatError'
+        "401":
+          description: Некорректный ID вызова
+          schema:
+            $ref: '#/definitions/handlers.IncorrectDataError'
+        "422":
+          description: Ошибка валидации
+          schema:
+            $ref: '#/definitions/handlers.ValidationError'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handlers.InternalServerError'
+      security:
+      - BearerAuth: []
+      summary: Получить приём СМП с медуслугами по ID
+      tags:
+      - Calls
+  /hospital/receptions/{doc_id}:
+    get:
+      consumes:
+      - application/json
+      description: |-
+        История приёмов пациентов у конкретного врача в больнице. Если `doctor_id` = 0, возвращаются все приёмы всех врачей.
+        По умолчанию сортировка по статусу - "Запланирован" и дате приема.
+      parameters:
+      - description: ID врача
+        in: path
+        name: doc_id
+        required: true
+        type: integer
+      - description: |-
+          Номер страницы
+          (по умолчанию 1)
+        in: query
+        name: page
+        type: integer
+      - description: |-
+          Количество записей на странице
+          (по умолчанию 0 — без ограничения)
+        in: query
+        name: count
+        type: integer
+      - description: |-
+          Фильтр в формате field.operation.value.
+          Примеры:
+          recommendations.like.режим - поле с подстрокой 'режим',
+          date.eq.2025-07-10 - фильтр по дате
+          date.eq.14:00:00 - фильтр по времени
+        in: query
+        name: filter
+        type: string
+      - description: |-
+          Сортировка в формате field.direction.
+          Примеры:
+          date.desc - по убыванию даты,
+          id.asc - по возрастанию id
+        in: query
+        name: order
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: История приёмов врача списком
+          schema:
+            $ref: '#/definitions/models.ReceptionHospitalListResponse'
+        "400":
+          description: Неверный формат запроса
+          schema:
+            $ref: '#/definitions/handlers.IncorrectFormatError'
+        "401":
+          description: Некорректный ID доктора
+          schema:
+            $ref: '#/definitions/handlers.IncorrectDataError'
+        "422":
+          description: Ошибка валидации
+          schema:
+            $ref: '#/definitions/handlers.ValidationError'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handlers.InternalServerError'
+      security:
+      - BearerAuth: []
+      summary: Получить список приёмов врача по его ID
+      tags:
+      - HospitalReception
+  /hospital/receptions/{recep_id}:
+    patch:
+      consumes:
+      - application/json
+      description: Изменяет статус приёма по ID
+      parameters:
+      - description: ID приёма
+        in: path
+        name: recep_id
+        required: true
+        type: integer
+      - description: Статус приёма
+        in: body
+        name: info
+        schema:
+          $ref: '#/definitions/entities.ReceptionHospitalStatus'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Приём с обновленным статусом
+          schema:
+            $ref: '#/definitions/entities.ReceptionHospital'
+        "400":
+          description: Неверный формат запроса
+          schema:
+            $ref: '#/definitions/handlers.IncorrectFormatError'
+        "401":
+          description: Некорректный ID приёма
+          schema:
+            $ref: '#/definitions/handlers.IncorrectDataError'
+        "422":
+          description: Ошибка валидации
+          schema:
+            $ref: '#/definitions/handlers.ValidationError'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handlers.InternalServerError'
+      security:
+      - BearerAuth: []
+      summary: Обновить статус приема
+      tags:
+      - HospitalReception
+    put:
+      consumes:
+      - application/json
+      description: Обновляет информацию о приёме в больнице по его ID
+      parameters:
+      - description: ID приёма
+        in: path
+        name: recep_id
+        required: true
+        type: integer
+      - description: Данные для обновления приёма
+        in: body
+        name: info
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateReceptionHospitalRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Обновлённый приём
+          schema:
+            $ref: '#/definitions/entities.ReceptionHospital'
+        "400":
+          description: Неверный формат запроса
+          schema:
+            $ref: '#/definitions/handlers.IncorrectFormatError'
+        "401":
+          description: Некорректный ID приёма
+          schema:
+            $ref: '#/definitions/handlers.IncorrectDataError'
+        "422":
+          description: Ошибка валидации
+          schema:
+            $ref: '#/definitions/handlers.ValidationError'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handlers.InternalServerError'
+      security:
+      - BearerAuth: []
+      summary: Обновить приём в больнице
+      tags:
+      - HospitalReception
+  /hospital/receptions/patients/{pat_id}:
+    get:
+      consumes:
+      - application/json
+      description: История приемов пациента в больнице
+      parameters:
+      - description: ID пациента
+        in: path
+        name: pat_id
+        required: true
+        type: integer
+      - description: |-
+          Номер страницы
+          (по умолчанию 1)
+        in: query
+        name: page
+        type: integer
+      - description: |-
+          Количество записей на странице
+          (по умолчанию 0 — без ограничения)
+        in: query
+        name: count
+        type: integer
+      - description: |-
+          Фильтр в формате field.operation.value.
+          Примеры:
+          recommendations.like.режим - поле с подстрокой 'режим',
+          date.eq.2025-07-10 - фильтр по дате
+          date.eq.14:00:00 - фильтр по времени
+        in: query
+        name: filter
+        type: string
+      - description: |-
+          Сортировка в формате field.direction.
+          Примеры:
+          date.desc - по убыванию даты,
+          id.asc - по возрастанию id
+        in: query
+        name: order
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: История приёмов списком
+          schema:
+            $ref: '#/definitions/models.ReceptionHospitalListResponse'
+        "400":
+          description: Неверный формат запроса
+          schema:
+            $ref: '#/definitions/handlers.IncorrectFormatError'
+        "401":
+          description: Некорректный ID пациента
+          schema:
+            $ref: '#/definitions/handlers.IncorrectDataError'
+        "422":
+          description: Ошибка валидации
+          schema:
+            $ref: '#/definitions/handlers.ValidationError'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handlers.InternalServerError'
+      security:
+      - BearerAuth: []
+      summary: Получить список приёмов пациента по его ID
+      tags:
+      - HospitalReception
+  /medcard/{pat_id}:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает полную информацию из медицинской карты пациента
+      parameters:
+      - description: ID пациента
+        in: path
+        name: pat_id
+        required: true
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Медицинская карта пациента
+          schema:
+            $ref: '#/definitions/models.MedCardResponse'
+        "400":
+          description: Некорректный запрос
+          schema:
+            $ref: '#/definitions/handlers.IncorrectFormatError'
+        "401":
+          description: Некорректный ID пациента
+          schema:
+            $ref: '#/definitions/handlers.IncorrectDataError'
+        "404":
+          description: Медицинская карта не найдена
+          schema:
+            $ref: '#/definitions/handlers.NotFoundError'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handlers.InternalServerError'
+      security:
+      - BearerAuth: []
+      summary: Получить медкарту пациента по его ID
+      tags:
+      - Medcard
+    put:
+      consumes:
+      - application/json
+      description: Обновляет данные в медицинской карте по ID пациента
+      parameters:
+      - description: ID пациента
+        in: path
+        name: pat_id
+        required: true
+        type: integer
+      - description: Данные для обновления мед карты
+        in: body
+        name: input
+        required: true
+        schema:
+          $ref: '#/definitions/models.UpdateMedCardRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Обновлённая медицинская карта
+          schema:
+            $ref: '#/definitions/models.MedCardResponse'
+        "400":
+          description: Некорректный запрос
+          schema:
+            $ref: '#/definitions/handlers.IncorrectFormatError'
+        "404":
+          description: Медицинская карта не найдена
+          schema:
+            $ref: '#/definitions/handlers.NotFoundError'
+        "422":
+          description: Ошибка валидации
+          schema:
+            $ref: '#/definitions/handlers.ValidationError'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handlers.InternalServerError'
+      security:
+      - BearerAuth: []
+      summary: Обновить медицинскую карту пациента
+      tags:
+      - Medcard
+  /medservices/:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает список платных услуг
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Медицинская карта пациента
+          schema:
+            $ref: '#/definitions/models.MedServicesListResponse'
+        "400":
+          description: Некорректный запрос
+          schema:
+            $ref: '#/definitions/handlers.IncorrectFormatError'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handlers.InternalServerError'
+      security:
+      - BearerAuth: []
+      summary: Получить все доступные платные услуги
+      tags:
+      - MedServices
+>>>>>>> dee09e0 (fix(security): swagger annotations; fix: server running correctly, all handlers work)
   /patients:
     get:
       consumes:
@@ -635,6 +1424,8 @@ paths:
           description: Внутренняя ошибка
           schema:
             $ref: '#/definitions/handlers.ResultError'
+      security:
+      - BearerAuth: []
       summary: Получить список всех пациентов
       tags:
       - Patient
@@ -668,7 +1459,97 @@ paths:
           description: Внутренняя ошибка сервера
           schema:
             $ref: '#/definitions/handlers.InternalServerError'
+      security:
+      - BearerAuth: []
       summary: Создать нового пациента
       tags:
       - Patient
+<<<<<<< HEAD
+=======
+  /patients/{doc_id}:
+    get:
+      consumes:
+      - application/json
+      description: |-
+        Возвращает список уникальных пациентов, посетивших указанного доктора
+
+        По умолчанию кидать запрос с фильтром 'on_treatment.eq.true' - пациенты на лечении
+        и сортировкой по алфавиту 'full_name.asc'
+      parameters:
+      - description: ID доктора
+        in: path
+        name: doc_id
+        required: true
+        type: integer
+      - description: |-
+          Номер страницы
+          (по умолчанию 1)
+        in: query
+        name: page
+        type: integer
+      - description: |-
+          Количество записей на странице
+          (по умолчанию 0 — без ограничения)
+        in: query
+        name: count
+        type: integer
+      - description: |-
+          Фильтр в формате field.operation.value.
+          Примеры:
+          full_name.like.Иван - имя содержит 'Иван',
+          birth_date.eq.1988-07-14 - точная дата рождения
+        in: query
+        name: filter
+        type: string
+      - description: |-
+          Сортировка в формате field.direction.
+          Примеры:
+          full_name.asc - по алфавиту,
+          id.desc - по убыванию ID пациента
+        in: query
+        name: order
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список пациентов
+          schema:
+            $ref: '#/definitions/models.PatientsListResponse'
+        "400":
+          description: Некорректные данные
+          schema:
+            $ref: '#/definitions/handlers.ResultError'
+        "500":
+          description: Внутренняя ошибка
+          schema:
+            $ref: '#/definitions/handlers.ResultError'
+      security:
+      - BearerAuth: []
+      summary: Получить список пациентов по ID доктора
+      tags:
+      - Patient
+  /version:
+    get:
+      description: Возвращает текущую версию приложения
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Версия проекта
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Получить версию проекта
+      tags:
+      - Utils
+securityDefinitions:
+  BearerAuth:
+    description: 'Type "Bearer" followed by a space and JWT token. Example: "Bearer
+      your_jwt_token_here"'
+    in: header
+    name: Authorization
+    type: apiKey
+>>>>>>> dee09e0 (fix(security): swagger annotations; fix: server running correctly, all handlers work)
 swagger: "2.0"

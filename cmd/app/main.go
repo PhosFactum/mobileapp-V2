@@ -1,8 +1,12 @@
 // @title ClinicHub API
 // @version 1.0.0
 // @description API для работы с приёмами пациентов
-// @contact.name API Support
-// @contact.email support@example.com
+
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
+// @description Type "Bearer" followed by a space and JWT token. Example: "Bearer your_jwt_token_here"
+
 // @host localhost:8080
 // @BasePath /api/v1
 package main

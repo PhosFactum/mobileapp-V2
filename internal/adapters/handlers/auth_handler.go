@@ -48,8 +48,45 @@ func (h *Handler) LoginDoctor(c *gin.Context) {
 	})
 }
 
-func (h *Handler) GetVersionProject(c *gin.Context) {
-	version := "1.2.3"
-	// version := h.usecase.GetVersion()
-	c.JSON(http.StatusOK, gin.H{"version": version})
+// LogoutDoctor осуществляет выход из системы
+// @Summary Выход из системы
+// @Description Инвалидирует токен пользователя
+// @Tags Auth
+// @Security ApiKeyAuth
+// @Produce json
+// @Success 200 {object} ResultResponse "Успешный выход"
+// @Failure 400 {object} IncorrectFormatError "Неверный формат запроса"
+// @Failure 500 {object} InternalServerError "Внутренняя ошибка сервера"
+// @Router /auth/logout [post]
+func (h *Handler) LogoutDoctor(c *gin.Context) {
+	// Получаем токен из заголовка Authorization
+	authHeader := c.GetHeader("Authorization")
+	if authHeader == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Authorization header required"})
+		return
+	}
+
+	// Обычно формат: "Bearer <token>"
+	token := authHeader
+	if len(authHeader) > 7 && authHeader[:7] == "Bearer " {
+		token = authHeader[7:]
+	}
+
+	h.logger.Info("Logout attempt", "token", token[:min(10, len(token))]+"...") // Логируем только часть токена
+
+	if err := h.usecase.LogoutDoctor(c.Request.Context(), token); err != nil {
+		h.logger.Error("Logout failed", "error", err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Logout failed"})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Successfully logged out"})
+}
+
+// Вспомогательная функция для безопасности
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }

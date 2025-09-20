@@ -23,7 +23,7 @@ func (r *DoctorRepository) UpdateDoctor(id uint, updateMap map[string]interface{
 
 	allowedFields := map[string]bool{
 		"full_name":         true,
-		"login":             true,
+		"phone":             true,
 		"password_hash":     true,
 		"specialization_id": true,
 	}
