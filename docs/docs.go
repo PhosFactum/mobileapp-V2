@@ -394,7 +394,7 @@ const docTemplate = `{
                     "application/json"
                 ],
                 "tags": [
-                    "SMP"
+                    "Groups"
                 ],
                 "summary": "Получить группы пациентов по их коду или названию их организаций",
                 "parameters": [
@@ -631,27 +631,21 @@ const docTemplate = `{
                 ],
                 "responses": {
                     "200": {
-                        "description": "Список пациентов",
+                        "description": "Список пациентов с пагинацией",
                         "schema": {
-                            "$ref": "#/definitions/models.ShortPatientResponse"
+                            "$ref": "#/definitions/models.PatientFilterResponse"
                         }
                     },
                     "400": {
                         "description": "Некорректные данные",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/handlers.IncorrectDataError"
                         }
                     },
                     "500": {
                         "description": "Внутренняя ошибка",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/handlers.InternalServerError"
                         }
                     }
                 }
@@ -1160,6 +1154,35 @@ const docTemplate = `{
                 },
                 "title": {
                     "type": "string"
+                }
+            }
+        },
+        "models.PatientFilterResponse": {
+            "description": "Список пациентов с информацией о пагинации",
+            "type": "object",
+            "properties": {
+                "current_page": {
+                    "description": "Текущая страница",
+                    "type": "integer"
+                },
+                "hits": {
+                    "description": "Список пациентов",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.ShortPatientResponse"
+                    }
+                },
+                "hits_per_page": {
+                    "description": "Количество элементов на странице",
+                    "type": "integer"
+                },
+                "total_hits": {
+                    "description": "Общее количество элементов",
+                    "type": "integer"
+                },
+                "total_pages": {
+                    "description": "Общее количество страниц",
+                    "type": "integer"
                 }
             }
         },

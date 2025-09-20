@@ -292,6 +292,27 @@ definitions:
       title:
         type: string
     type: object
+  models.PatientFilterResponse:
+    description: Список пациентов с информацией о пагинации
+    properties:
+      current_page:
+        description: Текущая страница
+        type: integer
+      hits:
+        description: Список пациентов
+        items:
+          $ref: '#/definitions/models.ShortPatientResponse'
+        type: array
+      hits_per_page:
+        description: Количество элементов на странице
+        type: integer
+      total_hits:
+        description: Общее количество элементов
+        type: integer
+      total_pages:
+        description: Общее количество страниц
+        type: integer
+    type: object
   models.PatientGroupShortResponse:
     properties:
       code:
@@ -630,7 +651,7 @@ paths:
             $ref: '#/definitions/handlers.InternalServerError'
       summary: Получить группы пациентов по их коду или названию их организаций
       tags:
-      - SMP
+      - Groups
   /organizations:
     get:
       consumes:
@@ -746,21 +767,17 @@ paths:
       - application/json
       responses:
         "200":
-          description: Список пациентов
+          description: Список пациентов с пагинацией
           schema:
-            $ref: '#/definitions/models.ShortPatientResponse'
+            $ref: '#/definitions/models.PatientFilterResponse'
         "400":
           description: Некорректные данные
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/handlers.IncorrectDataError'
         "500":
           description: Внутренняя ошибка
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/handlers.InternalServerError'
       security:
       - BearerAuth: []
       summary: Получить список всех пациентов

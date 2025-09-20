@@ -30,11 +30,6 @@ type ShortPatientResponse struct {
 	IsMale    bool      `json:"is_male" example:"true"`                    // Пол (true - мужской)
 }
 
-// PatientResponse - полная информация о пациенте
-// @Description Все данные пациента
-type PatientResponse struct {
-}
-
 type PatientData struct {
 	LastName   string `json:"last_name" example:"Смирнов"`
 	FirstName  string `json:"first_name" example:"Алексей"`
@@ -43,4 +38,14 @@ type PatientData struct {
 	IsMale     bool   `json:"is_male" example:"true"`
 	// Опциональные контактные данные
 	ContactInfo *ContactInfoData `json:"contact_info,omitempty"`
+}
+
+// PatientFilterResponse - ответ со списком пациентов с пагинацией
+// @Description Список пациентов с информацией о пагинации
+type PatientFilterResponse struct {
+	Hits        []ShortPatientResponse `json:"hits"`          // Список пациентов
+	CurrentPage int                    `json:"current_page"`  // Текущая страница
+	TotalPages  int                    `json:"total_pages"`   // Общее количество страниц
+	TotalHits   int                    `json:"total_hits"`    // Общее количество элементов
+	HitsPerPage int                    `json:"hits_per_page"` // Количество элементов на странице
 }

@@ -10,7 +10,7 @@ import (
 // GetPatientGroupsByCodeOrOrgTitle godoc
 // @Summary Получить группы пациентов по их коду или названию их организаций
 // @Description Возвращает список экстренных приёмов, назначенных врачу на указанную дату, с пагинацией
-// @Tags SMP
+// @Tags Groups
 // @Accept json
 // @Produce json
 // @Param doc_id path uint true "ID врача"

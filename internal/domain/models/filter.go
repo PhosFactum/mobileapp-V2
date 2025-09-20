@@ -4,8 +4,8 @@ package models
 // @Description Выводит информацию о пагинации и фильтрации
 type FilterResponse[T any] struct {
 	Hits        T   `json:"hits"`
-	CurrentPage int `json:"currentPage"`
-	TotalPages  int `json:"totalPages"`
-	TotalHits   int `json:"totalHits"`
-	HitsPerPage int `json:"hitsPerPage"`
+	CurrentPage int `json:"current_page"`
+	TotalPages  int `json:"total_pages"`
+	TotalHits   int `json:"total_hits"`
+	HitsPerPage int `json:"hits_per_page"`
 }

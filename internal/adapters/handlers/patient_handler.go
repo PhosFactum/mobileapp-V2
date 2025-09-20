@@ -19,9 +19,9 @@ import (
 // @Param count query int false "Количество записей" default(0)
 // @Param filter query string false "Фильтр в формате field.operation.value"
 // @Param order query string false "Сортировка в формате field.direction"
-// @Success 200 {object} models.ShortPatientResponse "Список пациентов"
-// @Failure 400 {object} map[string]string "Некорректные данные"
-// @Failure 500 {object} map[string]string "Внутренняя ошибка"
+// @Success 200 {object} models.PatientFilterResponse "Список пациентов с пагинацией"
+// @Failure 400 {object} IncorrectDataError "Некорректные данные"
+// @Failure 500 {object} InternalServerError "Внутренняя ошибка"
 // @Router /patients [get]
 func (h *Handler) GetAllPatients(c *gin.Context) {
 	page, err := h.service.ParseIntString(c.DefaultQuery("page", "1"))
