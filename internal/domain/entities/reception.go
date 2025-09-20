@@ -54,9 +54,9 @@ type CustomField struct {
 }
 
 // Вспомогательная функция для создания указателя на int
-func intPtr(i int) *int {
-	return &i
-}
+// func intPtr(i int) *int {
+// 	return &i
+// }
 
 // JSONB — фиктивный тип, чтобы Swagger знал, как дескриптить pgtype.JSONB
 // @name JSONB
