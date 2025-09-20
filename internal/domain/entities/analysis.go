@@ -38,7 +38,7 @@ type AnalysisOrder struct {
 	OrderNumber string    `gorm:"not null;uniqueIndex" json:"order_number"` // Номер направления (уникальный)
 	TotalAmount uint      `gorm:"not null" json:"total_amount"`             // Сумма всех анализов в направлении
 
-	PatientID *uint `gorm:"not null;index" json:"patient_id"`
+	PatientID uint `gorm:"not null;index" json:"patient_id"`
 
 	OrderItems []AnalysisOrderItem `gorm:"foreignKey:OrderID" json:"order_items"`
 }
