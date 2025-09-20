@@ -11,7 +11,7 @@ type DoctorResponse struct {
 }
 
 type DoctorInfoResponse struct {
-	DoctorID       uint   `json:"doctor_id" example: "1"`
+	DoctorID       uint   `json:"doctor_id" example:"1"`
 	FullName       string `json:"full_name" example:"Иванов Иван Иванович"` // Полное имя врача
 	Specialization string `json:"specialization"`
 }
@@ -30,7 +30,7 @@ type CreateDoctorRequest struct {
 type UpdateDoctorRequest struct {
 	ID               uint   `json:"id" example:"1"`
 	FullName         string `json:"full_name" example:"Иванов Иван Иванович"`
-	Login            string `json:"login" example:"+79123456789"`
+	Phone            string `json:"phone" example:"+79123456789"`
 	PasswordHash     string `json:"-"` // Убрали из JSON, чтобы не принималось извне
 	SpecializationID uint   `json:"specialization_id" example:"1"`
 }

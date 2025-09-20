@@ -11,7 +11,7 @@ import (
 )
 
 type AuthUsecase struct {
-	repo      interfaces.AuthRepository
+	repo      interfaces.Repository
 	secretKey string
 }
 
@@ -22,11 +22,11 @@ func NewAuthUsecase(repo interfaces.Repository, secretKey string) *AuthUsecase {
 	}
 }
 
-func (uc *AuthUsecase) LoginDoctor(ctx context.Context, phone, password string) (uint, string, *errors.AppError) {
+func (u *AuthUsecase) LoginDoctor(ctx context.Context, phone, password string) (uint, string, *errors.AppError) {
 	op := "usecase.Auth.LoginDoctor"
 
-	user, err := uc.repo.GetByLogin(ctx, phone)
-	if err != nil || user.ID == 0 {
+	user, err := u.repo.GetByLogin(ctx, phone)
+	if err != nil || user == nil || user.ID == 0 {
 		return 0, "", errors.NewUnauthorizedError(op, "invalid credentials")
 	}
 
@@ -39,10 +39,16 @@ func (uc *AuthUsecase) LoginDoctor(ctx context.Context, phone, password string) 
 		"exp":     time.Now().Add(time.Hour * 24).Unix(),
 	})
 
-	tokenString, err := token.SignedString([]byte(uc.secretKey))
+	tokenString, err := token.SignedString([]byte(u.secretKey))
 	if err != nil {
 		return 0, "", errors.NewInternalError(op, "failed to generate token", err)
 	}
 
 	return user.ID, tokenString, nil
+}
+
+func (u *AuthUsecase) LogoutDoctor(ctx context.Context, token string) *errors.AppError {
+	// Просто возвращаем nil - никаких действий не требуется
+	// В stateless JWT клиент сам удаляет токен
+	return nil
 }
