@@ -5,7 +5,7 @@ import (
 	"net/http"
 
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/handlers"
-	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories"
+	repositories "github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/auth"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/config"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/middleware/logging"

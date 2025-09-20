@@ -1,4 +1,4 @@
-package patientgroup
+package patient_group
 
 import (
 	"github.com/AlexanderMorozov1919/mobileapp/internal/domain/entities"
@@ -35,8 +35,9 @@ func (r *PatientGroupRepositoryImpl) GetPatientGroupsByCodeOrOrgTitle(search str
 	return patientGroups, total, nil
 }
 
+// GetPatientGroupsByOrganizationID получает все группы пациентов конкретной организации
 func (r *PatientGroupRepositoryImpl) GetPatientGroupsByOrganizationID(orgID uint, page, perPage int) ([]entities.PatientGroup, int64, error) {
-	op := "repo.PatientGroup.GetPatientGroupsByOrganizationID"
+	op := "repo.PatientGroup.GetByOrganizationID"
 	var patientGroups []entities.PatientGroup
 	var total int64
 
@@ -44,10 +45,12 @@ func (r *PatientGroupRepositoryImpl) GetPatientGroupsByOrganizationID(orgID uint
 		Model(&entities.PatientGroup{}).
 		Where("organization_id = ?", orgID)
 
+	// Получаем общее количество
 	if err := baseQuery.Count(&total).Error; err != nil {
 		return nil, 0, errors.NewDBError(op, err)
 	}
 
+	// Получаем данные с пагинацией
 	offset := (page - 1) * perPage
 	err := baseQuery.
 		Preload("Organization").

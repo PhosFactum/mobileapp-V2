@@ -17,7 +17,7 @@ import (
 // @Param date query string false "Дата в формате YYYY-MM-DD"
 // @Param page query int false "Номер страницы" default(1)
 // @Param perPage query int false "Количество записей на страницу" default(5)
-// @Success 200 {array} entities.EmergencyCall "Список приёмов"
+// @Success 200 {array} models.PatientGroupShortResponse "Список приёмов"
 // @Failure 400 {object} IncorrectFormatError "Некорректный запрос"
 // @Failure 500 {object} InternalServerError "Внутренняя ошибка"
 // @Router /emergency/{doc_id} [get]
@@ -59,7 +59,7 @@ func (h *Handler) GetPatientGroupsByCodeOrOrgTitle(c *gin.Context) {
 // @Param org_id path uint true "ID организации"
 // @Param page query int false "Номер страницы" default(1)
 // @Param perPage query int false "Количество записей на страницу" default(10)
-// @Success 200 {object} models.FilterResponse[[]models.PatientGroupShortResponse]
+// @Success 200 {object} models.PatientGroupShortResponse
 // @Failure 400 {object} map[string]string
 // @Failure 500 {object} map[string]string
 // @Security BearerAuth

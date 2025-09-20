@@ -36,11 +36,9 @@ func (u *PatientUsecase) CreatePatient(input *models.CreatePatientRequest) (enti
 
 	// 1. Создаем пациента без связей
 	patient := entities.Patient{
-		LastName:   input.LastName,
-		FirstName:  input.FirstName,
-		MiddleName: input.MiddleName,
-		BirthDate:  parsedTime,
-		IsMale:     input.IsMale,
+		FullName:  input.FullName,
+		BirthDate: parsedTime,
+		IsMale:    input.IsMale,
 	}
 
 	patientID, err := u.repo.CreatePatient(patient)
@@ -49,28 +47,28 @@ func (u *PatientUsecase) CreatePatient(input *models.CreatePatientRequest) (enti
 	}
 
 	// 2. Создаем ContactInfo и PersonalInfo с привязкой к patientID
-	contactInfo := entities.ContactInfo{}
-	contactID, err := u.contactRepo.CreateContactInfo(contactInfo)
-	if err != nil {
-		return entities.Patient{}, errors.NewAppError(errors.InternalServerErrorCode, "Не удалось создать контактную информацию", err, false)
-	}
+	// contactInfo := entities.ContactInfo{}
+	// contactID, err := u.contactRepo.CreateContactInfo(contactInfo)
+	// if err != nil {
+	// 	return entities.Patient{}, errors.NewAppError(errors.InternalServerErrorCode, "Не удалось создать контактную информацию", err, false)
+	// }
 
-	personalInfo := entities.PersonalInfo{
-		PatientID: patientID,
-	}
-	personalID, err := u.personalRepo.CreatePersonalInfo(personalInfo)
-	if err != nil {
-		return entities.Patient{}, errors.NewAppError(errors.InternalServerErrorCode, "Не удалось создать персональные данные", err, false)
-	}
+	// personalInfo := entities.PersonalInfo{
+	// 	PatientID: patientID,
+	// }
+	// personalID, err := u.personalRepo.CreatePersonalInfo(personalInfo)
+	// if err != nil {
+	// 	return entities.Patient{}, errors.NewAppError(errors.InternalServerErrorCode, "Не удалось создать персональные данные", err, false)
+	// }
 
 	// 3. Обновляем пациента, добавляя ID контактной и персональной информации
-	_, err = u.repo.UpdatePatient(patientID, map[string]interface{}{
-		"ContactInfoID":  contactID,
-		"PersonalInfoID": personalID,
-	})
-	if err != nil {
-		return entities.Patient{}, errors.NewAppError(errors.InternalServerErrorCode, "Не удалось обновить пациента", err, false)
-	}
+	// _, err = u.repo.UpdatePatient(patientID, map[string]interface{}{
+	// 	"ContactInfoID":  contactID,
+	// 	"PersonalInfoID": personalID,
+	// })
+	// if err != nil {
+	// 	return entities.Patient{}, errors.NewAppError(errors.InternalServerErrorCode, "Не удалось обновить пациента", err, false)
+	// }
 
 	// 4. Получаем обновленного пациента
 	createdPatient, err := u.repo.GetPatientByID(patientID)
@@ -206,11 +204,9 @@ func (u *PatientUsecase) GetAllPatients(page, count int, filter string, order st
 
 func mapPatientEntityToModel(entity entities.Patient) models.ShortPatientResponse {
 	return models.ShortPatientResponse{
-		ID:         entity.ID,
-		LastName:   entity.LastName,
-		FirstName:  entity.FirstName,
-		MiddleName: entity.MiddleName,
-		BirthDate:  entity.BirthDate,
-		IsMale:     entity.IsMale,
+		ID:        entity.ID,
+		FullName:  entity.FullName,
+		BirthDate: entity.BirthDate,
+		IsMale:    entity.IsMale,
 	}
 }
