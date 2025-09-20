@@ -20,7 +20,7 @@ type Config struct {
 	Database   DatabaseConfig
 	Logging    LoggerConfig
 	Services   Services
-	Server     ServerConfig // Добавляем ServerConfig в основную структуру
+	Server     ServerConfig
 	JWTSecret  string
 }
 
@@ -92,7 +92,7 @@ func LoadConfig() (*Config, error) {
 			WriteTimeout:      time.Second * 20,
 		},
 		Database: DatabaseConfig{
-			Host:     getEnv("DB_HOST", "192.168.29.138"),
+			Host:     getEnv("DB_HOST", "localhost"),
 			Port:     getEnv("DB_PORT", "5432"),
 			Username: getEnv("DB_USER", "postgres"),
 			Password: getEnv("DB_PASSWORD", "password"),

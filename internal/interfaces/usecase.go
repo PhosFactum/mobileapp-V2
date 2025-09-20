@@ -59,4 +59,11 @@ type PersonalInfoUsecase interface{}
 
 type AuthUsecase interface {
 	LoginDoctor(ctx context.Context, phone, password string) (uint, string, *errors.AppError)
+	LogoutDoctor(ctx context.Context, token string) *errors.AppError
+}
+
+type ConsentUsecase interface {
+	SaveConsent(patientID uint, signature []byte) *errors.AppError
+	GetSignature(patientID uint) ([]byte, *errors.AppError)
+	GetConsentByPatientID(patientID uint) (*entities.ConsentSignature, *errors.AppError)
 }

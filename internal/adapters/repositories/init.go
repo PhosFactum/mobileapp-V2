@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/auth"
+	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/consent_signatures"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/contactInfo"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/doctor"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/organization"
@@ -38,6 +39,7 @@ type Repository struct {
 	interfaces.TxRepository
 	interfaces.OrganizationRepository
 	interfaces.PatientGroupRepository
+	interfaces.ConsentSignatureRepository
 }
 
 func NewRepository(cfg *config.Config) (interfaces.Repository, error) {
@@ -83,6 +85,7 @@ func NewRepository(cfg *config.Config) (interfaces.Repository, error) {
 		tx.NewTxRepository(db),
 		organization.NewOrganizationRepository(db),
 		patientgroup.NewPatientGroupRepository(db),
+		consent_signatures.NewConsentSignatureRepository(db),
 	}, nil
 
 }
@@ -175,6 +178,10 @@ func autoMigrate(db *gorm.DB) error {
 		&entities.AnalysisOrderItem{}, // После AnalysisOrder и Analysis
 		&entities.Vaccine{},           // После Patient
 		&entities.Reception{},         // После Patient и Specialization
+		&entities.Patient{},
+		&entities.ContactInfo{},
+		&entities.PersonalInfo{},
+		&entities.ConsentSignature{},
 	}
 
 	if err := db.AutoMigrate(models...); err != nil {

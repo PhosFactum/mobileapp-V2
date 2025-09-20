@@ -13,6 +13,7 @@ import (
 // @Tags Doctor
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param doc_id path uint true "ID врача"
 // @Success 200 {object} entities.Doctor "Данные врача"
 // @Failure 400 {object} IncorrectDataError "Некорректный ID"
@@ -40,6 +41,7 @@ func (h *Handler) GetDoctorByID(c *gin.Context) {
 // @Tags Doctor
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param info body models.UpdateDoctorRequest true "Данные для обновления"
 // @Success 201 {object} entities.Doctor "Обновленный врач"
 // @Failure 400 {object} IncorrectFormatError "Некорректный запрос"
