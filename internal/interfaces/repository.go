@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/AlexanderMorozov1919/mobileapp/internal/domain/entities"
+	"github.com/AlexanderMorozov1919/mobileapp/internal/domain/models"
 	"gorm.io/gorm"
 )
 
@@ -72,7 +73,7 @@ type ReceptionRepository interface {
 
 // updated to match the new structured
 type PatientRepository interface {
-	CreatePatient(patient entities.Patient) (uint, error)
+	CreatePatient(patientData *models.CreatePatientData) (*entities.Patient, error)
 	UpdatePatient(id uint, updateMap map[string]interface{}) (uint, error)
 	DeletePatient(id uint) error
 	GetPatientByID(id uint) (entities.Patient, error)

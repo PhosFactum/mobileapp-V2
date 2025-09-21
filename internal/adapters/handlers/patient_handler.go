@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/AlexanderMorozov1919/mobileapp/internal/domain/models"
-	"github.com/AlexanderMorozov1919/mobileapp/pkg/errors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -65,17 +64,20 @@ func (h *Handler) GetPatientsByGroup(c *gin.Context) {
 // @Failure 422 {object} ValidationError "Ошибка валидации"
 // @Failure 500 {object} InternalServerError "Внутренняя ошибка сервера"
 // @Router /patients [post]
+// handlers/patient_handler.go
+// POST /patients - создание пациента
 func (h *Handler) CreatePatient(c *gin.Context) {
-	var input models.CreatePatientRequest
-	if err := c.ShouldBindJSON(&input); err != nil {
-		h.ErrorResponse(c, err, http.StatusBadRequest, errors.BadRequest, true)
+	var request models.CreatePatientData
+
+	if err := c.ShouldBindJSON(&request); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	patient, eerr := h.usecase.CreatePatient(&input)
-	if eerr != nil {
-		h.ErrorResponse(c, eerr.Err, eerr.Code, eerr.Message, eerr.IsUserFacing)
+	patient, appErr := h.usecase.CreatePatient(&request)
+	if appErr != nil {
+		h.ErrorResponse(c, appErr, http.StatusBadRequest, "fail to create patient", false)
 		return
 	}
-	h.ResultResponse(c, "Success patient create", Object, patient)
+	c.JSON(http.StatusCreated, patient)
 }

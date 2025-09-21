@@ -48,7 +48,7 @@ type DoctorUsecase interface {
 }
 
 type PatientUsecase interface {
-	CreatePatient(input *models.CreatePatientRequest) (entities.Patient, *errors.AppError)
+	CreatePatient(patientData *models.CreatePatientData) (*entities.Patient, error)
 	GetPatientByID(id uint) (entities.Patient, *errors.AppError)
 	UpdatePatient(input *models.UpdatePatientRequest) (entities.Patient, *errors.AppError)
 	DeletePatient(id uint) *errors.AppError

@@ -28,55 +28,25 @@ func NewPatientUsecase(repo interfaces.PatientRepository, contactRepo interfaces
 		FilterBuilder: s}
 }
 
-func (u *PatientUsecase) CreatePatient(input *models.CreatePatientRequest) (entities.Patient, *errors.AppError) {
-	parsedTime, err := time.Parse("2006-01-02", input.BirthDate)
+// CreatePatient - создание пациента
+func (u *PatientUsecase) CreatePatient(patientData *models.CreatePatientData) (*entities.Patient, error) {
+	// // 1. Валидация входных данных
+	// if err := u.validateCreatePatientData(patientData); err != nil {
+	//     return nil, errors.NewValidationError(op, err)
+	// }
+
+	// // 2. Проверяем существование обязательных сущностей
+	// if err := u.validateRequiredEntities(patientData); err != nil {
+	//     return nil, errors.NewValidationError(op, err)
+	// }
+
+	// 3. Создаем пациента через репозиторий
+	patient, err := u.repo.CreatePatient(patientData)
 	if err != nil {
-		return entities.Patient{}, errors.NewAppError(errors.InvalidDataCode, "Ошибка парсинга даты", err, false)
+		return nil, errors.NewAppError(errors.InternalServerErrorCode, "failed to create patient", err, true)
 	}
 
-	// 1. Создаем пациента без связей
-	patient := entities.Patient{
-		FullName:  input.FullName,
-		BirthDate: parsedTime,
-		IsMale:    input.IsMale,
-	}
-
-	patientID, err := u.repo.CreatePatient(patient)
-	if err != nil {
-		return entities.Patient{}, errors.NewAppError(errors.InternalServerErrorCode, "Не удалось создать пациента", err, false)
-	}
-
-	// 2. Создаем ContactInfo и PersonalInfo с привязкой к patientID
-	// contactInfo := entities.ContactInfo{}
-	// contactID, err := u.contactRepo.CreateContactInfo(contactInfo)
-	// if err != nil {
-	// 	return entities.Patient{}, errors.NewAppError(errors.InternalServerErrorCode, "Не удалось создать контактную информацию", err, false)
-	// }
-
-	// personalInfo := entities.PersonalInfo{
-	// 	PatientID: patientID,
-	// }
-	// personalID, err := u.personalRepo.CreatePersonalInfo(personalInfo)
-	// if err != nil {
-	// 	return entities.Patient{}, errors.NewAppError(errors.InternalServerErrorCode, "Не удалось создать персональные данные", err, false)
-	// }
-
-	// 3. Обновляем пациента, добавляя ID контактной и персональной информации
-	// _, err = u.repo.UpdatePatient(patientID, map[string]interface{}{
-	// 	"ContactInfoID":  contactID,
-	// 	"PersonalInfoID": personalID,
-	// })
-	// if err != nil {
-	// 	return entities.Patient{}, errors.NewAppError(errors.InternalServerErrorCode, "Не удалось обновить пациента", err, false)
-	// }
-
-	// 4. Получаем обновленного пациента
-	createdPatient, err := u.repo.GetPatientByID(patientID)
-	if err != nil {
-		return entities.Patient{}, errors.NewAppError(errors.InternalServerErrorCode, "Не удалось получить пациента", err, false)
-	}
-
-	return createdPatient, nil
+	return patient, nil
 }
 
 func (u *PatientUsecase) GetPatientByID(id uint) (entities.Patient, *errors.AppError) {

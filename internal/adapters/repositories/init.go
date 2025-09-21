@@ -90,10 +90,6 @@ func NewRepository(cfg *config.Config) (interfaces.Repository, error) {
 
 }
 
-// repository/migrations.go
-
-// repository/migrations.go
-
 func autoMigrate(db *gorm.DB) error {
 	// ✅ Правильный порядок удаления таблиц (зависимые первыми)
 	tablesToDelete := []string{
@@ -103,16 +99,17 @@ func autoMigrate(db *gorm.DB) error {
 		"analysis_orders",
 		"vaccines",
 		"fl_gs",
-		"patients_specializations",
-		"patients_patient_groups",
-		"doctor_specializations",
-		"doctor_organizations",
+		"patients_specializations",    // ✅ Автоматически созданные таблицы
+		"patients_patient_groups",     // ✅ Автоматически созданные таблицы
+		"doctor_specializations",      // ✅ Автоматически созданные таблицы
+		"doctor_organizations",        // ✅ Автоматически созданные таблицы
+		"harm_points_specializations", // ✅ Автоматически созданные таблицы
 		"contact_infos",
 		"personal_infos",
-		"patient_statistics", // После Patient
+		"patient_statistics",
 
 		// Родительские таблицы
-		"patients", // После зависимостей
+		"patients",
 		"patient_groups",
 		"doctors",
 		"specializations",
@@ -135,7 +132,7 @@ func autoMigrate(db *gorm.DB) error {
 		"places",
 	}
 
-	// Удаление таблиц в правильном порядке
+	// Удаление таблиц
 	for _, table := range tablesToDelete {
 		if db.Migrator().HasTable(table) {
 			if err := db.Migrator().DropTable(table); err != nil {
@@ -150,7 +147,7 @@ func autoMigrate(db *gorm.DB) error {
 		&entities.DocumentType{},
 		&entities.ExaminationType{},
 		&entities.ExaminationView{},
-		&entities.HarmPoint{},
+		&entities.HarmPoint{}, // ✅ Без внешних ключей
 		&entities.Title{},
 		&entities.Medication{},
 		&entities.Dose{},
@@ -163,36 +160,31 @@ func autoMigrate(db *gorm.DB) error {
 		&entities.Analysis{}, // Справочник анализов
 
 		// Основные сущности
-		&entities.Specialization{},
-		&entities.Doctor{},
-		&entities.Organization{},
-		&entities.PatientGroup{},
+		&entities.Specialization{}, // ✅ После HarmPoint (для many2many)
+		&entities.Doctor{},         // ✅ После Specialization
+		&entities.Organization{},   // ✅ После Manager
+		&entities.PatientGroup{},   // ✅ После Organization
 
-		// Зависимые сущности (без внешних ключей на Patient)
-		&entities.ContactInfo{},   // Без внешних ключей
-		&entities.PersonalInfo{},  // Без внешних ключей
-		&entities.Flg{},           // Без внешних ключей
-		&entities.AnalysisOrder{}, // Без внешних ключей
+		// Зависимые сущности
+		&entities.ContactInfo{},  // Без внешних ключей
+		&entities.PersonalInfo{}, // Без внешних ключей
+		&entities.Flg{},          // Без внешних ключей
 
-		// Зависимые от Patient
-		&entities.Patient{},           // После справочников и ContactInfo/PersonalInfo
-		&entities.PatientStatistics{}, // После Patient (внешний ключ)
-		&entities.AnalysisOrderItem{}, // После AnalysisOrder и Analysis
-		&entities.Vaccine{},           // После Patient
-		&entities.Reception{},         // После Patient и Specialization
-		&entities.Patient{},
-		&entities.ContactInfo{},
-		&entities.PersonalInfo{},
-		&entities.ConsentSignature{},
+		// Зависимые от основных
+		&entities.Patient{},           // ✅ После справочников и ContactInfo/PersonalInfo
+		&entities.AnalysisOrder{},     // ✅ После Patient и Analysis
+		&entities.AnalysisOrderItem{}, // ✅ После AnalysisOrder и Analysis
+		&entities.Vaccine{},           // ✅ После Patient
+		&entities.Reception{},         // ✅ После Patient и Specialization
+		&entities.PatientStatistics{}, // ✅ После Patient
 	}
 
 	if err := db.AutoMigrate(models...); err != nil {
 		return fmt.Errorf("failed to auto-migrate: %w", err)
 	}
 
-	// ✅ Заполняем тестовыми данными
 	if err := seedTestData(db); err != nil {
-		return fmt.Errorf("failed to seed test data: %w", err)
+		return fmt.Errorf("failed to seed test  %w", err)
 	}
 
 	return nil
@@ -256,7 +248,12 @@ func seedTestData(db *gorm.DB) error {
 	}
 
 	// 9. Создаем пациентов
-	if err := seedPatientsWithRequiredFields(db); err != nil {
+	if err := seedHarmPointsSpecializations(db); err != nil {
+		return fmt.Errorf("failed to seed patients: %w", err)
+	}
+
+	// 9.1. Создаем пациентов
+	if err := seedPatients(db); err != nil {
 		return fmt.Errorf("failed to seed patients: %w", err)
 	}
 
@@ -325,26 +322,6 @@ func seedExaminationViews(db *gorm.DB) error {
 	for _, examView := range examinationViews {
 		if err := db.Create(examView).Error; err != nil {
 			return fmt.Errorf("failed to create examination view %s: %w", examView.Value, err)
-		}
-	}
-	return nil
-}
-
-// seed/harm_points.go
-func seedHarmPoints(db *gorm.DB) error {
-	harmPoints := []*entities.HarmPoint{
-		{Value: 1.0},
-		{Value: 2.0},
-		{Value: 3.0},
-		{Value: 3.1},
-		{Value: 3.2},
-		{Value: 3.3},
-		{Value: 4.0},
-	}
-
-	for _, harmPoint := range harmPoints {
-		if err := db.Create(harmPoint).Error; err != nil {
-			return fmt.Errorf("failed to create harm point %f: %w", harmPoint.Value, err)
 		}
 	}
 	return nil
@@ -687,15 +664,75 @@ func seedAnalyses(db *gorm.DB) error {
 	return nil
 }
 
-// seed/patients.go - создание пациентов с обязательными полями
-func seedPatientsWithRequiredFields(db *gorm.DB) error {
+// seed/harm_points.go
+
+func seedHarmPoints(db *gorm.DB) error {
+	harmPoints := []*entities.HarmPoint{
+		{Value: 1.0},
+		{Value: 2.0},
+		{Value: 3.0},
+		{Value: 3.1},
+		{Value: 3.2},
+		{Value: 3.3},
+		{Value: 4.0},
+	}
+
+	for _, harmPoint := range harmPoints {
+		if err := db.Create(harmPoint).Error; err != nil {
+			return fmt.Errorf("failed to create harm point %f: %w", harmPoint.Value, err)
+		}
+	}
+
+	return nil
+}
+
+// seed/harm_points_specializations.go - связывание HarmPoint со Specialization
+
+func seedHarmPointsSpecializations(db *gorm.DB) error {
+	// Получаем все HarmPoint и Specialization
+	var harmPoints []entities.HarmPoint
+	var specializations []entities.Specialization
+
+	if err := db.Find(&harmPoints).Error; err != nil {
+		return fmt.Errorf("failed to get harm points: %w", err)
+	}
+
+	if err := db.Find(&specializations).Error; err != nil {
+		return fmt.Errorf("failed to get specializations: %w", err)
+	}
+
+	// Создаем связи: каждый HarmPoint связан с 2-3 специализациями
+	for i, harmPoint := range harmPoints {
+		specCount := 2
+		if i%3 == 0 {
+			specCount = 3
+		}
+
+		var specsToLink []entities.Specialization
+		for j := 0; j < specCount && j < len(specializations); j++ {
+			specIndex := (i + j) % len(specializations)
+			specsToLink = append(specsToLink, specializations[specIndex])
+		}
+
+		// ✅ GORM автоматически создаст записи в harm_points_specializations
+		if err := db.Model(&harmPoint).Association("Specializations").Append(&specsToLink); err != nil {
+			return fmt.Errorf("failed to link harm point %f with specializations: %w", harmPoint.Value, err)
+		}
+
+		fmt.Printf("✅ Linked harm point %f with %d specializations\n", harmPoint.Value, len(specsToLink))
+	}
+
+	return nil
+}
+
+// seed/patients.go - ИСПРАВЛЕННЫЙ
+
+func seedPatients(db *gorm.DB) error {
 	// Получаем все справочники
 	var examinationTypes []entities.ExaminationType
 	var examinationViews []entities.ExaminationView
 	var harmPoints []entities.HarmPoint
 	var docTypes []entities.DocumentType
-	var organizations []entities.Organization
-	var managers []entities.Manager
 	var patientGroup []entities.PatientGroup
 
 	if err := db.Find(&examinationTypes).Error; err != nil {
@@ -714,16 +751,8 @@ func seedPatientsWithRequiredFields(db *gorm.DB) error {
 		return fmt.Errorf("failed to get docTypes: %w", err)
 	}
 
-	if err := db.Find(&organizations).Error; err != nil {
-		return fmt.Errorf("failed to get organizations: %w", err)
-	}
-
-	if err := db.Find(&managers).Error; err != nil {
-		return fmt.Errorf("failed to get managers: %w", err)
-	}
-
 	if err := db.Find(&patientGroup).Error; err != nil {
-		return fmt.Errorf("failed to get patientGroups: %w", err)
+		return fmt.Errorf("failed to get patientGroup: %w", err)
 	}
 
 	patientsData := []struct {
@@ -732,11 +761,10 @@ func seedPatientsWithRequiredFields(db *gorm.DB) error {
 		IsMale         bool
 		Position       string
 		Division       string
-		PatientGroupID uint
 		ExamTypeID     uint
 		ExamViewID     uint
 		HarmPointID    uint
-		OrganizationID uint
+		PatientGroupID uint
 	}{
 		{
 			"Иванов Петр Сергеевич",
@@ -744,11 +772,10 @@ func seedPatientsWithRequiredFields(db *gorm.DB) error {
 			true,
 			"Программист",
 			"IT отдел",
-			patientGroup[0].ID,
 			examinationTypes[0].ID,
 			examinationViews[0].ID,
 			harmPoints[0].ID,
-			organizations[0].ID,
+			patientGroup[0].ID,
 		},
 		{
 			"Петрова Мария Ивановна",
@@ -756,11 +783,10 @@ func seedPatientsWithRequiredFields(db *gorm.DB) error {
 			false,
 			"Дизайнер",
 			"Дизайн отдел",
-			patientGroup[1].ID,
 			examinationTypes[1].ID,
 			examinationViews[1].ID,
 			harmPoints[1].ID,
-			organizations[1].ID,
+			patientGroup[1].ID,
 		},
 		{
 			"Сидоров Алексей Петрович",
@@ -768,11 +794,10 @@ func seedPatientsWithRequiredFields(db *gorm.DB) error {
 			true,
 			"Менеджер",
 			"Управление",
-			patientGroup[2].ID,
 			examinationTypes[2].ID,
 			examinationViews[2].ID,
 			harmPoints[2].ID,
-			organizations[2].ID,
+			patientGroup[2].ID,
 		},
 	}
 
@@ -793,9 +818,9 @@ func seedPatientsWithRequiredFields(db *gorm.DB) error {
 		personalInfo := &entities.PersonalInfo{
 			DocNumber:      fmt.Sprintf("%06d", 123456+i),
 			DocSeries:      fmt.Sprintf("451%d", i),
-			DocumentTypeID: docTypes[i%3].ID,
 			SNILS:          fmt.Sprintf("123-456-789 %02d", i),
 			OMS:            fmt.Sprintf("123456789012345%d", i),
+			DocumentTypeID: docTypes[0].ID,
 			CreatedAt:      time.Now(),
 			UpdatedAt:      time.Now(),
 		}
@@ -803,7 +828,8 @@ func seedPatientsWithRequiredFields(db *gorm.DB) error {
 			return fmt.Errorf("failed to create personal info: %w", err)
 		}
 
-		// ✅ 3. Создаем Flg запись
+		// ✅ 3. Создаем Flg запись (может быть NULL)
+		var flgID *uint
 		flg := &entities.Flg{
 			IsCompleted:  false,
 			Organization: "Городская поликлиника",
@@ -814,6 +840,7 @@ func seedPatientsWithRequiredFields(db *gorm.DB) error {
 		if err := db.Create(flg).Error; err != nil {
 			return fmt.Errorf("failed to create flg: %w", err)
 		}
+		flgID = &flg.ID
 
 		// ✅ 4. Создаем пустое направление на анализы
 		analysisOrder := &entities.AnalysisOrder{
@@ -839,15 +866,14 @@ func seedPatientsWithRequiredFields(db *gorm.DB) error {
 			IsMale:            pd.IsMale,
 			Position:          pd.Position,
 			Division:          pd.Division,
-			PatientGroupID:    pd.PatientGroupID,
+			PatientGroupID:    uint(i%3 + 1), // Группа 1 или 2
 			ExaminationTypeID: pd.ExamTypeID,
 			ExaminationViewID: pd.ExamViewID,
 			HarmPointID:       pd.HarmPointID,
 			PersonalInfoID:    personalInfo.ID,
 			ContactInfoID:     contactInfo.ID,
-			OrganizationID:    pd.OrganizationID,
-			FlgID:             flg.ID,
-			AnalysisOrderID:   analysisOrder.ID, // ✅ Обязательное поле!
+			FlgID:             flgID,
+			AnalysisOrderID:   analysisOrder.ID,
 			CreatedAt:         time.Now(),
 			UpdatedAt:         time.Now(),
 		}
@@ -862,7 +888,19 @@ func seedPatientsWithRequiredFields(db *gorm.DB) error {
 			return fmt.Errorf("failed to update analysis order with patient ID: %w", err)
 		}
 
-		fmt.Printf("✅ Created patient %s with all required fields\n", patient.FullName)
+		// ✅ 6. Автоматически связываем пациента со специализациями через HarmPoint
+		var harmPoint entities.HarmPoint
+		if err := db.Preload("Specializations").First(&harmPoint, pd.HarmPointID).Error; err != nil {
+			return fmt.Errorf("failed to get harm point with specializations: %w", err)
+		}
+
+		// GORM автоматически создаст связи в patients_specializations
+		if err := db.Model(patient).Association("Specializations").Append(&harmPoint.Specializations); err != nil {
+			return fmt.Errorf("failed to link patient with specializations: %w", err)
+		}
+
+		fmt.Printf("✅ Created patient %s with %d specializations\n",
+			patient.FullName, len(harmPoint.Specializations))
 	}
 
 	return nil

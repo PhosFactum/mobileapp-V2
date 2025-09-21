@@ -81,8 +81,8 @@ func ProvideRouter(h *Handler, cfg *config.Config, swagCfg *swagger.Config) http
 	// Поправить пациента на транзакцию
 
 	// Руты рабочие для новго проекта
-  
-  	// Авторизация
+
+	// Авторизация
 	authGroup := baseRouter.Group("/auth")
 	authGroup.POST("/login", h.LoginDoctor)
 	authGroup.POST("/logout", jwtMiddleware.JWTAuth(cfg.JWTSecret), h.LogoutDoctor)

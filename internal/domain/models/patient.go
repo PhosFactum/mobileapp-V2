@@ -35,12 +35,34 @@ type ShortPatientResponse struct {
 type PatientResponse struct {
 }
 
-type PatientData struct {
-	LastName   string `json:"last_name" example:"Смирнов"`
-	FirstName  string `json:"first_name" example:"Алексей"`
-	MiddleName string `json:"middle_name" example:"Петрович"`
-	BirthDate  string `json:"birth_date" example:"1980-05-15T00:00:00Z"`
-	IsMale     bool   `json:"is_male" example:"true"`
-	// Опциональные контактные данные
-	ContactInfo *ContactInfoData `json:"contact_info,omitempty"`
+type CreatePatientData struct {
+	FullName  string    `json:"full_name" binding:"required"`
+	BirthDate time.Time `json:"birth_date" binding:"required"`
+	IsMale    bool      `json:"is_male" binding:"required"`
+	Position  string    `json:"position" binding:"required"`
+	Division  string    `json:"division" binding:"required"`
+
+	// Обязательные связи
+	ExaminationTypeID uint `json:"examination_type_id" binding:"required"`
+	ExaminationViewID uint `json:"examination_view_id" binding:"required"`
+	HarmPointID       uint `json:"harm_point_id" binding:"required"`
+	PatientGroupID    uint `json:"patient_group_id" binding:"required"`
+
+	// Вложенные структуры
+	ContactInfo  CreateContactInfoData  `json:"contact_info" binding:"required"`
+	PersonalInfo CreatePersonalInfoData `json:"personal_info" binding:"required"`
+}
+
+type CreateContactInfoData struct {
+	Phone   string `json:"phone" binding:"required"`
+	Email   string `json:"email" binding:"required,email"`
+	Address string `json:"address" binding:"required"`
+}
+
+type CreatePersonalInfoData struct {
+	DocNumber      string `json:"doc_number" binding:"required"`
+	DocSeries      string `json:"doc_series" binding:"required"`
+	SNILS          string `json:"snils" binding:"required"`
+	OMS            string `json:"oms" binding:"required"`
+	DocumentTypeID uint   `json:"document_type_id,omitempty"`
 }
