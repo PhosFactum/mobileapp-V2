@@ -10,19 +10,18 @@ import (
 
 // GetAllOrganizations godoc
 // @Summary Получить все организации
-// @Description Возвращает список приёмов скорой медицинской помощи для указанного врача с пагинацией
-// @Tags Calls
+// @Description Возвращает список организаций с пагинацией
+// @Tags Organizations
 // @Accept json
 // @Produce json
-// @Param call_id path uint true "ID вызова"
 // @Param page query int false "Номер страницы" default(1)
 // @Param perPage query int false "Количество записей на страницу" default(5)
-// @Success 200 {array} models.ReceptionSMPResponseList "Информация о приёме скорой помощи"
+// @Success 200 {object} models.OrganizationShortResponse "Список организаций"
 // @Failure 400 {object} IncorrectFormatError "Неверный формат запроса"
-// @Failure 401 {object} IncorrectDataError "Некорректный ID вызова"
+// @Failure 401 {object} IncorrectDataError "Некорректный ID пользователя"
 // @Failure 422 {object} ValidationError "Ошибка валидации"
 // @Failure 500 {object} InternalServerError "Внутренняя ошибка сервера"
-// @Router /emergency/calls/{call_id} [get]
+// @Router /organizations [get]
 func (h *Handler) GetAllOrganizations(c *gin.Context) {
 	doctorIDAny, exists := c.Get("user_id")
 	if !exists {
@@ -44,11 +43,11 @@ func (h *Handler) GetAllOrganizations(c *gin.Context) {
 		return
 	}
 
-	// Получаем номер страницы из query параметров
+	// Получаем количество элементов на страницу из query параметров
 	perPageStr := c.DefaultQuery("perPage", "5")
 	perPage, err := strconv.Atoi(perPageStr)
-	if err != nil || perPage < 5 {
-		h.ErrorResponse(c, err, http.StatusBadRequest, "page must be a positive integer", false)
+	if err != nil || perPage < 1 {
+		h.ErrorResponse(c, err, http.StatusBadRequest, "perPage must be a positive integer", false)
 		return
 	}
 

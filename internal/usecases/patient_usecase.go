@@ -66,9 +66,9 @@ func (u *PatientUsecase) CreatePatient(input *models.CreatePatientRequest) (enti
 	// 	"ContactInfoID":  contactID,
 	// 	"PersonalInfoID": personalID,
 	// })
-	if err != nil {
-		return entities.Patient{}, errors.NewAppError(errors.InternalServerErrorCode, "Не удалось обновить пациента", err, false)
-	}
+	// if err != nil {
+	// 	return entities.Patient{}, errors.NewAppError(errors.InternalServerErrorCode, "Не удалось обновить пациента", err, false)
+	// }
 
 	// 4. Получаем обновленного пациента
 	createdPatient, err := u.repo.GetPatientByID(patientID)
