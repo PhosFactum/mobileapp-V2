@@ -1,5 +1,29 @@
 package reception
 
+import (
+	"github.com/AlexanderMorozov1919/mobileapp/internal/domain/entities"
+	"github.com/AlexanderMorozov1919/mobileapp/pkg/errors"
+)
+
+// GetPatientReceptionsByPatientSpecializations - простой метод получения приемов
+func (r *ReceptionRepositoryImpl) GetPatientReceptionsByPatientSpecializations(patientID uint) ([]entities.Reception, error) {
+	op := "repo.Reception.GetPatientReceptionsByPatientSpecializations"
+
+	var receptions []entities.Reception
+
+	err := r.db.
+		Joins("JOIN patients_specializations ps ON ps.specialization_id = receptions.specialization_id").
+		Where("ps.patient_id = ? AND receptions.patient_id = ?", patientID, patientID).
+		Order("receptions.created_at DESC").
+		Find(&receptions).Error
+
+	if err != nil {
+		return nil, errors.NewDBError(op, err)
+	}
+
+	return receptions, nil
+}
+
 // // GetDoctorReceptions - получение приемов доступных доктору (по его специализациям)
 // func (r *ReceptionRepositoryImpl) GetDoctorReceptions(doctorID uint) ([]entities.Reception, error) {
 //     op := "repo.Reception.GetDoctorReceptions"

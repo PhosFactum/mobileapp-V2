@@ -136,67 +136,89 @@ func (u *PatientUsecase) DeletePatient(id uint) *errors.AppError {
 	return nil
 }
 
-func (u *PatientUsecase) GetAllPatients(page, count int, filter string, order string) (models.FilterResponse[[]models.ShortPatientResponse], *errors.AppError) {
-	var queryFilter string
-	var queryOrder string
-	var parameters []interface{}
-	empty := models.FilterResponse[[]models.ShortPatientResponse]{}
+// func (u *PatientUsecase) GetAllPatients(page, count int, filter string, order string) (models.FilterResponse[[]models.ShortPatientResponse], *errors.AppError) {
+// 	var queryFilter string
+// 	var queryOrder string
+// 	var parameters []interface{}
+// 	empty := models.FilterResponse[[]models.ShortPatientResponse]{}
 
-	// Статические поля модели (имя таблицы/колонки и их типы)
-	entityFields, err := getFieldTypes(entities.Patient{})
-	if err != nil {
-		return empty, errors.NewAppError(errors.InternalServerErrorCode, errors.InternalServerError, err, false)
-	}
+// 	// Статические поля модели (имя таблицы/колонки и их типы)
+// 	entityFields, err := getFieldTypes(entities.Patient{})
+// 	if err != nil {
+// 		return empty, errors.NewAppError(errors.InternalServerErrorCode, errors.InternalServerError, err, false)
+// 	}
 
-	// Парсим фильтр, если он передан
-	if len(filter) > 0 {
-		subQuery, params, err := u.FilterBuilder.ParseFilterString(filter, entityFields)
-		if err != nil {
-			return empty, errors.NewAppError(
-				errors.InvalidDataCode,
-				fmt.Sprintf("invalid filter syntax: %s", err.Error()),
-				nil,
-				false,
-			)
-		}
-		queryFilter = subQuery
-		parameters = params
-	}
+// 	// Парсим фильтр, если он передан
+// 	if len(filter) > 0 {
+// 		subQuery, params, err := u.FilterBuilder.ParseFilterString(filter, entityFields)
+// 		if err != nil {
+// 			return empty, errors.NewAppError(
+// 				errors.InvalidDataCode,
+// 				fmt.Sprintf("invalid filter syntax: %s", err.Error()),
+// 				nil,
+// 				false,
+// 			)
+// 		}
+// 		queryFilter = subQuery
+// 		parameters = params
+// 	}
 
-	if len(order) > 0 {
-		subQuery, err := u.FilterBuilder.ParseOrderString(order, entityFields)
-		if err != nil {
-			return empty, errors.NewAppError(errors.InternalServerErrorCode, fmt.Sprintf("invalid order syntax: %s", err.Error()), nil, false)
-		}
-		queryOrder = subQuery
-	}
+// 	if len(order) > 0 {
+// 		subQuery, err := u.FilterBuilder.ParseOrderString(order, entityFields)
+// 		if err != nil {
+// 			return empty, errors.NewAppError(errors.InternalServerErrorCode, fmt.Sprintf("invalid order syntax: %s", err.Error()), nil, false)
+// 		}
+// 		queryOrder = subQuery
+// 	}
+
+// 	// Получение пациентов
+// 	patients, totalRows, err := u.repo.GetAllPatients(page, count, queryFilter, queryOrder, parameters)
+// 	if err != nil {
+// 		return empty, errors.NewAppError(errors.InternalServerErrorCode, "failed to get patients", err, true)
+// 	}
+
+// 	var totalPages int
+// 	if count == 0 {
+// 		// Если count == 0, то пагинация отключена, и все записи возвращаются на одной странице
+// 		totalPages = 1
+// 		page = 1
+// 	} else {
+// 		// Вычисляем количество страниц с округлением вверх
+// 		totalPages = int(math.Ceil(float64(totalRows) / float64(count)))
+// 	}
+
+// 	var resp_models []models.ShortPatientResponse
+// 	for _, patient := range patients {
+// 		model := mapPatientEntityToModel(patient)
+// 		resp_models = append(resp_models, model)
+// 	}
+
+// 	return models.FilterResponse[[]models.ShortPatientResponse]{
+// 		Hits:        resp_models,
+// 		CurrentPage: page,
+// 		HitsPerPage: len(resp_models),
+// 		TotalHits:   int(totalRows),
+// 		TotalPages:  totalPages,
+// 	}, nil
+// }
+
+func (u *PatientUsecase) GetPatientsByGroup(page, perPage int, group_id uint,
+) (models.FilterResponse[[]entities.Patient], *errors.AppError) {
+
+	empty := models.FilterResponse[[]entities.Patient]{}
 
 	// Получение пациентов
-	patients, totalRows, err := u.repo.GetAllPatients(page, count, queryFilter, queryOrder, parameters)
+	patients, totalRows, err := u.repo.GetPatientsByGroup(page, perPage, group_id)
 	if err != nil {
 		return empty, errors.NewAppError(errors.InternalServerErrorCode, "failed to get patients", err, true)
 	}
 
-	var totalPages int
-	if count == 0 {
-		// Если count == 0, то пагинация отключена, и все записи возвращаются на одной странице
-		totalPages = 1
-		page = 1
-	} else {
-		// Вычисляем количество страниц с округлением вверх
-		totalPages = int(math.Ceil(float64(totalRows) / float64(count)))
-	}
+	totalPages := int(math.Ceil(float64(totalRows) / float64(perPage)))
 
-	var resp_models []models.ShortPatientResponse
-	for _, patient := range patients {
-		model := mapPatientEntityToModel(patient)
-		resp_models = append(resp_models, model)
-	}
-
-	return models.FilterResponse[[]models.ShortPatientResponse]{
-		Hits:        resp_models,
+	return models.FilterResponse[[]entities.Patient]{
+		Hits:        patients,
 		CurrentPage: page,
-		HitsPerPage: len(resp_models),
+		HitsPerPage: len(patients),
 		TotalHits:   int(totalRows),
 		TotalPages:  totalPages,
 	}, nil

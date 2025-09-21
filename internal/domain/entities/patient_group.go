@@ -12,5 +12,5 @@ type PatientGroup struct {
 	OrganizationID uint          `gorm:"not null;index" json:"-"`
 	Organization   *Organization `gorm:"foreignKey:OrganizationID" json:"Organization"`
 
-	Patient []Patient `gorm:"many2many:patients_patient_groups" json:"-"`
+	Patients []Patient `gorm:"foreignKey:PatientGroupID" json:"patients,omitempty"`
 }
