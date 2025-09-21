@@ -14,12 +14,8 @@ type Reception struct {
 
 	IsCompleted bool `gorm:"default:false" json:"is_completed"`
 
-	PatientID uint    `gorm:"not null;index" json:"patient_id" example:"1"`
-	Patient   Patient `gorm:"foreignKey:PatientID" json:"-"`
-
-	// УНИКАЛЬНОЕ ОГРАНИЧЕНИЕ: у пациента может быть только одно заключение на специализацию
-	// Добавляем композитный уникальный индекс
-	// _ struct{} `gorm:"uniqueIndex:idx_patient_specialization"`
+	PatientID uint     `gorm:"not null;index" json:"patient_id" example:"1"`
+	Patient   *Patient `gorm:"foreignKey:PatientID" json:"-"`
 
 	// Связь со специализацией
 	SpecializationID uint            `gorm:"not null;index" json:"specialization_id"`

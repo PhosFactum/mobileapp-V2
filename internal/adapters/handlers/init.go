@@ -63,11 +63,6 @@ func ProvideRouter(h *Handler, cfg *config.Config, swagCfg *swagger.Config) http
 	//Версия
 	baseRouter.GET("/version", h.GetVersionProject)
 
-	// Авторизация
-	authGroup := baseRouter.Group("/auth")
-	authGroup.POST("/login", h.LoginDoctor)
-	authGroup.POST("/logout", jwtMiddleware.JWTAuth(cfg.JWTSecret), h.LogoutDoctor)
-
 	protected := baseRouter.Group("/")
 	protected.Use(jwtMiddleware.JWTAuth(cfg.JWTSecret))
 
@@ -75,12 +70,6 @@ func ProvideRouter(h *Handler, cfg *config.Config, swagCfg *swagger.Config) http
 	doctorGroup := protected.Group("/doctors")
 	doctorGroup.GET("/:doc_id", h.GetDoctorByID)
 	doctorGroup.PUT("/:doc_id", h.UpdateDoctor)
-
-	// Пациенты
-	patientGroup := protected.Group("/patients")
-	// patientGroup.GET("/:doc_id/", h.GetAllPatientsByDoctorID) // Список пациентов доктора
-	patientGroup.GET("/", h.GetAllPatients)
-	patientGroup.POST("/", h.CreatePatient)
 
 	// // Приёмы больницы
 	// hospitalGroup := protected.Group("/hospital")
@@ -92,6 +81,11 @@ func ProvideRouter(h *Handler, cfg *config.Config, swagCfg *swagger.Config) http
 	// Поправить пациента на транзакцию
 
 	// Руты рабочие для новго проекта
+  
+  	// Авторизация
+	authGroup := baseRouter.Group("/auth")
+	authGroup.POST("/login", h.LoginDoctor)
+	authGroup.POST("/logout", jwtMiddleware.JWTAuth(cfg.JWTSecret), h.LogoutDoctor)
 
 	// Организации (страховые)
 	organizationGroup := protected.Group("/organization")
@@ -99,10 +93,14 @@ func ProvideRouter(h *Handler, cfg *config.Config, swagCfg *swagger.Config) http
 
 	//Списки пациентов
 	patientGroupsGroup := protected.Group("/groups")
-	patientGroupsGroup.GET("/", h.GetPatientGroupsByCodeOrOrgTitle)
-	patientGroupsGroup.GET("/:org_id", h.GetPatientGroupsByOrganization) // arg org_id
+	patientGroupsGroup.GET("/", h.GetPatientGroupsByCodeOrOrgTitle) //arg search
+	patientGroupsGroup.GET("/:org_id", h.GetPatientGroupsByOrganization)
 
-	// Подписи пациентов
+	// Пациенты
+	patientGroup := baseRouter.Group("/patients")
+	patientGroup.GET("/:group_id", h.GetPatientsByGroup)
+	patientGroup.POST("/", h.CreatePatient)
+
 	consentGroup := protected.Group("/consent")
 	consentGroup.GET("/personal-data", h.GetPersonalDataConsent)
 	consentGroup.GET("/medical-exam", h.GetMedicalExamConsent)

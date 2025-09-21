@@ -80,7 +80,7 @@ type PatientRepository interface {
 	GetPatientsByFullName(name string) ([]entities.Patient, error)
 	GetPatientByIDWithTx(tx *gorm.DB, id uint) (*entities.Patient, error)
 	UpdatePatientWithTx(tx *gorm.DB, id uint, updateMap map[string]interface{}) (uint, error)
-	GetPatientsByGroup(groupID uint, page, pageSize int) ([]entities.Patient, int64, error)
+	GetPatientsByGroup(page, perPage int, group_id uint) ([]entities.Patient, int64, error)
 }
 
 // updated to match the new structure

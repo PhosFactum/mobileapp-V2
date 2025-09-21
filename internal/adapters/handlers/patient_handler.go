@@ -25,23 +25,25 @@ import (
 // @Failure 400 {object} ResultError "Некорректные данные"
 // @Failure 500 {object} ResultError "Внутренняя ошибка"
 // @Router /patients [get]
-func (h *Handler) GetAllPatients(c *gin.Context) {
+func (h *Handler) GetPatientsByGroup(c *gin.Context) {
+	group_id, err := h.service.ParseUintString(c.Param("group_id"))
+	if err != nil {
+		h.ErrorResponse(c, err, http.StatusBadRequest, "parameter 'group_id' must be an uint", false)
+		return
+	}
 	page, err := h.service.ParseIntString(c.DefaultQuery("page", "1"))
 	if err != nil {
 		h.ErrorResponse(c, err, http.StatusBadRequest, "parameter 'page' must be an integer", false)
 		return
 	}
 
-	count, err := h.service.ParseIntString(c.DefaultQuery("count", "0"))
+	perPage, err := h.service.ParseIntString(c.DefaultQuery("perPage", "20"))
 	if err != nil {
 		h.ErrorResponse(c, err, http.StatusBadRequest, "parameter 'count' must be an integer", false)
 		return
 	}
 
-	filter := c.Query("filter")
-	order := c.Query("order")
-
-	patients, appErr := h.usecase.GetAllPatients(page, count, filter, order)
+	patients, appErr := h.usecase.GetPatientsByGroup(page, perPage, group_id)
 	if appErr != nil {
 		h.ErrorResponse(c, appErr.Err, appErr.Code, appErr.Message, appErr.IsUserFacing)
 		return

@@ -92,6 +92,8 @@ func NewRepository(cfg *config.Config) (interfaces.Repository, error) {
 
 // repository/migrations.go
 
+// repository/migrations.go
+
 func autoMigrate(db *gorm.DB) error {
 	// ✅ Правильный порядок удаления таблиц (зависимые первыми)
 	tablesToDelete := []string{
@@ -107,10 +109,10 @@ func autoMigrate(db *gorm.DB) error {
 		"doctor_organizations",
 		"contact_infos",
 		"personal_infos",
-		"patient_statistics",
+		"patient_statistics", // После Patient
 
 		// Родительские таблицы
-		"patients",
+		"patients", // После зависимостей
 		"patient_groups",
 		"doctors",
 		"specializations",
@@ -167,14 +169,14 @@ func autoMigrate(db *gorm.DB) error {
 		&entities.PatientGroup{},
 
 		// Зависимые сущности (без внешних ключей на Patient)
-		&entities.ContactInfo{},  // Без внешних ключей
-		&entities.PersonalInfo{}, // Без внешних ключей
-		&entities.Flg{},          // Без внешних ключей
+		&entities.ContactInfo{},   // Без внешних ключей
+		&entities.PersonalInfo{},  // Без внешних ключей
+		&entities.Flg{},           // Без внешних ключей
+		&entities.AnalysisOrder{}, // Без внешних ключей
 
 		// Зависимые от Patient
 		&entities.Patient{},           // После справочников и ContactInfo/PersonalInfo
 		&entities.PatientStatistics{}, // После Patient (внешний ключ)
-		&entities.AnalysisOrder{},     // После Patient и Analysis
 		&entities.AnalysisOrderItem{}, // После AnalysisOrder и Analysis
 		&entities.Vaccine{},           // После Patient
 		&entities.Reception{},         // После Patient и Specialization
@@ -254,7 +256,7 @@ func seedTestData(db *gorm.DB) error {
 	}
 
 	// 9. Создаем пациентов
-	if err := seedPatients(db); err != nil {
+	if err := seedPatientsWithRequiredFields(db); err != nil {
 		return fmt.Errorf("failed to seed patients: %w", err)
 	}
 
@@ -685,18 +687,16 @@ func seedAnalyses(db *gorm.DB) error {
 	return nil
 }
 
-// seed/patients.go
-func seedPatients(db *gorm.DB) error {
-	// Получаем справочники
-	var documentTypes []entities.DocumentType
+// seed/patients.go - создание пациентов с обязательными полями
+func seedPatientsWithRequiredFields(db *gorm.DB) error {
+	// Получаем все справочники
 	var examinationTypes []entities.ExaminationType
 	var examinationViews []entities.ExaminationView
 	var harmPoints []entities.HarmPoint
+	var docTypes []entities.DocumentType
 	var organizations []entities.Organization
-
-	if err := db.Find(&documentTypes).Error; err != nil {
-		return fmt.Errorf("failed to get document types: %w", err)
-	}
+	var managers []entities.Manager
+	var patientGroup []entities.PatientGroup
 
 	if err := db.Find(&examinationTypes).Error; err != nil {
 		return fmt.Errorf("failed to get examination types: %w", err)
@@ -710,17 +710,32 @@ func seedPatients(db *gorm.DB) error {
 		return fmt.Errorf("failed to get harm points: %w", err)
 	}
 
+	if err := db.Find(&docTypes).Error; err != nil {
+		return fmt.Errorf("failed to get docTypes: %w", err)
+	}
+
 	if err := db.Find(&organizations).Error; err != nil {
 		return fmt.Errorf("failed to get organizations: %w", err)
 	}
 
-	// Создаем пациентов с обязательными связями
+	if err := db.Find(&managers).Error; err != nil {
+		return fmt.Errorf("failed to get managers: %w", err)
+	}
+
+	if err := db.Find(&patientGroup).Error; err != nil {
+		return fmt.Errorf("failed to get patientGroups: %w", err)
+	}
+
 	patientsData := []struct {
 		FullName       string
 		BirthDate      time.Time
 		IsMale         bool
 		Position       string
 		Division       string
+		PatientGroupID uint
+		ExamTypeID     uint
+		ExamViewID     uint
+		HarmPointID    uint
 		OrganizationID uint
 	}{
 		{
@@ -729,6 +744,10 @@ func seedPatients(db *gorm.DB) error {
 			true,
 			"Программист",
 			"IT отдел",
+			patientGroup[0].ID,
+			examinationTypes[0].ID,
+			examinationViews[0].ID,
+			harmPoints[0].ID,
 			organizations[0].ID,
 		},
 		{
@@ -737,6 +756,10 @@ func seedPatients(db *gorm.DB) error {
 			false,
 			"Дизайнер",
 			"Дизайн отдел",
+			patientGroup[1].ID,
+			examinationTypes[1].ID,
+			examinationViews[1].ID,
+			harmPoints[1].ID,
 			organizations[1].ID,
 		},
 		{
@@ -745,12 +768,16 @@ func seedPatients(db *gorm.DB) error {
 			true,
 			"Менеджер",
 			"Управление",
+			patientGroup[2].ID,
+			examinationTypes[2].ID,
+			examinationViews[2].ID,
+			harmPoints[2].ID,
 			organizations[2].ID,
 		},
 	}
 
 	for i, pd := range patientsData {
-		// Создаем контактную информацию
+		// ✅ 1. Создаем контактную информацию
 		contactInfo := &entities.ContactInfo{
 			Phone:     fmt.Sprintf("+7900%06d", 111111+i),
 			Email:     fmt.Sprintf("patient%d@example.com", i+1),
@@ -762,13 +789,13 @@ func seedPatients(db *gorm.DB) error {
 			return fmt.Errorf("failed to create contact info: %w", err)
 		}
 
-		// Создаем персональную информацию
+		// ✅ 2. Создаем персональную информацию
 		personalInfo := &entities.PersonalInfo{
 			DocNumber:      fmt.Sprintf("%06d", 123456+i),
 			DocSeries:      fmt.Sprintf("451%d", i),
+			DocumentTypeID: docTypes[i%3].ID,
 			SNILS:          fmt.Sprintf("123-456-789 %02d", i),
 			OMS:            fmt.Sprintf("123456789012345%d", i),
-			DocumentTypeID: documentTypes[0].ID,
 			CreatedAt:      time.Now(),
 			UpdatedAt:      time.Now(),
 		}
@@ -776,7 +803,7 @@ func seedPatients(db *gorm.DB) error {
 			return fmt.Errorf("failed to create personal info: %w", err)
 		}
 
-		// Создаем Flg запись
+		// ✅ 3. Создаем Flg запись
 		flg := &entities.Flg{
 			IsCompleted:  false,
 			Organization: "Городская поликлиника",
@@ -788,20 +815,39 @@ func seedPatients(db *gorm.DB) error {
 			return fmt.Errorf("failed to create flg: %w", err)
 		}
 
-		// Создаем пациента с обязательными связями
+		// ✅ 4. Создаем пустое направление на анализы
+		analysisOrder := &entities.AnalysisOrder{
+			OrderNumber: fmt.Sprintf("ORD-%06d", 0), // Временный номер
+			TotalAmount: 0,                          // Пустое направление
+			CreatedAt:   time.Now(),
+			UpdatedAt:   time.Now(),
+		}
+		if err := db.Create(analysisOrder).Error; err != nil {
+			return fmt.Errorf("failed to create analysis order: %w", err)
+		}
+
+		// Обновляем номер с правильным ID
+		analysisOrder.OrderNumber = fmt.Sprintf("ORD-%06d", analysisOrder.ID)
+		if err := db.Save(analysisOrder).Error; err != nil {
+			return fmt.Errorf("failed to update analysis order number: %w", err)
+		}
+
+		// ✅ 5. Создаем пациента со всеми обязательными связями
 		patient := &entities.Patient{
 			FullName:          pd.FullName,
 			BirthDate:         pd.BirthDate,
 			IsMale:            pd.IsMale,
 			Position:          pd.Position,
 			Division:          pd.Division,
-			ExaminationTypeID: examinationTypes[0].ID,
-			ExaminationViewID: examinationViews[0].ID,
-			HarmPointID:       harmPoints[0].ID,
+			PatientGroupID:    pd.PatientGroupID,
+			ExaminationTypeID: pd.ExamTypeID,
+			ExaminationViewID: pd.ExamViewID,
+			HarmPointID:       pd.HarmPointID,
 			PersonalInfoID:    personalInfo.ID,
 			ContactInfoID:     contactInfo.ID,
 			OrganizationID:    pd.OrganizationID,
 			FlgID:             flg.ID,
+			AnalysisOrderID:   analysisOrder.ID, // ✅ Обязательное поле!
 			CreatedAt:         time.Now(),
 			UpdatedAt:         time.Now(),
 		}
@@ -810,38 +856,34 @@ func seedPatients(db *gorm.DB) error {
 			return fmt.Errorf("failed to create patient %s: %w", patient.FullName, err)
 		}
 
-		// Связываем пациента с группами
-		var patientGroups []entities.PatientGroup
-		db.Limit(2).Find(&patientGroups)
-		for _, group := range patientGroups {
-			db.Model(patient).Association("PatientGroups").Append(&group)
+		// Обновляем AnalysisOrder с PatientID
+		analysisOrder.PatientID = patient.ID
+		if err := db.Save(analysisOrder).Error; err != nil {
+			return fmt.Errorf("failed to update analysis order with patient ID: %w", err)
 		}
 
-		// Связываем пациента со специализациями
-		var specializations []entities.Specialization
-		db.Limit(3).Find(&specializations)
-		for _, spec := range specializations {
-			db.Model(patient).Association("Specialization").Append(&spec)
-		}
+		fmt.Printf("✅ Created patient %s with all required fields\n", patient.FullName)
 	}
 
 	return nil
 }
 
-// seed/patient_statistics.go
+// seed/patient_statistics.go - создание нулевой статистики
 func seedPatientStatistics(db *gorm.DB) error {
+	// Получаем всех пациентов
 	var patients []entities.Patient
 	if err := db.Find(&patients).Error; err != nil {
 		return fmt.Errorf("failed to get patients: %w", err)
 	}
 
+	// Создаем нулевую статистику для каждого пациента
 	for _, patient := range patients {
 		stats := &entities.PatientStatistics{
 			PatientID:              patient.ID,
-			TotalReceptions:        0,
-			CompletedReceptions:    0,
-			TotalAnalysisOrders:    0,
-			CompletedAnalysisItems: 0,
+			TotalReceptions:        0, // ✅ Нулевая статистика
+			CompletedReceptions:    0, // ✅ Нулевая статистика
+			TotalAnalysisOrders:    0, // ✅ Нулевая статистика
+			CompletedAnalysisItems: 0, // ✅ Нулевая статистика
 			CreatedAt:              time.Now(),
 			UpdatedAt:              time.Now(),
 		}
@@ -851,13 +893,22 @@ func seedPatientStatistics(db *gorm.DB) error {
 				return fmt.Errorf("failed to create stats for patient %d: %w", patient.ID, err)
 			}
 		}
+
+		// Обновляем пациента с StatisticsID
+		patient.StatisticsID = stats.ID
+		if err := db.Save(&patient).Error; err != nil {
+			return fmt.Errorf("failed to update patient %d with statistics ID: %w", patient.ID, err)
+		}
+
+		fmt.Printf("✅ Created zero statistics for patient %d\n", patient.ID)
 	}
 
 	return nil
 }
 
-// seed/analysis_orders.go
+// seed/analysis_orders.go - создание направлений на анализы
 func seedAnalysisOrders(db *gorm.DB) error {
+	// Получаем пациентов и анализы
 	var patients []entities.Patient
 	var analyses []entities.Analysis
 
@@ -869,60 +920,61 @@ func seedAnalysisOrders(db *gorm.DB) error {
 		return fmt.Errorf("failed to get analyses: %w", err)
 	}
 
+	// Обновляем существующие направления пациентов
 	for i, patient := range patients {
-		orderCount := 1
-		if i%3 == 0 {
-			orderCount = 2
+		var analysisOrder entities.AnalysisOrder
+		if err := db.First(&analysisOrder, patient.AnalysisOrderID).Error; err != nil {
+			return fmt.Errorf("failed to get analysis order for patient %d: %w", patient.ID, err)
 		}
 
-		for j := 0; j < orderCount; j++ {
-			totalAmount := uint(0)
-			var orderItems []entities.AnalysisOrderItem
+		// Добавляем 2-3 анализа в направление
+		orderCount := 2
+		if i%2 == 0 {
+			orderCount = 3
+		}
 
-			itemCount := 2
-			if j%2 == 0 {
-				itemCount = 3
+		var orderItems []entities.AnalysisOrderItem
+		totalAmount := uint(0)
+
+		for j := 0; j < orderCount && j < len(analyses); j++ {
+			analysisIndex := (i + j) % len(analyses)
+			analysis := analyses[analysisIndex]
+
+			totalAmount += analysis.Price
+
+			item := entities.AnalysisOrderItem{
+				OrderID:           analysisOrder.ID,
+				AnalysisID:        analysis.ID,
+				PriceAtAssignment: analysis.Price,
+				IsCompleted:       i%3 != 0, // 2 из 3 анализов завершены
+				CreatedAt:         time.Now().Add(-time.Duration((i+j)*24) * time.Hour),
+				UpdatedAt:         time.Now().Add(-time.Duration((i+j)*12) * time.Hour),
 			}
 
-			for k := 0; k < itemCount && k < len(analyses); k++ {
-				analysisIndex := (j + k) % len(analyses)
-				analysis := analyses[analysisIndex]
-
-				totalAmount += analysis.Price
-
-				item := entities.AnalysisOrderItem{
-					AnalysisID:        analysis.ID,
-					PriceAtAssignment: analysis.Price,
-					IsCompleted:       j%3 != 0,
-					CreatedAt:         time.Now().Add(-time.Duration((i+j)*24) * time.Hour),
-					UpdatedAt:         time.Now().Add(-time.Duration((i+j)*12) * time.Hour),
-				}
-
-				if item.IsCompleted {
-					completedAt := time.Now().Add(-time.Duration((i+j)*6) * time.Hour)
-					item.CompletedAt = &completedAt
-				}
-
-				orderItems = append(orderItems, item)
+			if item.IsCompleted {
+				completedAt := time.Now().Add(-time.Duration((i+j)*6) * time.Hour)
+				item.CompletedAt = &completedAt
 			}
 
-			orderNumber := fmt.Sprintf("ORD-%06d-%02d", patient.ID, j+1)
+			orderItems = append(orderItems, item)
+		}
 
-			order := &entities.AnalysisOrder{
-				OrderNumber: orderNumber,
-				PatientID:   patient.ID,
-				TotalAmount: totalAmount,
-				CreatedAt:   time.Now().Add(-time.Duration(i*24) * time.Hour),
-				UpdatedAt:   time.Now().Add(-time.Duration(i*12) * time.Hour),
-				OrderItems:  orderItems,
-			}
+		// Обновляем направление
+		analysisOrder.TotalAmount = totalAmount
+		analysisOrder.UpdatedAt = time.Now()
+		if err := db.Save(&analysisOrder).Error; err != nil {
+			return fmt.Errorf("failed to update analysis order for patient %d: %w", patient.ID, err)
+		}
 
-			if err := db.Create(order).Error; err != nil {
-				if !strings.Contains(err.Error(), "duplicate") {
-					return fmt.Errorf("failed to create analysis order for patient %d: %w", patient.ID, err)
-				}
+		// Создаем элементы направления
+		if len(orderItems) > 0 {
+			if err := db.Create(&orderItems).Error; err != nil {
+				return fmt.Errorf("failed to create order items for patient %d: %w", patient.ID, err)
 			}
 		}
+
+		fmt.Printf("✅ Updated analysis order %d for patient %d with %d items\n",
+			analysisOrder.ID, patient.ID, len(orderItems))
 	}
 
 	return nil
