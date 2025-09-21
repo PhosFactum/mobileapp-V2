@@ -4,6 +4,8 @@ import (
 	"time"
 )
 
+// entities/patient.go
+
 type Patient struct {
 	ID        uint      `gorm:"primarykey" json:"id" example:"1"`
 	CreatedAt time.Time `json:"created_at"`
@@ -14,47 +16,40 @@ type Patient struct {
 	Position  string    `gorm:"not null" json:"position" example:"Прогер"`
 	Division  string    `gorm:"not null" json:"division" example:"Прогер"`
 
-	ExaminationTypeID uint             `gorm:"not null;index" json:"-"`
-	ExaminationType   *ExaminationType `gorm:"foreignKey:ExaminationTypeID" json:"-"`
+	PatientGroupID uint `gorm:"not null;index" json:"patient_group_id"`
 
-	ExaminationViewID uint             `gorm:"not null;index" json:"-"`
-	ExaminationView   *ExaminationView `gorm:"foreignKey:ExaminationViewID" json:"-"`
+	// Связи с обязательными сущностями (всегда включаются в JSON)
+	ExaminationTypeID uint             `gorm:"not null;index" json:"examination_type_id"`
+	ExaminationType   *ExaminationType `gorm:"foreignKey:ExaminationTypeID" json:"examination_type,omitempty"`
 
-	HarmPointID uint       `gorm:"not null;index" json:"-"`
-	HarmPoint   *HarmPoint `gorm:"foreignKey:HarmPointID" json:"-"`
+	ExaminationViewID uint             `gorm:"not null;index" json:"examination_view_id"`
+	ExaminationView   *ExaminationView `gorm:"foreignKey:ExaminationViewID" json:"examination_view,omitempty"`
 
-	PersonalInfoID uint          `gorm:"not null;index" json:"-"`
-	PersonalInfo   *PersonalInfo `gorm:"foreignKey:PersonalInfoID" json:"-"`
+	HarmPointID uint       `gorm:"not null;index" json:"harm_point_id"`
+	HarmPoint   *HarmPoint `gorm:"foreignKey:HarmPointID" json:"harm_point,omitempty"`
 
-	ContactInfoID uint         `gorm:"not null;index" json:"-"`
-	ContactInfo   *ContactInfo `gorm:"foreignKey:ContactInfoID" json:"-"`
+	PersonalInfoID uint          `gorm:"not null;index" json:"personal_info_id"`
+	PersonalInfo   *PersonalInfo `gorm:"foreignKey:PersonalInfoID" json:"personal_info,omitempty"`
 
-	FlgID uint `gorm:"not null;index" json:"-"`
-	Flg   *Flg `gorm:"foreignKey:FlgID" json:"flg"`
+	ContactInfoID uint         `gorm:"not null;index" json:"contact_info_id"`
+	ContactInfo   *ContactInfo `gorm:"foreignKey:ContactInfoID" json:"contact_info,omitempty"`
 
-	OrganizationID uint          `gorm:"not null;index" json:"organization_id,omitempty" example:"1"`
-	Organization   *Organization `gorm:"foreignKey:OrganizationID" json:"-"`
+	FlgID uint `gorm:"not null;index" json:"flg_id"`
+	Flg   *Flg `gorm:"foreignKey:FlgID" json:"flg,omitempty"`
 
-	Vaccines []Vaccine `gorm:"foreignKey:PatientID"`
+	OrganizationID uint          `gorm:"not null;index" json:"organization_id"`
+	Organization   *Organization `gorm:"foreignKey:OrganizationID" json:"organization,omitempty"`
 
-	PatientGroups   []PatientGroup   `gorm:"many2many:patients_patient_groups;" json:"-"`
-	Specializations []Specialization `gorm:"many2many:patients_specializations;" json:"-"`
+	AnalysisOrderID uint           `gorm:"not null;index" json:"analysis_order_id"`
+	AnalysisOrder   *AnalysisOrder `gorm:"foreignKey:AnalysisOrderID" json:"analysis_order,omitempty"`
 
-	Statistics *PatientStatistics `gorm:"foreignKey:PatientID" json:"statistics,omitempty"`
-}
+	StatisticsID uint               `gorm:"not null;index" json:"statistics_id"`
+	Statistics   *PatientStatistics `gorm:"foreignKey:PatientID" json:"statistics,omitempty"`
 
-type PatientStatistics struct {
-	ID        uint      `gorm:"primarykey" json:"id"`
-	CreatedAt time.Time `json:"-"`
-	UpdatedAt time.Time `json:"updated_at"`
+	Vaccines   []Vaccine   `gorm:"foreignKey:PatientID" json:"vaccines,omitempty"`
+	Receptions []Reception `gorm:"foreignKey:PatientID" json:"receptions,omitempty"`
 
-	PatientID uint `gorm:"not null;uniqueIndex" json:"patient_id"`
-
-	TotalReceptions     int64 `gorm:"not null;default:0" json:"total_receptions"`
-	CompletedReceptions int64 `gorm:"not null;default:0" json:"completed_receptions"`
-
-	TotalAnalysisOrders    int64 `gorm:"not null;default:0" json:"total_analysis_orders"`
-	CompletedAnalysisItems int64 `gorm:"not null;default:0" json:"completed_analysis_items"`
+	Specializations []Specialization `gorm:"many2many:patients_specializations;" json:"specializations,omitempty"`
 }
 
 type ExaminationType struct {
@@ -112,4 +107,18 @@ type PersonalInfo struct {
 type DocumentType struct {
 	ID    uint   `gorm:"primarykey" json:"id"`
 	Value string `gorm:"not null;" json:"value"`
+}
+
+type PatientStatistics struct {
+	ID        uint      `gorm:"primarykey" json:"id"`
+	CreatedAt time.Time `json:"-"`
+	UpdatedAt time.Time `json:"updated_at"`
+
+	PatientID uint `gorm:"not null;uniqueIndex" json:"patient_id"`
+
+	TotalReceptions     int64 `gorm:"not null;default:0" json:"total_receptions"`
+	CompletedReceptions int64 `gorm:"not null;default:0" json:"completed_receptions"`
+
+	TotalAnalysisOrders    int64 `gorm:"not null;default:0" json:"total_analysis_orders"`
+	CompletedAnalysisItems int64 `gorm:"not null;default:0" json:"completed_analysis_items"`
 }
