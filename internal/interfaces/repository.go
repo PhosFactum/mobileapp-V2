@@ -14,6 +14,7 @@ type Repository interface {
 	ContactInfoRepository
 	PersonalInfoRepository
 	TxRepository
+	ConsentSignatureRepository
 	OrganizationRepository
 	PatientGroupRepository
 	ReceptionRepository
@@ -98,6 +99,12 @@ type ContactInfoRepository interface {
 
 type AuthRepository interface {
 	GetByLogin(ctx context.Context, login string) (*entities.Doctor, error)
+}
+
+type ConsentSignatureRepository interface {
+	SaveSignature(patientID uint, signature []byte) error
+	GetSignature(patientID uint) ([]byte, error)
+	GetByPatientID(patientID uint) (*entities.ConsentSignature, error)
 }
 
 type VaccineRepository interface {

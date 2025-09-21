@@ -5,7 +5,7 @@ import (
 
 	"github.com/AlexanderMorozov1919/mobileapp/internal/config"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/interfaces"
-	middleware "github.com/AlexanderMorozov1919/mobileapp/internal/middleware/jwt"
+	jwtMiddleware "github.com/AlexanderMorozov1919/mobileapp/internal/middleware/jwt"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/middleware/logging"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/middleware/swagger"
 	"github.com/gin-gonic/gin"
@@ -64,7 +64,7 @@ func ProvideRouter(h *Handler, cfg *config.Config, swagCfg *swagger.Config) http
 	baseRouter.GET("/version", h.GetVersionProject)
 
 	protected := baseRouter.Group("/")
-	protected.Use(middleware.JWTAuth(cfg.JWTSecret))
+	protected.Use(jwtMiddleware.JWTAuth(cfg.JWTSecret))
 
 	// Доктора
 	doctorGroup := protected.Group("/doctors")
@@ -81,10 +81,11 @@ func ProvideRouter(h *Handler, cfg *config.Config, swagCfg *swagger.Config) http
 	// Поправить пациента на транзакцию
 
 	// Руты рабочие для новго проекта
-
-	// Авторизация
+  
+  	// Авторизация
 	authGroup := baseRouter.Group("/auth")
-	authGroup.POST("/", h.LoginDoctor)
+	authGroup.POST("/login", h.LoginDoctor)
+	authGroup.POST("/logout", jwtMiddleware.JWTAuth(cfg.JWTSecret), h.LogoutDoctor)
 
 	// Организации (страховые)
 	organizationGroup := protected.Group("/organization")
@@ -97,9 +98,14 @@ func ProvideRouter(h *Handler, cfg *config.Config, swagCfg *swagger.Config) http
 
 	// Пациенты
 	patientGroup := baseRouter.Group("/patients")
-	// patientGroup.GET("/:doc_id/", h.GetAllPatientsByDoctorID) // Список пациентов доктора
 	patientGroup.GET("/:group_id", h.GetPatientsByGroup)
 	patientGroup.POST("/", h.CreatePatient)
+
+	consentGroup := protected.Group("/consent")
+	consentGroup.GET("/personal-data", h.GetPersonalDataConsent)
+	consentGroup.GET("/medical-exam", h.GetMedicalExamConsent)
+	consentGroup.GET("/signature/:recep_id", h.GetSignature)
+	consentGroup.POST("/signature/:recep_id", h.SaveSignature)
 
 	return r
 }
