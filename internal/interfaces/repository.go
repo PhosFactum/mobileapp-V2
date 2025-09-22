@@ -23,7 +23,7 @@ type Repository interface {
 
 type PatientGroupRepository interface {
 	GetPatientGroupsByCodeOrOrgTitle(search string, page, perPage int) ([]entities.PatientGroup, int64, error)
-	GetPatientGroupsByOrganizationID(orgID uint, page, perPage int) ([]entities.PatientGroup, int64, error)
+	GetPatientGroupsWithPatientsByOrganizationID(orgID uint, page, perPage int) ([]entities.PatientGroup, int64, error)
 }
 
 type OrganizationRepository interface {

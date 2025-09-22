@@ -606,7 +606,7 @@ paths:
       summary: Обновить данные врача
       tags:
       - Doctor
-  /emergency/{doc_id}:
+  /groups:
     get:
       consumes:
       - application/json
@@ -652,51 +652,7 @@ paths:
       summary: Получить группы пациентов по их коду или названию их организаций
       tags:
       - Groups
-  /organizations:
-    get:
-      consumes:
-      - application/json
-      description: Возвращает список организаций с пагинацией
-      parameters:
-      - default: 1
-        description: Номер страницы
-        in: query
-        name: page
-        type: integer
-      - default: 5
-        description: Количество записей на страницу
-        in: query
-        name: perPage
-        type: integer
-      produces:
-      - application/json
-      responses:
-        "200":
-          description: Список организаций
-          schema:
-            $ref: '#/definitions/models.OrganizationShortResponse'
-        "400":
-          description: Неверный формат запроса
-          schema:
-            $ref: '#/definitions/handlers.IncorrectFormatError'
-        "401":
-          description: Некорректный ID пользователя
-          schema:
-            $ref: '#/definitions/handlers.IncorrectDataError'
-        "422":
-          description: Ошибка валидации
-          schema:
-            $ref: '#/definitions/handlers.ValidationError'
-        "500":
-          description: Внутренняя ошибка сервера
-          schema:
-            $ref: '#/definitions/handlers.InternalServerError'
-      security:
-      - BearerAuth: []
-      summary: Получить все организации
-      tags:
-      - Organizations
-  /organizations/{org_id}/groups:
+  /groups/{org_id}:
     get:
       consumes:
       - application/json
@@ -741,6 +697,50 @@ paths:
       summary: Получить группы пациентов организации
       tags:
       - PatientGroups
+  /organizations:
+    get:
+      consumes:
+      - application/json
+      description: Возвращает список организаций с пагинацией
+      parameters:
+      - default: 1
+        description: Номер страницы
+        in: query
+        name: page
+        type: integer
+      - default: 5
+        description: Количество записей на страницу
+        in: query
+        name: perPage
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Список организаций
+          schema:
+            $ref: '#/definitions/models.OrganizationShortResponse'
+        "400":
+          description: Неверный формат запроса
+          schema:
+            $ref: '#/definitions/handlers.IncorrectFormatError'
+        "401":
+          description: Некорректный ID пользователя
+          schema:
+            $ref: '#/definitions/handlers.IncorrectDataError'
+        "422":
+          description: Ошибка валидации
+          schema:
+            $ref: '#/definitions/handlers.ValidationError'
+        "500":
+          description: Внутренняя ошибка сервера
+          schema:
+            $ref: '#/definitions/handlers.InternalServerError'
+      security:
+      - BearerAuth: []
+      summary: Получить все организации
+      tags:
+      - Organizations
   /patients:
     get:
       consumes:

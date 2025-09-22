@@ -20,7 +20,7 @@ import (
 // @Success 200 {array} models.PatientGroupShortResponse "Список приёмов"
 // @Failure 400 {object} IncorrectFormatError "Некорректный запрос"
 // @Failure 500 {object} InternalServerError "Внутренняя ошибка"
-// @Router /emergency/{doc_id} [get]
+// @Router /groups [get]
 func (h *Handler) GetPatientGroupsByCodeOrOrgTitle(c *gin.Context) {
 	// Получаем дату из query параметров
 	search := c.Query("search")
@@ -63,7 +63,7 @@ func (h *Handler) GetPatientGroupsByCodeOrOrgTitle(c *gin.Context) {
 // @Failure 400 {object} map[string]string
 // @Failure 500 {object} map[string]string
 // @Security BearerAuth
-// @Router /organizations/{org_id}/groups [get]
+// @Router /groups/{org_id} [get]
 func (h *Handler) GetPatientGroupsByOrganization(c *gin.Context) {
 	// Получаем org_id из URL
 	orgIDParam := c.Param("org_id")

@@ -19,7 +19,7 @@ type Usecases interface {
 
 type PatientGroupUseCase interface {
 	GetPatientGroupsByCodeOrOrgTitle(search string, page, perPage int) (*models.FilterResponse[[]models.PatientGroupShortResponse], error)
-	GetPatientGroupsByOrganizationID(orgID uint, page, perPage int) (*models.FilterResponse[[]models.PatientGroupShortResponse], error)
+	GetPatientGroupsByOrganizationID(orgID uint, page, perPage int) (*models.FilterResponse[[]models.PatientGroupWithPatientsResponse], error)
 }
 
 type OrganizationUseCase interface {

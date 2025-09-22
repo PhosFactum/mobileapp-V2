@@ -35,9 +35,9 @@ func (r *PatientGroupRepositoryImpl) GetPatientGroupsByCodeOrOrgTitle(search str
 	return patientGroups, total, nil
 }
 
-// GetPatientGroupsByOrganizationID получает все группы пациентов конкретной организации
-func (r *PatientGroupRepositoryImpl) GetPatientGroupsByOrganizationID(orgID uint, page, perPage int) ([]entities.PatientGroup, int64, error) {
-	op := "repo.PatientGroup.GetByOrganizationID"
+// GetPatientGroupsWithPatientsByOrganizationID получает группы пациентов с пациентами
+func (r *PatientGroupRepositoryImpl) GetPatientGroupsWithPatientsByOrganizationID(orgID uint, page, perPage int) ([]entities.PatientGroup, int64, error) {
+	op := "repo.PatientGroup.GetWithPatientsByOrganizationID"
 	var patientGroups []entities.PatientGroup
 	var total int64
 
@@ -50,10 +50,11 @@ func (r *PatientGroupRepositoryImpl) GetPatientGroupsByOrganizationID(orgID uint
 		return nil, 0, errors.NewDBError(op, err)
 	}
 
-	// Получаем данные с пагинацией
+	// Получаем данные с пагинацией и предзагрузкой пациентов
 	offset := (page - 1) * perPage
 	err := baseQuery.
 		Preload("Organization").
+		Preload("Patient"). // Загружаем пациентов
 		Offset(offset).
 		Limit(perPage).
 		Find(&patientGroups).
