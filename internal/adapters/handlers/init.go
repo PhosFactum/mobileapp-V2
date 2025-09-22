@@ -44,11 +44,11 @@ func NewHandler(usecase interfaces.Usecases, parentLogger *logging.Logger, servi
 func ProvideRouter(h *Handler, cfg *config.Config, swagCfg *swagger.Config) http.Handler {
 	r := gin.Default()
 
-	// CORS
+	// Временное решение для разработки - разрешаем все
 	r.Use(cors.New(cors.Config{
-		AllowOrigins:     []string{"http://127.0.0.1:8080", "http://localhost:8080"},
+		AllowAllOrigins:  true,
 		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"},
-		AllowHeaders:     []string{"Origin", "Content-Type", "Accept", "Authorization", "Content-Length"},
+		AllowHeaders:     []string{"*"},
 		ExposeHeaders:    []string{"Content-Length", "Authorization"},
 		AllowCredentials: true,
 		MaxAge:           12 * time.Hour,
@@ -63,7 +63,7 @@ func ProvideRouter(h *Handler, cfg *config.Config, swagCfg *swagger.Config) http
 	// Общая группа для API
 	baseRouter := r.Group("/api/v1")
 
-	//Версия
+	// Версия - без авторизации
 	baseRouter.GET("/version", h.GetVersionProject)
 
 	// Авторизация

@@ -453,6 +453,11 @@ const docTemplate = `{
         },
         "/organizations": {
             "get": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
                 "description": "Возвращает список организаций с пагинацией",
                 "consumes": [
                     "application/json"

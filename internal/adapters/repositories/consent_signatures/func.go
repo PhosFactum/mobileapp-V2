@@ -56,7 +56,7 @@ func (r *ConsentSignatureRepositoryImpl) GetSignature(patientID uint) ([]byte, e
 
 		if err == gorm.ErrRecordNotFound {
 			log.Printf("[%s] Signature not found for patient %d", op, patientID)
-			return nil, errors.NewNotFoundError(op)
+			return nil, errors.ErrNotFound
 		}
 
 		log.Printf("[%s] DB error: %v", op, err)

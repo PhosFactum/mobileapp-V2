@@ -691,6 +691,8 @@ paths:
           description: Внутренняя ошибка сервера
           schema:
             $ref: '#/definitions/handlers.InternalServerError'
+      security:
+      - BearerAuth: []
       summary: Получить все организации
       tags:
       - Organizations
