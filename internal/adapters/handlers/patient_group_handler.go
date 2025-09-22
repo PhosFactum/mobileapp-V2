@@ -60,8 +60,8 @@ func (h *Handler) GetPatientGroupsByCodeOrOrgTitle(c *gin.Context) {
 // @Param page query int false "Номер страницы" default(1)
 // @Param perPage query int false "Количество записей на страницу" default(10)
 // @Success 200 {object} models.PatientGroupShortResponse
-// @Failure 400 {object} map[string]string
-// @Failure 500 {object} map[string]string
+// @Failure 400 {object} IncorrectFormatError "Группа пациентов не найдена"
+// @Failure 500 {object} InternalServerError "Внутренняя ошибка сервера"
 // @Security BearerAuth
 // @Router /groups/{org_id} [get]
 func (h *Handler) GetPatientGroupsByOrganization(c *gin.Context) {

@@ -104,9 +104,9 @@ func (h *Handler) GetMedicalExamConsent(c *gin.Context) {
 // @Security BearerAuth
 // @Param recep_id path string true "ID пациента"
 // @Param signature formData file true "Изображение подписи (PNG/JPG)"
-// @Success 200 {object} map[string]interface{} "Подпись сохранена"
-// @Failure 400 {object} map[string]interface{} "Неверный ID пациента или отсутствует файл"
-// @Failure 500 {object} map[string]interface{} "Ошибка сервера"
+// @Success 200 {object} entities.ConsentSignature "Подпись сохранена"
+// @Failure 400 {object} IncorrectDataError "Неверный ID пациента или отсутствует файл"
+// @Failure 500 {object} InternalServerError "Ошибка сервера"
 // @Router /consent/signature/{recep_id} [post]
 func (h *Handler) SaveSignature(c *gin.Context) {
 	patientID, err := h.service.ParseUintString(c.Param("recep_id"))
@@ -150,11 +150,10 @@ func (h *Handler) SaveSignature(c *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Param recep_id path string true "ID пациента"
-// @Success 200 {object} map[string]interface{} "Подпись получена"
 // @Success 200 {string} signatureBase64.Base64 "Base64-кодированное изображение"
-// @Failure 400 {object} map[string]interface{} "Неверный ID пациента"
-// @Failure 404 {object} map[string]interface{} "Подпись не найдена"
-// @Failure 500 {object} map[string]interface{} "Ошибка сервера"
+// @Failure 400 {object} IncorrectFormatError "Неверный ID пациента"
+// @Failure 404 {object} NotFoundError "Подпись не найдена"
+// @Failure 500 {object} InternalServerError "Ошибка сервера"
 // @Router /consent/signature/{recep_id} [get]
 func (h *Handler) GetSignature(c *gin.Context) {
 	patientID, err := h.service.ParseUintString(c.Param("recep_id"))

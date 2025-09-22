@@ -13,6 +13,7 @@ import (
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/consent_signatures"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/contactInfo"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/doctor"
+	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/flg"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/organization"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/patient"
 	patientgroup "github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/patient_group"
@@ -40,6 +41,7 @@ type Repository struct {
 	interfaces.OrganizationRepository
 	interfaces.PatientGroupRepository
 	interfaces.ConsentSignatureRepository
+	interfaces.FLGRepository
 }
 
 func NewRepository(cfg *config.Config) (interfaces.Repository, error) {
@@ -83,9 +85,11 @@ func NewRepository(cfg *config.Config) (interfaces.Repository, error) {
 		personalInfo.NewPersonalInfoRepository(db),
 		reception.NewReceptionRepository(db),
 		tx.NewTxRepository(db),
+
 		organization.NewOrganizationRepository(db),
 		patientgroup.NewPatientGroupRepository(db),
 		consent_signatures.NewConsentSignatureRepository(db),
+		flg.NewFLGRepository(db),
 	}, nil
 
 }
@@ -101,7 +105,7 @@ func autoMigrate(db *gorm.DB) error {
 		"analysis_order_items",
 		"analysis_orders",
 		"vaccines",
-		"fl_gs",
+		"flgs",
 		"patients_specializations",
 		"patients_patient_groups",
 		"doctor_specializations",
@@ -685,7 +689,6 @@ func seedAnalyses(db *gorm.DB) error {
 	return nil
 }
 
-// seed/patients.go
 func seedPatients(db *gorm.DB) error {
 	// Получаем справочники
 	var documentTypes []entities.DocumentType
@@ -714,7 +717,7 @@ func seedPatients(db *gorm.DB) error {
 		return fmt.Errorf("failed to get organizations: %w", err)
 	}
 
-	// Создаем пациентов с обязательными связями
+	// Данные пациентов
 	patientsData := []struct {
 		FullName       string
 		BirthDate      time.Time
@@ -723,34 +726,13 @@ func seedPatients(db *gorm.DB) error {
 		Division       string
 		OrganizationID uint
 	}{
-		{
-			"Иванов Петр Сергеевич",
-			time.Date(1985, 5, 15, 0, 0, 0, 0, time.UTC),
-			true,
-			"Программист",
-			"IT отдел",
-			organizations[0].ID,
-		},
-		{
-			"Петрова Мария Ивановна",
-			time.Date(1990, 8, 22, 0, 0, 0, 0, time.UTC),
-			false,
-			"Дизайнер",
-			"Дизайн отдел",
-			organizations[1].ID,
-		},
-		{
-			"Сидоров Алексей Петрович",
-			time.Date(1978, 12, 3, 0, 0, 0, 0, time.UTC),
-			true,
-			"Менеджер",
-			"Управление",
-			organizations[2].ID,
-		},
+		{"Иванов Петр Сергеевич", time.Date(1985, 5, 15, 0, 0, 0, 0, time.UTC), true, "Программист", "IT отдел", organizations[0].ID},
+		{"Петрова Мария Ивановна", time.Date(1990, 8, 22, 0, 0, 0, 0, time.UTC), false, "Дизайнер", "Дизайн отдел", organizations[1].ID},
+		{"Сидоров Алексей Петрович", time.Date(1978, 12, 3, 0, 0, 0, 0, time.UTC), true, "Менеджер", "Управление", organizations[2].ID},
 	}
 
 	for i, pd := range patientsData {
-		// Создаем контактную информацию
+		// 1. Контактная информация
 		contactInfo := &entities.ContactInfo{
 			Phone:     fmt.Sprintf("+7900%06d", 111111+i),
 			Email:     fmt.Sprintf("patient%d@example.com", i+1),
@@ -762,7 +744,7 @@ func seedPatients(db *gorm.DB) error {
 			return fmt.Errorf("failed to create contact info: %w", err)
 		}
 
-		// Создаем персональную информацию
+		// 2. Персональная информация
 		personalInfo := &entities.PersonalInfo{
 			DocNumber:      fmt.Sprintf("%06d", 123456+i),
 			DocSeries:      fmt.Sprintf("451%d", i),
@@ -776,19 +758,7 @@ func seedPatients(db *gorm.DB) error {
 			return fmt.Errorf("failed to create personal info: %w", err)
 		}
 
-		// Создаем Flg запись
-		flg := &entities.Flg{
-			IsCompleted:  false,
-			Organization: "Городская поликлиника",
-			Number:       10000 + i,
-			Result:       "Норма",
-			Date:         time.Now(),
-		}
-		if err := db.Create(flg).Error; err != nil {
-			return fmt.Errorf("failed to create flg: %w", err)
-		}
-
-		// Создаем пациента с обязательными связями
+		// 3. Создаём пациента без FlgID
 		patient := &entities.Patient{
 			FullName:          pd.FullName,
 			BirthDate:         pd.BirthDate,
@@ -801,23 +771,41 @@ func seedPatients(db *gorm.DB) error {
 			PersonalInfoID:    personalInfo.ID,
 			ContactInfoID:     contactInfo.ID,
 			OrganizationID:    pd.OrganizationID,
-			FlgID:             flg.ID,
 			CreatedAt:         time.Now(),
 			UpdatedAt:         time.Now(),
 		}
-
 		if err := db.Create(patient).Error; err != nil {
 			return fmt.Errorf("failed to create patient %s: %w", patient.FullName, err)
 		}
 
-		// Связываем пациента с группами
+		// 4. Создаём Flg после пациента
+		flg := &entities.Flg{
+			PatientID:       patient.ID,
+			OrganizationID:  pd.OrganizationID,
+			DoctorID:        1, // если нужно, можно заменить на существующего доктора
+			ExaminationDate: time.Now(),
+			Number:          fmt.Sprintf("%d", 10000+i),
+			Result:          "Норма",
+		}
+		if err := db.Create(flg).Error; err != nil {
+			return fmt.Errorf("failed to create flg: %w", err)
+		}
+
+		// 5. Обновляем Patient.FlgID через указатель
+		patient.FlgID = new(uint) // создаём указатель
+		*patient.FlgID = flg.ID   // записываем значение
+		if err := db.Save(patient).Error; err != nil {
+			return fmt.Errorf("failed to update patient with flg_id: %w", err)
+		}
+
+		// 6. Связываем пациента с группами
 		var patientGroups []entities.PatientGroup
 		db.Limit(2).Find(&patientGroups)
 		for _, group := range patientGroups {
 			db.Model(patient).Association("PatientGroups").Append(&group)
 		}
 
-		// Связываем пациента со специализациями
+		// 7. Связываем пациента со специализациями
 		var specializations []entities.Specialization
 		db.Limit(3).Find(&specializations)
 		for _, spec := range specializations {

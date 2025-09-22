@@ -29,8 +29,8 @@ type Patient struct {
 	ContactInfoID uint         `gorm:"not null;index" json:"-"`
 	ContactInfo   *ContactInfo `gorm:"foreignKey:ContactInfoID" json:"-"`
 
-	FlgID uint `gorm:"not null;index" json:"-"`
-	Flg   *Flg `gorm:"foreignKey:FlgID" json:"flg"`
+	FlgID *uint `gorm:"column:flg_id;index" json:"-"`
+	Flg   *Flg  `gorm:"foreignKey:FlgID" json:"flg"`
 
 	OrganizationID uint          `gorm:"not null;index" json:"organization_id,omitempty" example:"1"`
 	Organization   *Organization `gorm:"foreignKey:OrganizationID" json:"-"`
@@ -74,13 +74,16 @@ type HarmPoint struct {
 
 type Flg struct {
 	ID        uint      `gorm:"primarykey" json:"id" example:"1"`
-	CreatedAt time.Time `json:"-"`
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
 
-	IsCompleted  bool      `gorm:"default:false" json:"is_completed"`
-	Organization string    `gorm:"not null" json:"organization" example:"Stavropol"`
-	Number       int       `gorm:"not null" json:"number" example:"984212"`
-	Result       string    `gorm:"not null" json:"result" example:"COVID"`
-	Date         time.Time `json:"date" example:"2023-10-15T14:30:00Z"`
+	PatientID       uint      `gorm:"not null;index" json:"patient_id"`
+	OrganizationID  uint      `gorm:"not null;index" json:"organization_id"`
+	DoctorID        uint      `gorm:"not null;index" json:"doctor_id"`
+	ExaminationDate time.Time `gorm:"not null" json:"examination_date"`
+	Number          string    `gorm:"not null" json:"number" example:"ФЛГ-2025-001"`
+	Result          string    `gorm:"not null" json:"result" example:"Годен"`
+	AttachedImage   string    `json:"attached_image,omitempty"` // URL или base64
 }
 
 // ContactInfo представляет контактную информацию пациента

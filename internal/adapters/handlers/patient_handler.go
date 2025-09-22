@@ -57,9 +57,9 @@ func (h *Handler) GetAllPatients(c *gin.Context) {
 // @Security BearerAuth
 // @Param input body models.CreatePatientRequest true "Данные пациента"
 // @Success 201 {object} entities.Patient "Созданный пациент"
-// @Failure 400 {object} map[string]string "Неверный формат"
+// @Failure 400 {object} IncorrectFormatError "Неверный формат"
 // @Failure 422 {object} map[string]string "Ошибка валидации"
-// @Failure 500 {object} map[string]string "Внутренняя ошибка"
+// @Failure 500 {object} InternalServerError "Внутренняя ошибка сервера" "Внутренняя ошибка"
 // @Router /patients [post]
 func (h *Handler) CreatePatient(c *gin.Context) {
 	var input models.CreatePatientRequest

@@ -15,6 +15,7 @@ type Usecases interface {
 	AuthUsecase
 	OrganizationUseCase
 	PatientGroupUseCase
+	FLGUsecase
 }
 
 type PatientGroupUseCase interface {
@@ -66,4 +67,9 @@ type ConsentUsecase interface {
 	SaveConsent(patientID uint, signature []byte) *errors.AppError
 	GetSignature(patientID uint) ([]byte, *errors.AppError)
 	GetConsentByPatientID(patientID uint) (*entities.ConsentSignature, *errors.AppError)
+}
+
+type FLGUsecase interface {
+	CreateFLG(req *models.FLGCreateRequest) (models.FLGResponse, *errors.AppError)
+	UpdateFLG(flgID uint, req *models.FLGUpdateRequest) (models.FLGResponse, *errors.AppError)
 }

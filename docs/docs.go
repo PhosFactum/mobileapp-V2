@@ -190,22 +190,19 @@ const docTemplate = `{
                     "400": {
                         "description": "Неверный ID пациента",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/handlers.IncorrectFormatError"
                         }
                     },
                     "404": {
                         "description": "Подпись не найдена",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/handlers.NotFoundError"
                         }
                     },
                     "500": {
                         "description": "Ошибка сервера",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/handlers.InternalServerError"
                         }
                     }
                 }
@@ -247,22 +244,19 @@ const docTemplate = `{
                     "200": {
                         "description": "Подпись сохранена",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/entities.ConsentSignature"
                         }
                     },
                     "400": {
                         "description": "Неверный ID пациента или отсутствует файл",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/handlers.IncorrectDataError"
                         }
                     },
                     "500": {
                         "description": "Ошибка сервера",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": true
+                            "$ref": "#/definitions/handlers.InternalServerError"
                         }
                     }
                 }
@@ -365,6 +359,76 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Врач не найден",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.NotFoundError"
+                        }
+                    },
+                    "422": {
+                        "description": "Ошибка валидации",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ValidationError"
+                        }
+                    },
+                    "500": {
+                        "description": "Внутренняя ошибка",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.InternalServerError"
+                        }
+                    }
+                }
+            }
+        },
+        "/flg/{flg_id}": {
+            "put": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Обновляет информацию о флюорографическом исследовании",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "FLG"
+                ],
+                "summary": "Обновить данные ФЛГ",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID записи ФЛГ",
+                        "name": "flg_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Данные для обновления",
+                        "name": "info",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.FLGUpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Обновлённая запись ФЛГ",
+                        "schema": {
+                            "$ref": "#/definitions/models.FLGResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректный запрос",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.IncorrectFormatError"
+                        }
+                    },
+                    "404": {
+                        "description": "ФЛГ не найдено",
                         "schema": {
                             "$ref": "#/definitions/handlers.NotFoundError"
                         }
@@ -500,21 +564,15 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "Группа пациентов не найдена",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/handlers.IncorrectFormatError"
                         }
                     },
                     "500": {
-                        "description": "Internal Server Error",
+                        "description": "Внутренняя ошибка сервера",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/handlers.InternalServerError"
                         }
                     }
                 }
@@ -693,10 +751,7 @@ const docTemplate = `{
                     "400": {
                         "description": "Неверный формат",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/handlers.IncorrectFormatError"
                         }
                     },
                     "422": {
@@ -709,12 +764,79 @@ const docTemplate = `{
                         }
                     },
                     "500": {
+                        "description": "Внутренняя ошибка сервера\" \"Внутренняя ошибка",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.InternalServerError"
+                        }
+                    }
+                }
+            }
+        },
+        "/patients/{patient_id}/flg": {
+            "post": {
+                "security": [
+                    {
+                        "BearerAuth": []
+                    }
+                ],
+                "description": "Добавляет новое флюорографическое исследование пациенту",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "FLG"
+                ],
+                "summary": "Создать запись ФЛГ",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "ID пациента",
+                        "name": "patient_id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Данные ФЛГ",
+                        "name": "info",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/models.FLGCreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Созданная запись ФЛГ",
+                        "schema": {
+                            "$ref": "#/definitions/models.FLGResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Некорректный запрос",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.IncorrectFormatError"
+                        }
+                    },
+                    "404": {
+                        "description": "Пациент не найден",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.NotFoundError"
+                        }
+                    },
+                    "422": {
+                        "description": "Ошибка валидации",
+                        "schema": {
+                            "$ref": "#/definitions/handlers.ValidationError"
+                        }
+                    },
+                    "500": {
                         "description": "Внутренняя ошибка",
                         "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
+                            "$ref": "#/definitions/handlers.InternalServerError"
                         }
                     }
                 }
@@ -745,6 +867,23 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "entities.ConsentSignature": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "patient_id": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "entities.Doctor": {
             "type": "object",
             "properties": {
@@ -770,28 +909,39 @@ const docTemplate = `{
         "entities.Flg": {
             "type": "object",
             "properties": {
-                "date": {
-                    "type": "string",
-                    "example": "2023-10-15T14:30:00Z"
+                "attached_image": {
+                    "description": "URL или base64",
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "doctor_id": {
+                    "type": "integer"
+                },
+                "examination_date": {
+                    "type": "string"
                 },
                 "id": {
                     "type": "integer",
                     "example": 1
                 },
-                "is_completed": {
-                    "type": "boolean"
-                },
                 "number": {
-                    "type": "integer",
-                    "example": 984212
-                },
-                "organization": {
                     "type": "string",
-                    "example": "Stavropol"
+                    "example": "ФЛГ-2025-001"
+                },
+                "organization_id": {
+                    "type": "integer"
+                },
+                "patient_id": {
+                    "type": "integer"
                 },
                 "result": {
                     "type": "string",
-                    "example": "COVID"
+                    "example": "Годен"
+                },
+                "updated_at": {
+                    "type": "string"
                 }
             }
         },
@@ -1145,6 +1295,88 @@ const docTemplate = `{
                     "description": "Логин (телефон)",
                     "type": "string",
                     "example": "+79161111111"
+                }
+            }
+        },
+        "models.FLGCreateRequest": {
+            "type": "object",
+            "required": [
+                "examination_date",
+                "number",
+                "organization_id",
+                "patient_id",
+                "result"
+            ],
+            "properties": {
+                "attached_image": {
+                    "type": "string"
+                },
+                "examination_date": {
+                    "type": "string"
+                },
+                "number": {
+                    "type": "string"
+                },
+                "organization_id": {
+                    "type": "integer"
+                },
+                "patient_id": {
+                    "type": "integer"
+                },
+                "result": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.FLGResponse": {
+            "type": "object",
+            "properties": {
+                "attached_image": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "examination_date": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "integer"
+                },
+                "number": {
+                    "type": "string"
+                },
+                "organization_id": {
+                    "type": "integer"
+                },
+                "patient_id": {
+                    "type": "integer"
+                },
+                "result": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.FLGUpdateRequest": {
+            "type": "object",
+            "properties": {
+                "attached_image": {
+                    "type": "string"
+                },
+                "examination_date": {
+                    "type": "string"
+                },
+                "number": {
+                    "type": "string"
+                },
+                "organization_id": {
+                    "type": "integer"
+                },
+                "result": {
+                    "type": "string"
                 }
             }
         },

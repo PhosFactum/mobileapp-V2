@@ -1,5 +1,16 @@
 basePath: /api/v1
 definitions:
+  entities.ConsentSignature:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: integer
+      patient_id:
+        type: integer
+      updated_at:
+        type: string
+    type: object
   entities.Doctor:
     properties:
       created_at:
@@ -17,22 +28,29 @@ definitions:
     type: object
   entities.Flg:
     properties:
-      date:
-        example: "2023-10-15T14:30:00Z"
+      attached_image:
+        description: URL или base64
+        type: string
+      created_at:
+        type: string
+      doctor_id:
+        type: integer
+      examination_date:
         type: string
       id:
         example: 1
         type: integer
-      is_completed:
-        type: boolean
       number:
-        example: 984212
-        type: integer
-      organization:
-        example: Stavropol
+        example: ФЛГ-2025-001
         type: string
+      organization_id:
+        type: integer
+      patient_id:
+        type: integer
       result:
-        example: COVID
+        example: Годен
+        type: string
+      updated_at:
         type: string
     type: object
   entities.Manager:
@@ -283,6 +301,61 @@ definitions:
     - password
     - phone
     type: object
+  models.FLGCreateRequest:
+    properties:
+      attached_image:
+        type: string
+      examination_date:
+        type: string
+      number:
+        type: string
+      organization_id:
+        type: integer
+      patient_id:
+        type: integer
+      result:
+        type: string
+    required:
+    - examination_date
+    - number
+    - organization_id
+    - patient_id
+    - result
+    type: object
+  models.FLGResponse:
+    properties:
+      attached_image:
+        type: string
+      created_at:
+        type: string
+      examination_date:
+        type: string
+      id:
+        type: integer
+      number:
+        type: string
+      organization_id:
+        type: integer
+      patient_id:
+        type: integer
+      result:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  models.FLGUpdateRequest:
+    properties:
+      attached_image:
+        type: string
+      examination_date:
+        type: string
+      number:
+        type: string
+      organization_id:
+        type: integer
+      result:
+        type: string
+    type: object
   models.OrganizationShortResponse:
     properties:
       id:
@@ -476,18 +549,15 @@ paths:
         "400":
           description: Неверный ID пациента
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/handlers.IncorrectFormatError'
         "404":
           description: Подпись не найдена
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/handlers.NotFoundError'
         "500":
           description: Ошибка сервера
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/handlers.InternalServerError'
       security:
       - BearerAuth: []
       summary: Получить подпись пациента
@@ -515,18 +585,15 @@ paths:
         "200":
           description: Подпись сохранена
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/entities.ConsentSignature'
         "400":
           description: Неверный ID пациента или отсутствует файл
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/handlers.IncorrectDataError'
         "500":
           description: Ошибка сервера
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/handlers.InternalServerError'
       security:
       - BearerAuth: []
       summary: Сохранить подпись пациента
@@ -606,6 +673,51 @@ paths:
       summary: Обновить данные врача
       tags:
       - Doctor
+  /flg/{flg_id}:
+    put:
+      consumes:
+      - application/json
+      description: Обновляет информацию о флюорографическом исследовании
+      parameters:
+      - description: ID записи ФЛГ
+        in: path
+        name: flg_id
+        required: true
+        type: integer
+      - description: Данные для обновления
+        in: body
+        name: info
+        required: true
+        schema:
+          $ref: '#/definitions/models.FLGUpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: Обновлённая запись ФЛГ
+          schema:
+            $ref: '#/definitions/models.FLGResponse'
+        "400":
+          description: Некорректный запрос
+          schema:
+            $ref: '#/definitions/handlers.IncorrectFormatError'
+        "404":
+          description: ФЛГ не найдено
+          schema:
+            $ref: '#/definitions/handlers.NotFoundError'
+        "422":
+          description: Ошибка валидации
+          schema:
+            $ref: '#/definitions/handlers.ValidationError'
+        "500":
+          description: Внутренняя ошибка
+          schema:
+            $ref: '#/definitions/handlers.InternalServerError'
+      security:
+      - BearerAuth: []
+      summary: Обновить данные ФЛГ
+      tags:
+      - FLG
   /groups:
     get:
       consumes:
@@ -681,17 +793,13 @@ paths:
           schema:
             $ref: '#/definitions/models.PatientGroupShortResponse'
         "400":
-          description: Bad Request
+          description: Группа пациентов не найдена
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/handlers.IncorrectFormatError'
         "500":
-          description: Internal Server Error
+          description: Внутренняя ошибка сервера
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/handlers.InternalServerError'
       security:
       - BearerAuth: []
       summary: Получить группы пациентов организации
@@ -806,9 +914,7 @@ paths:
         "400":
           description: Неверный формат
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/handlers.IncorrectFormatError'
         "422":
           description: Ошибка валидации
           schema:
@@ -816,16 +922,59 @@ paths:
               type: string
             type: object
         "500":
-          description: Внутренняя ошибка
+          description: Внутренняя ошибка сервера" "Внутренняя ошибка
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/handlers.InternalServerError'
       security:
       - BearerAuth: []
       summary: Создать нового пациента
       tags:
       - Patient
+  /patients/{patient_id}/flg:
+    post:
+      consumes:
+      - application/json
+      description: Добавляет новое флюорографическое исследование пациенту
+      parameters:
+      - description: ID пациента
+        in: path
+        name: patient_id
+        required: true
+        type: integer
+      - description: Данные ФЛГ
+        in: body
+        name: info
+        required: true
+        schema:
+          $ref: '#/definitions/models.FLGCreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Созданная запись ФЛГ
+          schema:
+            $ref: '#/definitions/models.FLGResponse'
+        "400":
+          description: Некорректный запрос
+          schema:
+            $ref: '#/definitions/handlers.IncorrectFormatError'
+        "404":
+          description: Пациент не найден
+          schema:
+            $ref: '#/definitions/handlers.NotFoundError'
+        "422":
+          description: Ошибка валидации
+          schema:
+            $ref: '#/definitions/handlers.ValidationError'
+        "500":
+          description: Внутренняя ошибка
+          schema:
+            $ref: '#/definitions/handlers.InternalServerError'
+      security:
+      - BearerAuth: []
+      summary: Создать запись ФЛГ
+      tags:
+      - FLG
   /version:
     get:
       description: Возвращает текущую версию приложения
