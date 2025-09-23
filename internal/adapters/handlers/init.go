@@ -81,8 +81,8 @@ func ProvideRouter(h *Handler, cfg *config.Config, swagCfg *swagger.Config) http
 	// Поправить пациента на транзакцию
 
 	// Руты рабочие для новго проекта
-  
-  	// Авторизация
+
+	// Авторизация
 	authGroup := baseRouter.Group("/auth")
 	authGroup.POST("/login", h.LoginDoctor)
 	authGroup.POST("/logout", jwtMiddleware.JWTAuth(cfg.JWTSecret), h.LogoutDoctor)
@@ -92,14 +92,17 @@ func ProvideRouter(h *Handler, cfg *config.Config, swagCfg *swagger.Config) http
 	organizationGroup.GET("/", h.GetAllOrganizations)
 
 	//Списки пациентов
-	patientGroupsGroup := protected.Group("/groups")
+	patientGroupsGroup := baseRouter.Group("/groups")
 	patientGroupsGroup.GET("/", h.GetPatientGroupsByCodeOrOrgTitle) //arg search
 	patientGroupsGroup.GET("/:org_id", h.GetPatientGroupsByOrganization)
 
 	// Пациенты
 	patientGroup := baseRouter.Group("/patients")
 	patientGroup.GET("/:group_id", h.GetPatientsByGroup)
-	patientGroup.POST("/", h.CreatePatient)
+	patientGroup.POST("/:group_id/create", h.CreatePatient)
+
+	// Пациенты
+	// receptionGroup := baseRouter.Group("/reception")
 
 	consentGroup := protected.Group("/consent")
 	consentGroup.GET("/personal-data", h.GetPersonalDataConsent)

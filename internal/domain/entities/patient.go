@@ -18,7 +18,6 @@ type Patient struct {
 
 	PatientGroupID uint `gorm:"not null;index" json:"patient_group_id"`
 
-	// Связи с обязательными сущностями (всегда включаются в JSON)
 	ExaminationTypeID uint             `gorm:"not null;index" json:"examination_type_id"`
 	ExaminationType   *ExaminationType `gorm:"foreignKey:ExaminationTypeID" json:"examination_type,omitempty"`
 
@@ -34,11 +33,8 @@ type Patient struct {
 	ContactInfoID uint         `gorm:"not null;index" json:"contact_info_id"`
 	ContactInfo   *ContactInfo `gorm:"foreignKey:ContactInfoID" json:"contact_info,omitempty"`
 
-	FlgID uint `gorm:"not null;index" json:"flg_id"`
-	Flg   *Flg `gorm:"foreignKey:FlgID" json:"flg,omitempty"`
-
-	OrganizationID uint          `gorm:"not null;index" json:"organization_id"`
-	Organization   *Organization `gorm:"foreignKey:OrganizationID" json:"organization,omitempty"`
+	FlgID *uint `gorm:"index" json:"flg_id"`
+	Flg   *Flg  `gorm:"foreignKey:FlgID" json:"flg,omitempty"`
 
 	AnalysisOrderID uint           `gorm:"not null;index" json:"analysis_order_id"`
 	AnalysisOrder   *AnalysisOrder `gorm:"foreignKey:AnalysisOrderID" json:"analysis_order,omitempty"`
@@ -65,17 +61,8 @@ type ExaminationView struct {
 type HarmPoint struct {
 	ID    uint    `gorm:"primarykey" json:"id"`
 	Value float32 `gorm:"not null;" json:"value"`
-}
 
-type Flg struct {
-	ID        uint      `gorm:"primarykey" json:"id" example:"1"`
-	CreatedAt time.Time `json:"-"`
-
-	IsCompleted  bool      `gorm:"default:false" json:"is_completed"`
-	Organization string    `gorm:"not null" json:"organization" example:"Stavropol"`
-	Number       int       `gorm:"not null" json:"number" example:"984212"`
-	Result       string    `gorm:"not null" json:"result" example:"COVID"`
-	Date         time.Time `json:"date" example:"2023-10-15T14:30:00Z"`
+	Specializations []Specialization `gorm:"many2many:harm_points_specializations;" json:"-"`
 }
 
 // ContactInfo представляет контактную информацию пациента

@@ -1,8 +1,8 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
-	"strconv"
 
 	"github.com/gin-gonic/gin"
 )
@@ -21,33 +21,44 @@ import (
 // @Failure 400 {object} IncorrectFormatError "Некорректный запрос"
 // @Failure 500 {object} InternalServerError "Внутренняя ошибка"
 // @Router /emergency/{doc_id} [get]
+// GetPatientGroupsByCodeOrOrgTitle — поиск групп пациентов по коду или названию организации
 func (h *Handler) GetPatientGroupsByCodeOrOrgTitle(c *gin.Context) {
-	// Получаем дату из query параметров
+	// 1. Парсим page
+	pageStr := c.DefaultQuery("page", "1")
+	page, err := h.service.ParseUintString(pageStr)
+	if err != nil {
+		h.ErrorResponse(c, err, http.StatusBadRequest, "parameter 'page' must be an integer", false)
+		return
+	}
+	if page == 0 {
+		h.ErrorResponse(c, errors.New("page must be greater than 0"), http.StatusBadRequest, "parameter 'page' must be greater than 0", true)
+		return
+	}
+
+	// 2. Парсим perPage
+	perPageStr := c.DefaultQuery("perPage", "10")
+	perPage, err := h.service.ParseUintString(perPageStr)
+	if err != nil {
+		h.ErrorResponse(c, err, http.StatusBadRequest, "parameter 'perPage' must be an integer", false)
+		return
+	}
+	if perPage == 0 || perPage > 100 {
+		h.ErrorResponse(c, errors.New("perPage must be between 1 and 100"), http.StatusBadRequest, "parameter 'perPage' must be between 1 and 100", true)
+		return
+	}
+
+	// 3. Получаем search
 	search := c.Query("search")
 
-	// Получаем номер страницы
-	pageStr := c.DefaultQuery("page", "1")
-	page, err := strconv.Atoi(pageStr)
-	if err != nil || page < 1 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Page must be integer greater than 0"})
+	// 4. Вызываем usecase
+	groups, appErr := h.usecase.GetPatientGroupsByCodeOrOrgTitle(search, int(page), int(perPage))
+	if appErr != nil {
+		h.ErrorResponse(c, appErr.Err, appErr.Code, appErr.Message, appErr.IsUserFacing)
 		return
 	}
 
-	perPageStr := c.DefaultQuery("perPage", "10")
-	perPage, err := strconv.Atoi(perPageStr)
-	if err != nil || perPage < 1 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Page must be integer greater than 0"})
-		return
-	}
-
-	// Вызываем usecase
-	receptions, err := h.usecase.GetPatientGroupsByCodeOrOrgTitle(search, page, perPage)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-
-	c.JSON(http.StatusOK, receptions)
+	// 5. Возвращаем результат
+	h.ResultResponse(c, "Success fetch patient groups", Object, groups)
 }
 
 // GetPatientGroupsByOrganization godoc
@@ -65,35 +76,44 @@ func (h *Handler) GetPatientGroupsByCodeOrOrgTitle(c *gin.Context) {
 // @Security BearerAuth
 // @Router /organizations/{org_id}/groups [get]
 func (h *Handler) GetPatientGroupsByOrganization(c *gin.Context) {
-	// Получаем org_id из URL
-	orgIDParam := c.Param("org_id")
-	orgID, err := strconv.ParseUint(orgIDParam, 10, 32)
+	// 1. Парсим org_id из URL
+	orgID, err := h.service.ParseUintString(c.Param("org_id"))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid organization ID"})
+		h.ErrorResponse(c, err, http.StatusBadRequest, "parameter 'org_id' must be an uint", false)
 		return
 	}
 
-	// Получаем параметры пагинации
+	// 2. Парсим page
 	pageStr := c.DefaultQuery("page", "1")
-	page, err := strconv.Atoi(pageStr)
-	if err != nil || page < 1 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Page must be positive integer"})
-		return
-	}
-
-	perPageStr := c.DefaultQuery("perPage", "10")
-	perPage, err := strconv.Atoi(perPageStr)
-	if err != nil || perPage < 1 || perPage > 100 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "PerPage must be between 1 and 100"})
-		return
-	}
-
-	// Вызываем usecase
-	groups, err := h.usecase.GetPatientGroupsByOrganizationID(uint(orgID), page, perPage)
+	page, err := h.service.ParseUintString(pageStr)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		h.ErrorResponse(c, err, http.StatusBadRequest, "parameter 'page' must be an integer", false)
+		return
+	}
+	if page == 0 {
+		h.ErrorResponse(c, errors.New("page must be greater than 0"), http.StatusBadRequest, "parameter 'page' must be greater than 0", true)
 		return
 	}
 
-	c.JSON(http.StatusOK, groups)
+	// 3. Парсим perPage
+	perPageStr := c.DefaultQuery("perPage", "10")
+	perPage, err := h.service.ParseUintString(perPageStr)
+	if err != nil {
+		h.ErrorResponse(c, err, http.StatusBadRequest, "parameter 'perPage' must be an integer", false)
+		return
+	}
+	if perPage == 0 || perPage > 100 {
+		h.ErrorResponse(c, errors.New("perPage must be between 1 and 100"), http.StatusBadRequest, "parameter 'perPage' must be between 1 and 100", true)
+		return
+	}
+
+	// 4. Вызываем usecase
+	groups, appErr := h.usecase.GetPatientGroupsByOrganizationID(orgID, int(page), int(perPage))
+	if appErr != nil {
+		h.ErrorResponse(c, appErr.Err, appErr.Code, appErr.Message, appErr.IsUserFacing)
+		return
+	}
+
+	// 5. Возвращаем результат
+	h.ResultResponse(c, "Success fetch patient groups by organization", Object, groups)
 }

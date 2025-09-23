@@ -6,15 +6,15 @@ import (
 )
 
 // GetPatientReceptionsByPatientSpecializations - простой метод получения приемов
-func (r *ReceptionRepositoryImpl) GetPatientReceptionsByPatientSpecializations(patientID uint) ([]entities.Reception, error) {
-	op := "repo.Reception.GetPatientReceptionsByPatientSpecializations"
+func (r *ReceptionRepositoryImpl) GetPatientReceptionsByPatientID(patientID uint) ([]entities.Reception, error) {
+	op := "repo.Reception.GetPatientReceptionsByPatientID"
 
 	var receptions []entities.Reception
 
 	err := r.db.
-		Joins("JOIN patients_specializations ps ON ps.specialization_id = receptions.specialization_id").
-		Where("ps.patient_id = ? AND receptions.patient_id = ?", patientID, patientID).
-		Order("receptions.created_at DESC").
+		Where("patient_id = ?", patientID).
+		Preload("Specialization").
+		Order("created_at DESC").
 		Find(&receptions).Error
 
 	if err != nil {

@@ -1,16 +1,12 @@
 package usecases
 
 import (
-	"fmt"
-	"math"
-	"net/http"
 	"time"
 
 	"github.com/AlexanderMorozov1919/mobileapp/internal/domain/entities"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/domain/models"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/interfaces"
 	"github.com/AlexanderMorozov1919/mobileapp/pkg/errors"
-	"gorm.io/gorm"
 )
 
 type PatientUsecase struct {
@@ -28,207 +24,363 @@ func NewPatientUsecase(repo interfaces.PatientRepository, contactRepo interfaces
 		FilterBuilder: s}
 }
 
-func (u *PatientUsecase) CreatePatient(input *models.CreatePatientRequest) (entities.Patient, *errors.AppError) {
-	parsedTime, err := time.Parse("2006-01-02", input.BirthDate)
-	if err != nil {
-		return entities.Patient{}, errors.NewAppError(errors.InvalidDataCode, "Ошибка парсинга даты", err, false)
-	}
-
-	// 1. Создаем пациента без связей
-	patient := entities.Patient{
-		FullName:  input.FullName,
-		BirthDate: parsedTime,
-		IsMale:    input.IsMale,
-	}
-
-	patientID, err := u.repo.CreatePatient(patient)
-	if err != nil {
-		return entities.Patient{}, errors.NewAppError(errors.InternalServerErrorCode, "Не удалось создать пациента", err, false)
-	}
-
-	// 2. Создаем ContactInfo и PersonalInfo с привязкой к patientID
-	// contactInfo := entities.ContactInfo{}
-	// contactID, err := u.contactRepo.CreateContactInfo(contactInfo)
-	// if err != nil {
-	// 	return entities.Patient{}, errors.NewAppError(errors.InternalServerErrorCode, "Не удалось создать контактную информацию", err, false)
+// CreatePatient - создание пациента
+func (u *PatientUsecase) CreatePatient(patientData *models.CreatePatientData, group_id uint) (*entities.Patient, *errors.AppError) {
+	// // 1. Валидация входных данных
+	// if err := u.validateCreatePatientData(patientData); err != nil {
+	//     return nil, errors.NewValidationError(op, err)
 	// }
 
-	// personalInfo := entities.PersonalInfo{
-	// 	PatientID: patientID,
-	// }
-	// personalID, err := u.personalRepo.CreatePersonalInfo(personalInfo)
-	// if err != nil {
-	// 	return entities.Patient{}, errors.NewAppError(errors.InternalServerErrorCode, "Не удалось создать персональные данные", err, false)
+	// // 2. Проверяем существование обязательных сущностей
+	// if err := u.validateRequiredEntities(patientData); err != nil {
+	//     return nil, errors.NewValidationError(op, err)
 	// }
 
-	// 3. Обновляем пациента, добавляя ID контактной и персональной информации
-	// _, err = u.repo.UpdatePatient(patientID, map[string]interface{}{
-	// 	"ContactInfoID":  contactID,
-	// 	"PersonalInfoID": personalID,
-	// })
-	// if err != nil {
-	// 	return entities.Patient{}, errors.NewAppError(errors.InternalServerErrorCode, "Не удалось обновить пациента", err, false)
-	// }
-
-	// 4. Получаем обновленного пациента
-	createdPatient, err := u.repo.GetPatientByID(patientID)
+	// 3. Создаем пациента через репозиторий
+	patient, err := u.repo.CreatePatient(patientData, group_id)
 	if err != nil {
-		return entities.Patient{}, errors.NewAppError(errors.InternalServerErrorCode, "Не удалось получить пациента", err, false)
+		return nil, errors.NewAppError(errors.InternalServerErrorCode, "failed to create patient", err, true)
 	}
 
-	return createdPatient, nil
-}
-
-func (u *PatientUsecase) GetPatientByID(id uint) (entities.Patient, *errors.AppError) {
-	patient, err := u.repo.GetPatientByID(id)
-	if err != nil {
-		if errors.Is(err, gorm.ErrRecordNotFound) || errors.Is(err, errors.ErrNotFound) {
-			return entities.Patient{}, errors.NewAppError(
-				http.StatusNotFound,
-				"Пациент не найден",
-				nil,
-				true,
-			)
-		}
-
-		return entities.Patient{}, errors.NewAppError(
-			errors.InternalServerErrorCode,
-			errors.InternalServerError,
-			err,
-			false,
-		)
-	}
 	return patient, nil
 }
 
-func (u *PatientUsecase) UpdatePatient(input *models.UpdatePatientRequest) (entities.Patient, *errors.AppError) {
-	parsedTime, err := time.Parse("2006-01-02", input.BirthDate)
+// GetPatientsByGroup — основной метод
+func (u *PatientUsecase) GetPatientsByGroup(groupID uint) ([]models.PatientResponse, *errors.AppError) {
+	patients, err := u.repo.GetPatientsByGroup(groupID)
 	if err != nil {
-		fmt.Println("Ошибка парсинга даты:", err)
-		return entities.Patient{}, errors.NewAppError(errors.InvalidDataCode, "Ошибка парсинга даты:", err, false)
+		return nil, errors.NewAppError(
+			errors.InternalServerErrorCode,
+			"failed to get patients",
+			err,
+			true,
+		)
 	}
 
-	updateMap := map[string]interface{}{
-		"id":         input.ID,
-		"birth_date": parsedTime,
-		"full_name":  input.FullName,
-		"updated_at": time.Now(),
+	// Преобразуем сущности → DTO
+	var response []models.PatientResponse
+	for _, p := range patients {
+		response = append(response, u.buildPatientResponse(p))
 	}
 
-	updatedPatientId, err := u.repo.UpdatePatient(input.ID, updateMap)
-	if err != nil {
-		return entities.Patient{}, errors.NewAppError(errors.InternalServerErrorCode, errors.InternalServerError, err, false)
-	}
-
-	updatedPatient, err := u.repo.GetPatientByID(updatedPatientId)
-	if err != nil {
-		return entities.Patient{}, errors.NewAppError(errors.InternalServerErrorCode, errors.InternalServerError, err, false)
-	}
-
-	return updatedPatient, nil
-
+	return response, nil
 }
 
-func (u *PatientUsecase) DeletePatient(id uint) *errors.AppError {
-	if err := u.repo.DeletePatient(id); err != nil {
-		return errors.NewAppError(errors.InternalServerErrorCode, "удаление пациента", err, false)
+// buildPatientResponse — собирает модель пациента для API
+func (u *PatientUsecase) buildPatientResponse(p entities.Patient) models.PatientResponse {
+	return models.PatientResponse{
+		ID:             p.ID,
+		FullName:       p.FullName,
+		BirthDate:      p.BirthDate,
+		Age:            u.calculateAge(p.BirthDate),
+		IsMale:         p.IsMale,
+		Position:       p.Position,
+		Division:       p.Division,
+		PatientGroupID: p.PatientGroupID,
+
+		ExaminationType: u.mapExaminationType(p.ExaminationType),
+		ExaminationView: u.mapExaminationView(p.ExaminationView),
+		HarmPoint:       u.mapHarmPoint(p.HarmPoint),
+		PersonalInfo:    u.mapPersonalInfo(p.PersonalInfo),
+		ContactInfo:     u.mapContactInfo(p.ContactInfo),
+		Flg:             u.mapFlg(p.Flg),
+		AnalysisOrder:   u.mapAnalysisOrder(p.AnalysisOrder),
+		Statistics:      u.mapStatistics(p.Statistics),
+		Vaccines:        u.mapVaccines(p.Vaccines),
+		Receptions:      u.mapReceptions(p.Receptions),
+		Specializations: u.mapSpecializations(p.Specializations),
 	}
-	return nil
 }
 
-// func (u *PatientUsecase) GetAllPatients(page, count int, filter string, order string) (models.FilterResponse[[]models.ShortPatientResponse], *errors.AppError) {
-// 	var queryFilter string
-// 	var queryOrder string
-// 	var parameters []interface{}
-// 	empty := models.FilterResponse[[]models.ShortPatientResponse]{}
-
-// 	// Статические поля модели (имя таблицы/колонки и их типы)
-// 	entityFields, err := getFieldTypes(entities.Patient{})
-// 	if err != nil {
-// 		return empty, errors.NewAppError(errors.InternalServerErrorCode, errors.InternalServerError, err, false)
-// 	}
-
-// 	// Парсим фильтр, если он передан
-// 	if len(filter) > 0 {
-// 		subQuery, params, err := u.FilterBuilder.ParseFilterString(filter, entityFields)
-// 		if err != nil {
-// 			return empty, errors.NewAppError(
-// 				errors.InvalidDataCode,
-// 				fmt.Sprintf("invalid filter syntax: %s", err.Error()),
-// 				nil,
-// 				false,
-// 			)
-// 		}
-// 		queryFilter = subQuery
-// 		parameters = params
-// 	}
-
-// 	if len(order) > 0 {
-// 		subQuery, err := u.FilterBuilder.ParseOrderString(order, entityFields)
-// 		if err != nil {
-// 			return empty, errors.NewAppError(errors.InternalServerErrorCode, fmt.Sprintf("invalid order syntax: %s", err.Error()), nil, false)
-// 		}
-// 		queryOrder = subQuery
-// 	}
-
-// 	// Получение пациентов
-// 	patients, totalRows, err := u.repo.GetAllPatients(page, count, queryFilter, queryOrder, parameters)
-// 	if err != nil {
-// 		return empty, errors.NewAppError(errors.InternalServerErrorCode, "failed to get patients", err, true)
-// 	}
-
-// 	var totalPages int
-// 	if count == 0 {
-// 		// Если count == 0, то пагинация отключена, и все записи возвращаются на одной странице
-// 		totalPages = 1
-// 		page = 1
-// 	} else {
-// 		// Вычисляем количество страниц с округлением вверх
-// 		totalPages = int(math.Ceil(float64(totalRows) / float64(count)))
-// 	}
-
-// 	var resp_models []models.ShortPatientResponse
-// 	for _, patient := range patients {
-// 		model := mapPatientEntityToModel(patient)
-// 		resp_models = append(resp_models, model)
-// 	}
-
-// 	return models.FilterResponse[[]models.ShortPatientResponse]{
-// 		Hits:        resp_models,
-// 		CurrentPage: page,
-// 		HitsPerPage: len(resp_models),
-// 		TotalHits:   int(totalRows),
-// 		TotalPages:  totalPages,
-// 	}, nil
-// }
-
-func (u *PatientUsecase) GetPatientsByGroup(page, perPage int, group_id uint,
-) (models.FilterResponse[[]entities.Patient], *errors.AppError) {
-
-	empty := models.FilterResponse[[]entities.Patient]{}
-
-	// Получение пациентов
-	patients, totalRows, err := u.repo.GetPatientsByGroup(page, perPage, group_id)
-	if err != nil {
-		return empty, errors.NewAppError(errors.InternalServerErrorCode, "failed to get patients", err, true)
+// calculateAge — вычисляет возраст на основе даты рождения
+func (u *PatientUsecase) calculateAge(birthDate time.Time) int {
+	now := time.Now()
+	age := now.Year() - birthDate.Year()
+	birthdayThisYear := time.Date(now.Year(), birthDate.Month(), birthDate.Day(), 0, 0, 0, 0, time.Local)
+	if now.Before(birthdayThisYear) {
+		age--
 	}
-
-	totalPages := int(math.Ceil(float64(totalRows) / float64(perPage)))
-
-	return models.FilterResponse[[]entities.Patient]{
-		Hits:        patients,
-		CurrentPage: page,
-		HitsPerPage: len(patients),
-		TotalHits:   int(totalRows),
-		TotalPages:  totalPages,
-	}, nil
+	return age
 }
 
-func mapPatientEntityToModel(entity entities.Patient) models.ShortPatientResponse {
-	return models.ShortPatientResponse{
-		ID:        entity.ID,
-		FullName:  entity.FullName,
-		BirthDate: entity.BirthDate,
-		IsMale:    entity.IsMale,
+func (u *PatientUsecase) mapExaminationType(et *entities.ExaminationType) *models.ExaminationTypeResponse {
+	if et == nil {
+		return nil
+	}
+	return &models.ExaminationTypeResponse{
+		ID:    et.ID,
+		Value: et.Value,
+	}
+}
+
+func (u *PatientUsecase) mapExaminationView(ev *entities.ExaminationView) *models.ExaminationViewResponse {
+	if ev == nil {
+		return nil
+	}
+	return &models.ExaminationViewResponse{
+		ID:    ev.ID,
+		Value: ev.Value,
+	}
+}
+
+func (u *PatientUsecase) mapHarmPoint(hp *entities.HarmPoint) *models.HarmPointResponse {
+	if hp == nil {
+		return nil
+	}
+	return &models.HarmPointResponse{
+		ID:    hp.ID,
+		Value: hp.Value,
+	}
+}
+
+func (u *PatientUsecase) mapPersonalInfo(pi *entities.PersonalInfo) *models.PersonalInfoResponse {
+	if pi == nil {
+		return nil
+	}
+	return &models.PersonalInfoResponse{
+		ID:           pi.ID,
+		DocNumber:    pi.DocNumber,
+		DocSeries:    pi.DocSeries,
+		SNILS:        pi.SNILS,
+		OMS:          pi.OMS,
+		DocumentType: u.mapDocumentType(pi.DocumentType),
+	}
+}
+
+func (u *PatientUsecase) mapDocumentType(dt *entities.DocumentType) *models.DocumentTypeResponse {
+	if dt == nil {
+		return nil
+	}
+	return &models.DocumentTypeResponse{
+		ID:    dt.ID,
+		Value: dt.Value,
+	}
+}
+
+func (u *PatientUsecase) mapContactInfo(ci *entities.ContactInfo) *models.ContactInfoResponse {
+	if ci == nil {
+		return nil
+	}
+	return &models.ContactInfoResponse{
+		ID:      ci.ID,
+		Phone:   ci.Phone,
+		Email:   ci.Email,
+		Address: ci.Address,
+	}
+}
+
+func (u *PatientUsecase) mapFlg(flg *entities.Flg) *models.FlgResponse {
+	if flg == nil {
+		return nil
+	}
+	return &models.FlgResponse{
+		ID:           flg.ID,
+		IsCompleted:  flg.IsCompleted,
+		Organization: flg.Organization,
+		Number:       flg.Number,
+		Result:       flg.Result,
+	}
+}
+
+func (u *PatientUsecase) mapStatistics(stat *entities.PatientStatistics) *models.PatientStatisticsResponse {
+	if stat == nil {
+		return nil
+	}
+	return &models.PatientStatisticsResponse{
+		ID:                     stat.ID,
+		TotalReceptions:        stat.TotalReceptions,
+		CompletedReceptions:    stat.CompletedReceptions,
+		TotalAnalysisOrders:    stat.TotalAnalysisOrders,
+		CompletedAnalysisItems: stat.CompletedAnalysisItems,
+	}
+}
+
+func (u *PatientUsecase) mapVaccines(vaccines []entities.Vaccine) []models.VaccineResponse {
+	if vaccines == nil {
+		return nil
+	}
+	var result []models.VaccineResponse
+	for _, v := range vaccines {
+		result = append(result, models.VaccineResponse{
+			ID:              v.ID,
+			Date:            v.Date,
+			IsCompleted:     v.IsCompleted,
+			IsRefusal:       v.IsRefusal,
+			IsExemption:     v.IsExemption,
+			TiterAmount:     v.TiterAmount,
+			MedWithdrawlNum: v.MedWithdrawlNum,
+			Result:          v.Result,
+
+			Title:             u.mapTitle(v.Title),
+			Medication:        u.mapMedication(v.Medication),
+			Dose:              u.mapDose(v.Dose),
+			Number:            u.mapNumber(v.Number),
+			CertificateNumber: u.mapCertificateNumber(v.CertificateNumber),
+			BodyPart:          u.mapBodyPart(v.BodyPart),
+			Method:            u.mapMethod(v.Method),
+			Place:             u.mapPlace(v.Place),
+		})
+	}
+	return result
+}
+
+func (u *PatientUsecase) mapReceptions(receptions []entities.Reception) []models.ReceptionResponse {
+	if receptions == nil {
+		return nil
+	}
+	var result []models.ReceptionResponse
+	for _, r := range receptions {
+		result = append(result, models.ReceptionResponse{
+			ID:               r.ID,
+			IsCompleted:      r.IsCompleted,
+			SpecializationID: r.SpecializationID,
+			Specialization:   u.mapSpecialization(r.Specialization),
+			Data:             r.Data,
+		})
+	}
+	return result
+}
+
+func (u *PatientUsecase) mapSpecializations(specs []entities.Specialization) []models.SpecializationResponse {
+	if specs == nil {
+		return nil
+	}
+	var result []models.SpecializationResponse
+	for _, s := range specs {
+		result = append(result, models.SpecializationResponse{
+			ID:    s.ID,
+			Title: s.Title,
+		})
+	}
+	return result
+}
+
+func (u *PatientUsecase) mapSpecialization(spec *entities.Specialization) *models.SpecializationResponse {
+	if spec == nil {
+		return nil
+	}
+	return &models.SpecializationResponse{
+		ID:    spec.ID,
+		Title: spec.Title,
+	}
+}
+
+func (u *PatientUsecase) mapAnalysisOrder(ao *entities.AnalysisOrder) *models.AnalysisOrderResponse {
+	if ao == nil {
+		return nil
+	}
+	return &models.AnalysisOrderResponse{
+		ID:          ao.ID,
+		OrderNumber: ao.OrderNumber,
+		TotalAmount: ao.TotalAmount,
+		OrderItems:  u.mapAnalysisOrderItems(ao.OrderItems),
+	}
+}
+
+func (u *PatientUsecase) mapAnalysisOrderItems(items []entities.AnalysisOrderItem) []models.AnalysisOrderItemResponse {
+	if items == nil {
+		return nil
+	}
+	var result []models.AnalysisOrderItemResponse
+	for _, item := range items {
+		result = append(result, models.AnalysisOrderItemResponse{
+			ID:          item.ID,
+			AnalysisID:  item.AnalysisID,
+			Analysis:    u.mapAnalysis(item.Analysis),
+			IsCompleted: item.IsCompleted,
+		})
+	}
+	return result
+}
+
+func (u *PatientUsecase) mapAnalysis(a *entities.Analysis) *models.AnalysisResponse {
+	if a == nil {
+		return nil
+	}
+	return &models.AnalysisResponse{
+		ID:    a.ID,
+		Name:  a.Name,
+		Price: a.Price,
+	}
+}
+
+// Map-функции для вакцин
+func (u *PatientUsecase) mapTitle(t *entities.Title) *models.TitleResponse {
+	if t == nil {
+		return nil
+	}
+	return &models.TitleResponse{
+		ID:    t.ID,
+		Value: t.Value,
+	}
+}
+
+func (u *PatientUsecase) mapMedication(m *entities.Medication) *models.MedicationResponse {
+	if m == nil {
+		return nil
+	}
+	return &models.MedicationResponse{
+		ID:    m.ID,
+		Value: m.Value,
+	}
+}
+
+func (u *PatientUsecase) mapDose(d *entities.Dose) *models.DoseResponse {
+	if d == nil {
+		return nil
+	}
+	return &models.DoseResponse{
+		ID:    d.ID,
+		Value: d.Value,
+	}
+}
+
+func (u *PatientUsecase) mapNumber(n *entities.Number) *models.NumberResponse {
+	if n == nil {
+		return nil
+	}
+	return &models.NumberResponse{
+		ID:    n.ID,
+		Value: n.Value,
+	}
+}
+
+func (u *PatientUsecase) mapCertificateNumber(cn *entities.CertificateNumber) *models.CertificateNumberResponse {
+	if cn == nil {
+		return nil
+	}
+	return &models.CertificateNumberResponse{
+		ID:    cn.ID,
+		Value: cn.Value,
+	}
+}
+
+func (u *PatientUsecase) mapBodyPart(bp *entities.BodyPart) *models.BodyPartResponse {
+	if bp == nil {
+		return nil
+	}
+	return &models.BodyPartResponse{
+		ID:    bp.ID,
+		Value: bp.Value,
+	}
+}
+
+func (u *PatientUsecase) mapMethod(m *entities.Method) *models.MethodResponse {
+	if m == nil {
+		return nil
+	}
+	return &models.MethodResponse{
+		ID:    m.ID,
+		Value: m.Value,
+	}
+}
+
+func (u *PatientUsecase) mapPlace(p *entities.Place) *models.PlaceResponse {
+	if p == nil {
+		return nil
+	}
+	return &models.PlaceResponse{
+		ID:    p.ID,
+		Value: p.Value,
 	}
 }

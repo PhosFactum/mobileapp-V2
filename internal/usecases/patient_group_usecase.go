@@ -4,6 +4,7 @@ import (
 	"math"
 	"time"
 
+	"github.com/AlexanderMorozov1919/mobileapp/internal/domain/entities"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/domain/models"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/interfaces"
 	"github.com/AlexanderMorozov1919/mobileapp/pkg/errors"
@@ -19,27 +20,20 @@ func NewPatientGroupUsecase(repo interfaces.PatientGroupRepository) interfaces.P
 }
 
 func (u *PatientGroupUsecase) GetPatientGroupsByCodeOrOrgTitle(search string, page, perPage int,
-) (*models.FilterResponse[[]models.PatientGroupShortResponse], error) {
-	// Получаем данные из репозитория
+) (*models.FilterResponse[[]models.PatientGroupShortResponse], *errors.AppError) {
 	patientGroups, total, err := u.repo.GetPatientGroupsByCodeOrOrgTitle(search, page, perPage)
 	if err != nil {
 		return nil, errors.NewAppError(
 			errors.InternalServerErrorCode,
-			"Failed to get pateintGroups",
+			"Failed to get patientGroups",
 			err,
 			false,
 		)
 	}
 
-	// Преобразуем в DTO
 	response := make([]models.PatientGroupShortResponse, len(patientGroups))
-	for i, patient_group := range patientGroups {
-		response[i] = models.PatientGroupShortResponse{
-			ID:                patient_group.ID,
-			Code:              patient_group.Code,
-			OrganizationTitle: patient_group.Organization.Title,
-			CreatedAt:         patient_group.CreatedAt.Format(time.RFC3339),
-		}
+	for i, pg := range patientGroups {
+		response[i] = u.mapPatientGroupShort(pg)
 	}
 
 	totalPages := int(math.Ceil(float64(total) / float64(perPage)))
@@ -53,8 +47,8 @@ func (u *PatientGroupUsecase) GetPatientGroupsByCodeOrOrgTitle(search string, pa
 	}, nil
 }
 
-func (u *PatientGroupUsecase) GetPatientGroupsByOrganizationID(orgID uint, page, perPage int) (*models.FilterResponse[[]models.PatientGroupShortResponse], error) {
-	// Получаем данные из репозитория
+func (u *PatientGroupUsecase) GetPatientGroupsByOrganizationID(orgID uint, page, perPage int,
+) (*models.FilterResponse[[]models.PatientGroupShortResponse], *errors.AppError) {
 	patientGroups, total, err := u.repo.GetPatientGroupsByOrganizationID(orgID, page, perPage)
 	if err != nil {
 		return nil, errors.NewAppError(
@@ -65,15 +59,9 @@ func (u *PatientGroupUsecase) GetPatientGroupsByOrganizationID(orgID uint, page,
 		)
 	}
 
-	// Преобразуем в DTO
 	response := make([]models.PatientGroupShortResponse, len(patientGroups))
-	for i, patient_group := range patientGroups {
-		response[i] = models.PatientGroupShortResponse{
-			ID:                patient_group.ID,
-			Code:              patient_group.Code,
-			OrganizationTitle: patient_group.Organization.Title,
-			CreatedAt:         patient_group.CreatedAt.Format(time.RFC3339),
-		}
+	for i, pg := range patientGroups {
+		response[i] = u.mapPatientGroupShort(pg)
 	}
 
 	totalPages := int(math.Ceil(float64(total) / float64(perPage)))
@@ -85,4 +73,14 @@ func (u *PatientGroupUsecase) GetPatientGroupsByOrganizationID(orgID uint, page,
 		TotalHits:   int(total),
 		HitsPerPage: perPage,
 	}, nil
+}
+
+// ✅ Внутренний маппер: PatientGroup → PatientGroupShortResponse
+func (u *PatientGroupUsecase) mapPatientGroupShort(pg entities.PatientGroup) models.PatientGroupShortResponse {
+	return models.PatientGroupShortResponse{
+		ID:                pg.ID,
+		Code:              pg.Code,
+		OrganizationTitle: pg.Organization.Title, // ← Убедись, что Organization предзагружена!
+		CreatedAt:         pg.CreatedAt.Format(time.RFC3339),
+	}
 }

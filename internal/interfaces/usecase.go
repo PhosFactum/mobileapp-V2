@@ -18,12 +18,12 @@ type Usecases interface {
 }
 
 type PatientGroupUseCase interface {
-	GetPatientGroupsByCodeOrOrgTitle(search string, page, perPage int) (*models.FilterResponse[[]models.PatientGroupShortResponse], error)
-	GetPatientGroupsByOrganizationID(orgID uint, page, perPage int) (*models.FilterResponse[[]models.PatientGroupShortResponse], error)
+	GetPatientGroupsByCodeOrOrgTitle(search string, page, perPage int) (*models.FilterResponse[[]models.PatientGroupShortResponse], *errors.AppError)
+	GetPatientGroupsByOrganizationID(orgID uint, page, perPage int) (*models.FilterResponse[[]models.PatientGroupShortResponse], *errors.AppError)
 }
 
 type OrganizationUseCase interface {
-	GetAllOrganizations(doctorID uint, page, perPage int) (*models.FilterResponse[[]models.OrganizationShortResponse], error)
+	GetAllOrganizations(doctorID uint, page, perPage int) (*models.FilterResponse[[]models.OrganizationShortResponse], *errors.AppError)
 }
 
 type ReceptionUsecase interface {
@@ -36,7 +36,6 @@ type ReceptionUsecase interface {
 }
 
 type ContactInfoUsecase interface {
-	CreateContactInfo(input *models.CreateContactInfoRequest) (entities.ContactInfo, *errors.AppError)
 	GetContactInfoByPatientID(patientID uint) (entities.ContactInfo, *errors.AppError)
 }
 
@@ -48,11 +47,8 @@ type DoctorUsecase interface {
 }
 
 type PatientUsecase interface {
-	CreatePatient(input *models.CreatePatientRequest) (entities.Patient, *errors.AppError)
-	GetPatientByID(id uint) (entities.Patient, *errors.AppError)
-	UpdatePatient(input *models.UpdatePatientRequest) (entities.Patient, *errors.AppError)
-	DeletePatient(id uint) *errors.AppError
-	GetPatientsByGroup(page, perPage int, group_id uint) (models.FilterResponse[[]entities.Patient], *errors.AppError)
+	CreatePatient(patientData *models.CreatePatientData, group_id uint) (*entities.Patient, *errors.AppError)
+	GetPatientsByGroup(groupID uint) ([]models.PatientResponse, *errors.AppError)
 }
 
 type PersonalInfoUsecase interface{}

@@ -23,6 +23,7 @@ func (r *OrganizationRepositoryImpl) GetAllOrganizations(doctorID uint, page, pe
 		Table("organizations").
 		Joins("JOIN doctor_organizations ON doctor_organizations.organization_id = organizations.id").
 		Where("doctor_organizations.doctor_id = ?", doctorID).
+		Preload("Manager").
 		Offset(offset).
 		Limit(perPage).
 		Find(&organizations).Error
