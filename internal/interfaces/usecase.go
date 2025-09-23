@@ -53,7 +53,7 @@ type PatientUsecase interface {
 	GetPatientByID(id uint) (entities.Patient, *errors.AppError)
 	UpdatePatient(input *models.UpdatePatientRequest) (entities.Patient, *errors.AppError)
 	DeletePatient(id uint) *errors.AppError
-	GetAllPatients(page, count int, filter string, order string) (models.FilterResponse[[]models.ShortPatientResponse], *errors.AppError)
+	GetPatientsByGroup(page, perPage int, group_id uint) (models.FilterResponse[[]entities.Patient], *errors.AppError)
 }
 
 type PersonalInfoUsecase interface{}
