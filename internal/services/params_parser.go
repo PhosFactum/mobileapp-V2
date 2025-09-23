@@ -1,7 +1,9 @@
 package services
 
 import (
+	"encoding/json"
 	"fmt"
+	"reflect"
 	"regexp"
 	"strconv"
 	"strings"
@@ -79,26 +81,31 @@ func (s *ParamsParser) FormatTimeToString(t time.Time) string {
 	return t.Format(TIME_LAYOUT)
 }
 
-func ParseUint(value interface{}) (uint, error) {
+func (s *ParamsParser) ParseUint(value interface{}) (uint, error) {
 	switch v := value.(type) {
-	case uint:
-		return v, nil
-	case int:
-		if v >= 0 {
-			return uint(v), nil
-		}
-	case int64:
-		if v >= 0 {
-			return uint(v), nil
-		}
-	case float64:
-		if v >= 0 && v == float64(uint(v)) {
-			return uint(v), nil
-		}
 	case string:
-		if id, err := strconv.ParseUint(v, 10, 32); err == nil {
+		if id, err := strconv.ParseUint(v, 10, 64); err == nil {
 			return uint(id), nil
 		}
+	case uint:
+		return v, nil
+	case uint8, uint16, uint32, uint64:
+		return uint(reflect.ValueOf(v).Uint()), nil
+	case int, int8, int16, int32, int64:
+		iv := reflect.ValueOf(v).Int()
+		if iv >= 0 {
+			return uint(iv), nil
+		}
+	case float32, float64:
+		fv := reflect.ValueOf(v).Float()
+		if fv >= 0 && fv == float64(uint(fv)) {
+			return uint(fv), nil
+		}
+	case json.Number:
+		if iv, err := v.Int64(); err == nil && iv >= 0 {
+			return uint(iv), nil
+		}
 	}
+
 	return 0, fmt.Errorf("cannot convert %v (type %T) to uint", value, value)
 }

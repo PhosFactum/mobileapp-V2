@@ -1,10 +1,9 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
-	"strconv"
 
-	"github.com/AlexanderMorozov1919/mobileapp/internal/services"
 	"github.com/gin-gonic/gin"
 )
 
@@ -22,40 +21,54 @@ import (
 // @Failure 422 {object} ValidationError "Ошибка валидации"
 // @Failure 500 {object} InternalServerError "Внутренняя ошибка сервера"
 // @Router /organizations [get]
+// GetAllOrganizations — получение списка организаций для врача
+// GetAllOrganizations — получение списка организаций для врача
 func (h *Handler) GetAllOrganizations(c *gin.Context) {
+	// 1. Получаем doctor_id из контекста
 	doctorIDAny, exists := c.Get("user_id")
 	if !exists {
 		h.ErrorResponse(c, nil, http.StatusUnauthorized, "Doctor ID not found in context", false)
 		return
 	}
 
-	doctorID, err := services.ParseUint(doctorIDAny)
+	// 2.1. Парсим doctor_id
+	doctorID, err := h.service.ParseUint(doctorIDAny)
 	if err != nil {
 		h.ErrorResponse(c, err, http.StatusInternalServerError, "Invalid doctor ID", false)
 		return
 	}
 
-	// Получаем номер страницы из query параметров
+	// 3. Парсим page
 	pageStr := c.DefaultQuery("page", "1")
-	page, err := strconv.Atoi(pageStr)
-	if err != nil || page < 1 {
-		h.ErrorResponse(c, err, http.StatusBadRequest, "page must be a positive integer", false)
-		return
-	}
-
-	// Получаем количество элементов на страницу из query параметров
-	perPageStr := c.DefaultQuery("perPage", "5")
-	perPage, err := strconv.Atoi(perPageStr)
-	if err != nil || perPage < 1 {
-		h.ErrorResponse(c, err, http.StatusBadRequest, "perPage must be a positive integer", false)
-		return
-	}
-
-	// Вызываем usecase
-	organizations, err := h.usecase.GetAllOrganizations(doctorID, page, perPage)
+	page, err := h.service.ParseUintString(pageStr)
 	if err != nil {
-		h.ErrorResponse(c, err, http.StatusBadRequest, "error get organizations", false)
+		h.ErrorResponse(c, err, http.StatusBadRequest, "parameter 'page' must be an integer", false)
 		return
 	}
+	if page == 0 {
+		h.ErrorResponse(c, errors.New("page must be greater than 0"), http.StatusBadRequest, "parameter 'page' must be greater than 0", true)
+		return
+	}
+
+	// 4. Парсим perPage
+	perPageStr := c.DefaultQuery("perPage", "5")
+	perPage, err := h.service.ParseUintString(perPageStr)
+	if err != nil {
+		h.ErrorResponse(c, err, http.StatusBadRequest, "parameter 'perPage' must be an integer", false)
+		return
+	}
+	if perPage == 0 {
+		h.ErrorResponse(c, errors.New("perPage must be greater than 0"), http.StatusBadRequest, "parameter 'perPage' must be greater than 0", true)
+		return
+	}
+
+	// 5. Вызываем usecase
+	organizations, appErr := h.usecase.GetAllOrganizations(doctorID, int(page), int(perPage))
+	if appErr != nil {
+		h.ErrorResponse(c, appErr.Err, appErr.Code, appErr.Message, appErr.IsUserFacing)
+		return
+	}
+
+	// 6. Возвращаем результат
 	h.ResultResponse(c, "Success get organizations", Object, organizations)
 }

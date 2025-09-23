@@ -64,6 +64,7 @@ type PersonalInfoRepository interface {
 
 // updated to match the new structure
 type ReceptionRepository interface {
+	GetPatientReceptionsByPatientID(patientID uint) ([]entities.Reception, error)
 	// 	CreateReceptionHospital(reception entities.Reception) error
 	// 	UpdateReception(id uint, updateMap map[string]interface{}) (uint, error)
 	// 	DeleteReception(id uint) error
@@ -74,14 +75,7 @@ type ReceptionRepository interface {
 // updated to match the new structured
 type PatientRepository interface {
 	CreatePatient(patientData *models.CreatePatientData, group_id uint) (*entities.Patient, error)
-	UpdatePatient(id uint, updateMap map[string]interface{}) (uint, error)
-	DeletePatient(id uint) error
-	GetPatientByID(id uint) (entities.Patient, error)
-	GetAllPatients(page, count int, queryFilter string, queryOrder string, filterParams []interface{}) ([]entities.Patient, int64, error)
-	GetPatientsByFullName(name string) ([]entities.Patient, error)
-	GetPatientByIDWithTx(tx *gorm.DB, id uint) (*entities.Patient, error)
-	UpdatePatientWithTx(tx *gorm.DB, id uint, updateMap map[string]interface{}) (uint, error)
-	GetPatientsByGroup(page, perPage int, group_id uint) ([]entities.Patient, int64, error)
+	GetPatientsByGroup(group_id uint) ([]entities.Patient, error)
 }
 
 // updated to match the new structure

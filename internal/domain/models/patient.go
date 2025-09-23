@@ -4,35 +4,81 @@ import (
 	"time"
 )
 
-// UpdatePatientRequest - запрос на обновление данных пациента
-// @Description Данные для обновления информации о пациенте
-type UpdatePatientRequest struct {
-	ID        uint   `json:"id" example:"10"`                              // ID пациента
-	FullName  string `json:"full_name" example:"Смирнов Алексей Петрович"` // ФИО пациента
-	BirthDate string `json:"birth_date" example:"1980-05-15"`              // Дата рождения
-	IsMale    bool   `json:"is_male" example:"true"`                       // Пол (true - мужской)
-}
-
-// CreatePatientRequest - запрос на создание пациента
-// @Description Данные для создания нового пациента
-type CreatePatientRequest struct {
-	FullName  string `json:"full_name" example:"Смирнов Алексей Петрович"` // ФИО пациента
-	BirthDate string `json:"birth_date" example:"1980-05-15"`              // Дата рождения
-	IsMale    bool   `json:"is_male" example:"true"`                       // Пол (true - мужской)
-}
-
-// ShortPatientResponse - краткая информация о пациенте
-// @Description Сокращенные данные пациента
-type ShortPatientResponse struct {
-	ID        uint      `json:"id" example:"1"`
-	FullName  string    `json:"full_name" example:"Смирнов Алексей Петрович"`
-	BirthDate time.Time `json:"birth_date" example:"1980-05-15T00:00:00Z"` // Дата рождения
-	IsMale    bool      `json:"is_male" example:"true"`                    // Пол (true - мужской)
-}
-
-// PatientResponse - полная информация о пациенте
-// @Description Все данные пациента
 type PatientResponse struct {
+	ID        uint      `json:"id"`
+	FullName  string    `json:"full_name"`
+	BirthDate time.Time `json:"birth_date"`
+	Age       int       `json:"age"`
+	IsMale    bool      `json:"is_male"`
+	Position  string    `json:"position"`
+	Division  string    `json:"division"`
+
+	PatientGroupID uint `json:"patient_group_id"`
+
+	// Вложенные объекты
+	ExaminationType *ExaminationTypeResponse   `json:"examination_type,omitempty"`
+	ExaminationView *ExaminationViewResponse   `json:"examination_view,omitempty"`
+	HarmPoint       *HarmPointResponse         `json:"harm_point,omitempty"`
+	PersonalInfo    *PersonalInfoResponse      `json:"personal_info,omitempty"`
+	ContactInfo     *ContactInfoResponse       `json:"contact_info,omitempty"`
+	Flg             *FlgResponse               `json:"flg,omitempty"`
+	AnalysisOrder   *AnalysisOrderResponse     `json:"analysis_order,omitempty"`
+	Statistics      *PatientStatisticsResponse `json:"statistics,omitempty"`
+
+	Vaccines        []VaccineResponse        `json:"vaccines,omitempty"`
+	Receptions      []ReceptionResponse      `json:"receptions,omitempty"`
+	Specializations []SpecializationResponse `json:"specializations,omitempty"`
+}
+
+// Минимальные вложенные типы (расширьте по необходимости)
+type ExaminationTypeResponse struct {
+	ID    uint   `json:"id"`
+	Value string `json:"value"`
+}
+
+type ExaminationViewResponse struct {
+	ID    uint   `json:"id"`
+	Value string `json:"value"`
+}
+
+type HarmPointResponse struct {
+	ID    uint    `json:"id"`
+	Value float32 `json:"value"`
+}
+
+type PersonalInfoResponse struct {
+	ID        uint   `json:"id"`
+	DocNumber string `json:"doc_number"`
+	DocSeries string `json:"doc_series"`
+	SNILS     string `json:"snils"`
+	OMS       string `json:"oms"`
+
+	DocumentType *DocumentTypeResponse `json:"document_type,omitempty"`
+}
+
+type DocumentTypeResponse struct {
+	ID    uint   `json:"id"`
+	Value string `json:"value"`
+}
+
+type ContactInfoResponse struct {
+	ID      uint   `json:"id"`
+	Phone   string `json:"phone"`
+	Email   string `json:"email"`
+	Address string `json:"address"`
+}
+
+type PatientStatisticsResponse struct {
+	ID                     uint  `json:"id"`
+	TotalReceptions        int64 `json:"total_receptions"`
+	CompletedReceptions    int64 `json:"completed_receptions"`
+	TotalAnalysisOrders    int64 `json:"total_analysis_orders"`
+	CompletedAnalysisItems int64 `json:"completed_analysis_items"`
+}
+
+type SpecializationResponse struct {
+	ID    uint   `json:"id"`
+	Title string `json:"title"`
 }
 
 type CreatePatientData struct {

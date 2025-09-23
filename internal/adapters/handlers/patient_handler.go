@@ -30,19 +30,8 @@ func (h *Handler) GetPatientsByGroup(c *gin.Context) {
 		h.ErrorResponse(c, err, http.StatusBadRequest, "parameter 'group_id' must be an uint", false)
 		return
 	}
-	page, err := h.service.ParseIntString(c.DefaultQuery("page", "1"))
-	if err != nil {
-		h.ErrorResponse(c, err, http.StatusBadRequest, "parameter 'page' must be an integer", false)
-		return
-	}
 
-	perPage, err := h.service.ParseIntString(c.DefaultQuery("perPage", "20"))
-	if err != nil {
-		h.ErrorResponse(c, err, http.StatusBadRequest, "parameter 'count' must be an integer", false)
-		return
-	}
-
-	patients, appErr := h.usecase.GetPatientsByGroup(page, perPage, group_id)
+	patients, appErr := h.usecase.GetPatientsByGroup(group_id)
 	if appErr != nil {
 		h.ErrorResponse(c, appErr.Err, appErr.Code, appErr.Message, appErr.IsUserFacing)
 		return
@@ -67,22 +56,33 @@ func (h *Handler) GetPatientsByGroup(c *gin.Context) {
 // handlers/patient_handler.go
 // POST /patients - создание пациента
 func (h *Handler) CreatePatient(c *gin.Context) {
-	group_id, err := h.service.ParseUintString(c.Param("group_id"))
+	// 1. Парсим group_id из URL
+	groupID, err := h.service.ParseUintString(c.Param("group_id"))
 	if err != nil {
 		h.ErrorResponse(c, err, http.StatusBadRequest, "parameter 'group_id' must be an uint", false)
 		return
 	}
 
+	// 2. Биндим JSON
 	var request models.CreatePatientData
 	if err := c.ShouldBindJSON(&request); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		h.ErrorResponse(c, err, http.StatusBadRequest, "invalid request body", true)
 		return
 	}
 
-	patient, appErr := h.usecase.CreatePatient(&request, group_id)
-	if appErr != nil {
-		h.ErrorResponse(c, appErr, http.StatusBadRequest, "fail to create patient", false)
+	// 3. Валидируем структуру (если используете validator)
+	if err := validate.Struct(request); err != nil {
+		h.ErrorResponse(c, err, http.StatusUnprocessableEntity, "validation failed", true)
 		return
 	}
-	c.JSON(http.StatusCreated, patient)
+
+	// 4. Вызываем usecase
+	patient, appErr := h.usecase.CreatePatient(&request, groupID)
+	if appErr != nil {
+		h.ErrorResponse(c, appErr.Err, appErr.Code, appErr.Message, appErr.IsUserFacing)
+		return
+	}
+
+	// 5. Возвращаем результат
+	h.ResultResponse(c, "Patient created successfully", Object, patient)
 }

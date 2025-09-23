@@ -13,6 +13,7 @@ type Vaccine struct {
 	// Булевые флаги определяют подтип формы
 	IsRefusal   bool `gorm:"default:false" json:"is_refusal"`
 	IsExemption bool `gorm:"default:false" json:"is_exemption"`
+	IsTiter     bool `gorm:"default:false" json:"is_titer"`
 
 	// Поле для титра
 	TiterAmount *int `json:"titer_amount"`

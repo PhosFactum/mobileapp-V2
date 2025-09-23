@@ -14,6 +14,7 @@ type ParamsParserService interface {
 	ParseTimeString(timeStr string) (time.Time, error)
 	ParseUintString(uintStr string) (uint, error)
 	ParseIntString(intStr string) (int, error)
+	ParseUint(value interface{}) (uint, error)
 
 	FormatDateToString(t time.Time) string
 	FormatTimeToString(t time.Time) string

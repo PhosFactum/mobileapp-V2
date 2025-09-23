@@ -3,6 +3,7 @@ package usecases
 import (
 	"math"
 
+	"github.com/AlexanderMorozov1919/mobileapp/internal/domain/entities"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/domain/models"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/interfaces"
 	"github.com/AlexanderMorozov1919/mobileapp/pkg/errors"
@@ -18,7 +19,7 @@ func NewOrganizationUsecase(repo interfaces.OrganizationRepository) interfaces.O
 }
 
 func (u *OrganizationUsecase) GetAllOrganizations(doctorID uint, page, perPage int,
-) (*models.FilterResponse[[]models.OrganizationShortResponse], error) {
+) (*models.FilterResponse[[]models.OrganizationShortResponse], *errors.AppError) {
 	// Получаем данные из репозитория
 	organizations, total, err := u.repo.GetAllOrganizations(doctorID, page, perPage)
 	if err != nil {
@@ -33,11 +34,7 @@ func (u *OrganizationUsecase) GetAllOrganizations(doctorID uint, page, perPage i
 	// Преобразуем в DTO
 	response := make([]models.OrganizationShortResponse, len(organizations))
 	for i, org := range organizations {
-		response[i] = models.OrganizationShortResponse{
-			ID:      org.ID,
-			Title:   org.Title,
-			Manager: org.Manager,
-		}
+		response[i] = u.mapOrganizationShort(org)
 	}
 
 	totalPages := int(math.Ceil(float64(total) / float64(perPage)))
@@ -49,4 +46,21 @@ func (u *OrganizationUsecase) GetAllOrganizations(doctorID uint, page, perPage i
 		TotalHits:   int(total),
 		HitsPerPage: perPage,
 	}, nil
+}
+
+// ✅ Внутренний маппер: Organization → OrganizationShortResponse
+func (u *OrganizationUsecase) mapOrganizationShort(org entities.Organization) models.OrganizationShortResponse {
+	return models.OrganizationShortResponse{
+		ID:      org.ID,
+		Title:   org.Title,
+		Manager: u.mapManager(org.Manager),
+	}
+}
+
+// ✅ Внутренний маппер: Manager → ManagerResponse
+func (u *OrganizationUsecase) mapManager(manager entities.Manager) models.ManagerResponse {
+	return models.ManagerResponse{
+		FullName: manager.FullName,
+		Phone:    manager.Phone,
+	}
 }
