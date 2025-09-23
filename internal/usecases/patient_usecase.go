@@ -29,7 +29,7 @@ func NewPatientUsecase(repo interfaces.PatientRepository, contactRepo interfaces
 }
 
 // CreatePatient - создание пациента
-func (u *PatientUsecase) CreatePatient(patientData *models.CreatePatientData) (*entities.Patient, error) {
+func (u *PatientUsecase) CreatePatient(patientData *models.CreatePatientData, group_id uint) (*entities.Patient, error) {
 	// // 1. Валидация входных данных
 	// if err := u.validateCreatePatientData(patientData); err != nil {
 	//     return nil, errors.NewValidationError(op, err)
@@ -41,7 +41,7 @@ func (u *PatientUsecase) CreatePatient(patientData *models.CreatePatientData) (*
 	// }
 
 	// 3. Создаем пациента через репозиторий
-	patient, err := u.repo.CreatePatient(patientData)
+	patient, err := u.repo.CreatePatient(patientData, group_id)
 	if err != nil {
 		return nil, errors.NewAppError(errors.InternalServerErrorCode, "failed to create patient", err, true)
 	}

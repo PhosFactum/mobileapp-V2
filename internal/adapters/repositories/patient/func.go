@@ -8,6 +8,7 @@ import (
 	"github.com/AlexanderMorozov1919/mobileapp/internal/domain/entities"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/domain/models"
 	"github.com/AlexanderMorozov1919/mobileapp/pkg/errors"
+	"github.com/jackc/pgtype"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -236,9 +237,9 @@ func (r *PatientRepositoryImpl) GetPatientsByGroup(page, perPage int, group_id u
 	return patients, totalRecords, nil
 }
 
-// ДОПИЛИТЬ ВАЛИДАЦИЮ И ЧТОБЫ ПОДТЯГИВАЛАСЬ ГРУППА ИЗ ЮРЛКИ
+// ДОПИЛИТЬ ВАЛИДАЦИЮ (создан ли с таким ФИО) + поля
 // CreatePatient - создание пациента с кэшированием специальностей
-func (r *PatientRepositoryImpl) CreatePatient(patientData *models.CreatePatientData) (*entities.Patient, error) {
+func (r *PatientRepositoryImpl) CreatePatient(patientData *models.CreatePatientData, group_id uint) (*entities.Patient, error) {
 	op := "repo.Patient.CreatePatient"
 
 	var createdPatient *entities.Patient
@@ -297,7 +298,7 @@ func (r *PatientRepositoryImpl) CreatePatient(patientData *models.CreatePatientD
 			ExaminationTypeID: patientData.ExaminationTypeID,
 			ExaminationViewID: patientData.ExaminationViewID,
 			HarmPointID:       patientData.HarmPointID,
-			PatientGroupID:    patientData.PatientGroupID,
+			PatientGroupID:    group_id,
 			PersonalInfoID:    personalInfo.ID,
 			ContactInfoID:     contactInfo.ID,
 			AnalysisOrderID:   analysisOrder.ID,
@@ -326,7 +327,30 @@ func (r *PatientRepositoryImpl) CreatePatient(patientData *models.CreatePatientD
 			return fmt.Errorf("%s: failed to cache specializations: %w", op, err)
 		}
 
-		// ✅ 7. Создаем статистику пациента
+		// ✅ 8. Создаем пустые приемы (Reception) по каждой специализации
+		var receptions []entities.Reception
+		for _, spec := range specializations {
+			reception := entities.Reception{
+				PatientID:        patient.ID,
+				SpecializationID: spec.ID,
+				IsCompleted:      false,
+				CreatedAt:        time.Now(),
+				UpdatedAt:        time.Now(),
+				SpecializationData: pgtype.JSONB{
+					Status: pgtype.Null,
+				},
+				CustomFieldsSchema: nil,
+			}
+			receptions = append(receptions, reception)
+		}
+
+		if len(receptions) > 0 {
+			if err := tx.Create(&receptions).Error; err != nil {
+				return fmt.Errorf("%s: failed to create receptions: %w", op, err)
+			}
+		}
+
+		// ✅ 9. Создаем статистику пациента
 		statistics := &entities.PatientStatistics{
 			PatientID:              patient.ID,
 			TotalReceptions:        int64(len(specializations)),
@@ -343,7 +367,7 @@ func (r *PatientRepositoryImpl) CreatePatient(patientData *models.CreatePatientD
 			}
 		}
 
-		// ✅ 8. Предзагружаем кэшированные специальности
+		// ✅ 10. Предзагружаем кэшированные специальности
 		tx.Preload("Specializations").First(patient, patient.ID)
 
 		// ✅ Сохраняем созданного пациента для возврата

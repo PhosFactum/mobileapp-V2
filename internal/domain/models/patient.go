@@ -46,7 +46,6 @@ type CreatePatientData struct {
 	ExaminationTypeID uint `json:"examination_type_id" binding:"required"`
 	ExaminationViewID uint `json:"examination_view_id" binding:"required"`
 	HarmPointID       uint `json:"harm_point_id" binding:"required"`
-	PatientGroupID    uint `json:"patient_group_id" binding:"required"`
 
 	// Вложенные структуры
 	ContactInfo  CreateContactInfoData  `json:"contact_info" binding:"required"`

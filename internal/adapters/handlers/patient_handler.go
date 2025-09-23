@@ -67,14 +67,19 @@ func (h *Handler) GetPatientsByGroup(c *gin.Context) {
 // handlers/patient_handler.go
 // POST /patients - создание пациента
 func (h *Handler) CreatePatient(c *gin.Context) {
-	var request models.CreatePatientData
+	group_id, err := h.service.ParseUintString(c.Param("group_id"))
+	if err != nil {
+		h.ErrorResponse(c, err, http.StatusBadRequest, "parameter 'group_id' must be an uint", false)
+		return
+	}
 
+	var request models.CreatePatientData
 	if err := c.ShouldBindJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	patient, appErr := h.usecase.CreatePatient(&request)
+	patient, appErr := h.usecase.CreatePatient(&request, group_id)
 	if appErr != nil {
 		h.ErrorResponse(c, appErr, http.StatusBadRequest, "fail to create patient", false)
 		return

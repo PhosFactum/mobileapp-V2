@@ -73,7 +73,7 @@ type ReceptionRepository interface {
 
 // updated to match the new structured
 type PatientRepository interface {
-	CreatePatient(patientData *models.CreatePatientData) (*entities.Patient, error)
+	CreatePatient(patientData *models.CreatePatientData, group_id uint) (*entities.Patient, error)
 	UpdatePatient(id uint, updateMap map[string]interface{}) (uint, error)
 	DeletePatient(id uint) error
 	GetPatientByID(id uint) (entities.Patient, error)

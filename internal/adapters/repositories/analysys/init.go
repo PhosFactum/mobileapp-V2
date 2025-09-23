@@ -5,11 +5,11 @@ import (
 	"gorm.io/gorm"
 )
 
-type AnalysisRepository struct {
+type AnalysisRepositoryImpl struct {
 	db *gorm.DB
 }
 
 func NewAnalysisRepository(db *gorm.DB) interfaces.AnalysisRepository {
-	repo := &AnalysisRepository{db: db}
+	repo := &AnalysisRepositoryImpl{db: db}
 	return repo
 }

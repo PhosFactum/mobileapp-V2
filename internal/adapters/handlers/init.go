@@ -99,7 +99,7 @@ func ProvideRouter(h *Handler, cfg *config.Config, swagCfg *swagger.Config) http
 	// Пациенты
 	patientGroup := baseRouter.Group("/patients")
 	patientGroup.GET("/:group_id", h.GetPatientsByGroup)
-	patientGroup.POST("/", h.CreatePatient)
+	patientGroup.POST("/:group_id/create", h.CreatePatient)
 
 	consentGroup := protected.Group("/consent")
 	consentGroup.GET("/personal-data", h.GetPersonalDataConsent)
