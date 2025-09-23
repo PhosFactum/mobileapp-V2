@@ -14,6 +14,7 @@ import (
 // @Tags Organizations
 // @Accept json
 // @Produce json
+// @Security BearerAuth
 // @Param page query int false "Номер страницы" default(1)
 // @Param perPage query int false "Количество записей на страницу" default(5)
 // @Success 200 {object} models.OrganizationShortResponse "Список организаций"

@@ -2,12 +2,14 @@ package handlers
 
 import (
 	"net/http"
+	"time"
 
 	"github.com/AlexanderMorozov1919/mobileapp/internal/config"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/interfaces"
 	jwtMiddleware "github.com/AlexanderMorozov1919/mobileapp/internal/middleware/jwt"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/middleware/logging"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/middleware/swagger"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator/v10"
 	_ "github.com/swaggo/files"
@@ -42,14 +44,15 @@ func NewHandler(usecase interfaces.Usecases, parentLogger *logging.Logger, servi
 func ProvideRouter(h *Handler, cfg *config.Config, swagCfg *swagger.Config) http.Handler {
 	r := gin.Default()
 
-	// CORS
-	// r.Use(cors.New(cors.Config{
-	// 	AllowOrigins:     cfg.Server.AllowedOrigins,
-	// 	AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
-	// 	AllowHeaders:     []string{"Origin", "Content-Type", "Authorization"},
-	// 	ExposeHeaders:    []string{"Content-Length"},
-	// 	AllowCredentials: true,
-	// }))
+	// Временное решение для разработки - разрешаем все
+	r.Use(cors.New(cors.Config{
+		AllowAllOrigins:  true,
+		AllowMethods:     []string{"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"},
+		AllowHeaders:     []string{"*"},
+		ExposeHeaders:    []string{"Content-Length", "Authorization"},
+		AllowCredentials: true,
+		MaxAge:           12 * time.Hour,
+	}))
 
 	// Swagger-роутер
 	swagger.Setup(r, swagCfg)
@@ -60,8 +63,13 @@ func ProvideRouter(h *Handler, cfg *config.Config, swagCfg *swagger.Config) http
 	// Общая группа для API
 	baseRouter := r.Group("/api/v1")
 
-	//Версия
+	// Версия - без авторизации
 	baseRouter.GET("/version", h.GetVersionProject)
+
+	// Авторизация
+	authGroup := baseRouter.Group("/auth")
+	authGroup.POST("/login", h.LoginDoctor)
+	authGroup.POST("/logout", jwtMiddleware.JWTAuth(cfg.JWTSecret), h.LogoutDoctor)
 
 	protected := baseRouter.Group("/")
 	protected.Use(jwtMiddleware.JWTAuth(cfg.JWTSecret))
@@ -80,15 +88,11 @@ func ProvideRouter(h *Handler, cfg *config.Config, swagCfg *swagger.Config) http
 
 	// Поправить пациента на транзакцию
 
-	// Руты рабочие для новго проекта
   
-  	// Авторизация
-	authGroup := baseRouter.Group("/auth")
-	authGroup.POST("/login", h.LoginDoctor)
-	authGroup.POST("/logout", jwtMiddleware.JWTAuth(cfg.JWTSecret), h.LogoutDoctor)
+	// Руты рабочие для новго проекта
 
 	// Организации (страховые)
-	organizationGroup := protected.Group("/organization")
+	organizationGroup := protected.Group("/organizations")
 	organizationGroup.GET("/", h.GetAllOrganizations)
 
 	//Списки пациентов
@@ -101,6 +105,7 @@ func ProvideRouter(h *Handler, cfg *config.Config, swagCfg *swagger.Config) http
 	patientGroup.GET("/:group_id", h.GetPatientsByGroup)
 	patientGroup.POST("/", h.CreatePatient)
 
+  // Подписи пациентов
 	consentGroup := protected.Group("/consent")
 	consentGroup.GET("/personal-data", h.GetPersonalDataConsent)
 	consentGroup.GET("/medical-exam", h.GetMedicalExamConsent)

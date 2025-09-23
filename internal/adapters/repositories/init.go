@@ -13,6 +13,7 @@ import (
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/consent_signatures"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/contactInfo"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/doctor"
+	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/flg"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/organization"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/patient"
 	patientgroup "github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/patient_group"
@@ -40,6 +41,7 @@ type Repository struct {
 	interfaces.OrganizationRepository
 	interfaces.PatientGroupRepository
 	interfaces.ConsentSignatureRepository
+	interfaces.FLGRepository
 }
 
 func NewRepository(cfg *config.Config) (interfaces.Repository, error) {
@@ -83,9 +85,11 @@ func NewRepository(cfg *config.Config) (interfaces.Repository, error) {
 		personalInfo.NewPersonalInfoRepository(db),
 		reception.NewReceptionRepository(db),
 		tx.NewTxRepository(db),
+
 		organization.NewOrganizationRepository(db),
 		patientgroup.NewPatientGroupRepository(db),
 		consent_signatures.NewConsentSignatureRepository(db),
+		flg.NewFLGRepository(db),
 	}, nil
 
 }
@@ -98,11 +102,12 @@ func autoMigrate(db *gorm.DB) error {
 	// ✅ Правильный порядок удаления таблиц (зависимые первыми)
 	tablesToDelete := []string{
 		// Зависимые таблицы
+		"consent_signatures",
 		"receptions",
 		"analysis_order_items",
 		"analysis_orders",
 		"vaccines",
-		"fl_gs",
+		"flgs",
 		"patients_specializations",
 		"patients_patient_groups",
 		"doctor_specializations",
@@ -146,7 +151,7 @@ func autoMigrate(db *gorm.DB) error {
 
 	// ✅ Создание таблиц в правильном порядке (зависимости первыми)
 	models := []interface{}{
-		// Справочники (без внешних ключей)
+		// 1. Справочники (без внешних ключей вообще)
 		&entities.DocumentType{},
 		&entities.ExaminationType{},
 		&entities.ExaminationView{},
@@ -162,27 +167,26 @@ func autoMigrate(db *gorm.DB) error {
 		&entities.Manager{},
 		&entities.Analysis{}, // Справочник анализов
 
-		// Основные сущности
+		// 2. Основные сущности
 		&entities.Specialization{},
 		&entities.Doctor{},
 		&entities.Organization{},
 		&entities.PatientGroup{},
 
-		// Зависимые сущности (без внешних ключей на Patient)
-		&entities.ContactInfo{},   // Без внешних ключей
-		&entities.PersonalInfo{},  // Без внешних ключей
-		&entities.Flg{},           // Без внешних ключей
-		&entities.AnalysisOrder{}, // Без внешних ключей
+		// 3. Сущности, НА КОТОРЫЕ ссылается Patient 
+		&entities.ContactInfo{},  
+		&entities.PersonalInfo{}, 
+		&entities.Flg{},        
 
-		// Зависимые от Patient
-		&entities.Patient{},           // После справочников и ContactInfo/PersonalInfo
-		&entities.PatientStatistics{}, // После Patient (внешний ключ)
-		&entities.AnalysisOrderItem{}, // После AnalysisOrder и Analysis
-		&entities.Vaccine{},           // После Patient
-		&entities.Reception{},         // После Patient и Specialization
+		// 4. Patient — после всех, на кого он ссылается
 		&entities.Patient{},
-		&entities.ContactInfo{},
-		&entities.PersonalInfo{},
+
+		// 5. Все сущности, которые ссылаются НА Patient
+		&entities.PatientStatistics{},
+		&entities.AnalysisOrder{},
+		&entities.AnalysisOrderItem{},
+		&entities.Vaccine{},
+		&entities.Reception{},
 		&entities.ConsentSignature{},
 	}
 
@@ -718,6 +722,7 @@ func seedPatientsWithRequiredFields(db *gorm.DB) error {
 		return fmt.Errorf("failed to get organizations: %w", err)
 	}
 
+	// Данные пациентов
 	if err := db.Find(&managers).Error; err != nil {
 		return fmt.Errorf("failed to get managers: %w", err)
 	}
@@ -738,6 +743,15 @@ func seedPatientsWithRequiredFields(db *gorm.DB) error {
 		HarmPointID    uint
 		OrganizationID uint
 	}{
+
+    //
+		{"Иванов Петр Сергеевич", time.Date(1985, 5, 15, 0, 0, 0, 0, time.UTC), true, "Программист", "IT отдел", organizations[0].ID},
+		{"Петрова Мария Ивановна", time.Date(1990, 8, 22, 0, 0, 0, 0, time.UTC), false, "Дизайнер", "Дизайн отдел", organizations[1].ID},
+		{"Сидоров Алексей Петрович", time.Date(1978, 12, 3, 0, 0, 0, 0, time.UTC), true, "Менеджер", "Управление", organizations[2].ID},
+	}
+
+	for i, pd := range patientsData {
+		// 1. Контактная информация
 		{
 			"Иванов Петр Сергеевич",
 			time.Date(1985, 5, 15, 0, 0, 0, 0, time.UTC),
@@ -789,7 +803,7 @@ func seedPatientsWithRequiredFields(db *gorm.DB) error {
 			return fmt.Errorf("failed to create contact info: %w", err)
 		}
 
-		// ✅ 2. Создаем персональную информацию
+		// 2. Персональная информация
 		personalInfo := &entities.PersonalInfo{
 			DocNumber:      fmt.Sprintf("%06d", 123456+i),
 			DocSeries:      fmt.Sprintf("451%d", i),
@@ -803,7 +817,7 @@ func seedPatientsWithRequiredFields(db *gorm.DB) error {
 			return fmt.Errorf("failed to create personal info: %w", err)
 		}
 
-		// ✅ 3. Создаем Flg запись
+		// 3. Создаём пациента без FlgID
 		flg := &entities.Flg{
 			IsCompleted:  false,
 			Organization: "Городская поликлиника",
@@ -846,23 +860,46 @@ func seedPatientsWithRequiredFields(db *gorm.DB) error {
 			PersonalInfoID:    personalInfo.ID,
 			ContactInfoID:     contactInfo.ID,
 			OrganizationID:    pd.OrganizationID,
-			FlgID:             flg.ID,
-			AnalysisOrderID:   analysisOrder.ID, // ✅ Обязательное поле!
 			CreatedAt:         time.Now(),
 			UpdatedAt:         time.Now(),
 		}
-
 		if err := db.Create(patient).Error; err != nil {
 			return fmt.Errorf("failed to create patient %s: %w", patient.FullName, err)
 		}
 
-		// Обновляем AnalysisOrder с PatientID
-		analysisOrder.PatientID = patient.ID
-		if err := db.Save(analysisOrder).Error; err != nil {
-			return fmt.Errorf("failed to update analysis order with patient ID: %w", err)
+		// 4. Создаём Flg после пациента
+		flg := &entities.Flg{
+			PatientID:       patient.ID,
+			OrganizationID:  pd.OrganizationID,
+			DoctorID:        1, // если нужно, можно заменить на существующего доктора
+			ExaminationDate: time.Now(),
+			Number:          fmt.Sprintf("%d", 10000+i),
+			Result:          "Норма",
+		}
+		if err := db.Create(flg).Error; err != nil {
+			return fmt.Errorf("failed to create flg: %w", err)
 		}
 
-		fmt.Printf("✅ Created patient %s with all required fields\n", patient.FullName)
+		// 5. Обновляем Patient.FlgID через указатель
+		patient.FlgID = new(uint) // создаём указатель
+		*patient.FlgID = flg.ID   // записываем значение
+		if err := db.Save(patient).Error; err != nil {
+			return fmt.Errorf("failed to update patient with flg_id: %w", err)
+		}
+
+		// 6. Связываем пациента с группами
+		var patientGroups []entities.PatientGroup
+		db.Limit(2).Find(&patientGroups)
+		for _, group := range patientGroups {
+			db.Model(patient).Association("PatientGroups").Append(&group)
+		}
+
+		// 7. Связываем пациента со специализациями
+		var specializations []entities.Specialization
+		db.Limit(3).Find(&specializations)
+		for _, spec := range specializations {
+			db.Model(patient).Association("Specialization").Append(&spec)
+		}
 	}
 
 	return nil

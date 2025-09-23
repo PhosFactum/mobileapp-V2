@@ -10,7 +10,7 @@ import (
 // GetPatientGroupsByCodeOrOrgTitle godoc
 // @Summary Получить группы пациентов по их коду или названию их организаций
 // @Description Возвращает список экстренных приёмов, назначенных врачу на указанную дату, с пагинацией
-// @Tags SMP
+// @Tags Groups
 // @Accept json
 // @Produce json
 // @Param doc_id path uint true "ID врача"
@@ -20,7 +20,7 @@ import (
 // @Success 200 {array} models.PatientGroupShortResponse "Список приёмов"
 // @Failure 400 {object} IncorrectFormatError "Некорректный запрос"
 // @Failure 500 {object} InternalServerError "Внутренняя ошибка"
-// @Router /emergency/{doc_id} [get]
+// @Router /groups [get]
 func (h *Handler) GetPatientGroupsByCodeOrOrgTitle(c *gin.Context) {
 	// Получаем дату из query параметров
 	search := c.Query("search")
@@ -60,10 +60,10 @@ func (h *Handler) GetPatientGroupsByCodeOrOrgTitle(c *gin.Context) {
 // @Param page query int false "Номер страницы" default(1)
 // @Param perPage query int false "Количество записей на страницу" default(10)
 // @Success 200 {object} models.PatientGroupShortResponse
-// @Failure 400 {object} map[string]string
-// @Failure 500 {object} map[string]string
+// @Failure 400 {object} IncorrectFormatError "Группа пациентов не найдена"
+// @Failure 500 {object} InternalServerError "Внутренняя ошибка сервера"
 // @Security BearerAuth
-// @Router /organizations/{org_id}/groups [get]
+// @Router /groups/{org_id} [get]
 func (h *Handler) GetPatientGroupsByOrganization(c *gin.Context) {
 	// Получаем org_id из URL
 	orgIDParam := c.Param("org_id")

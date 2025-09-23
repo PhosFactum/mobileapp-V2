@@ -19,11 +19,12 @@ type Repository interface {
 	PatientGroupRepository
 	ReceptionRepository
 	VaccineRepository
+	FLGRepository
 }
 
 type PatientGroupRepository interface {
 	GetPatientGroupsByCodeOrOrgTitle(search string, page, perPage int) ([]entities.PatientGroup, int64, error)
-	GetPatientGroupsByOrganizationID(orgID uint, page, perPage int) ([]entities.PatientGroup, int64, error)
+	GetPatientGroupsWithPatientsByOrganizationID(orgID uint, page, perPage int) ([]entities.PatientGroup, int64, error)
 }
 
 type OrganizationRepository interface {
@@ -111,4 +112,9 @@ type VaccineRepository interface {
 }
 
 type AnalysisRepository interface {
+}
+
+type FLGRepository interface {
+	CreateFLG(flg entities.FLG) (uint, error)
+	UpdateFLG(id uint, updateMap map[string]interface{}) (*entities.FLG, error)
 }

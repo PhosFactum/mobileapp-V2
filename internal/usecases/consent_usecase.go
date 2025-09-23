@@ -1,6 +1,7 @@
 package usecases
 
 import (
+	"net/http"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/domain/entities"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/interfaces"
 	"github.com/AlexanderMorozov1919/mobileapp/pkg/errors"
@@ -16,24 +17,37 @@ func NewConsentUsecase(repo interfaces.ConsentSignatureRepository) *ConsentUseca
 
 // SaveConsent сохраняет подпись пациента и ставит флаг согласия
 func (u *ConsentUsecase) SaveConsent(patientID uint, signature []byte) *errors.AppError {
-	op := "usecase.Consent.SaveConsent"
-
 	if err := u.repo.SaveSignature(patientID, signature); err != nil {
-		return errors.NewInternalError(op, "не удалось сохранить подпись", err)
+		return errors.NewAppError(
+			errors.InternalServerErrorCode,
+			"Не удалось сохранить подпись",
+			err,
+			false,
+		)
 	}
-
 	return nil
 }
 
 // GetSignature возвращает подпись пациента (если нужна для фронта/админки)
 func (u *ConsentUsecase) GetSignature(patientID uint) ([]byte, *errors.AppError) {
-	op := "usecase.Consent.GetSignature"
-
 	signature, err := u.repo.GetSignature(patientID)
 	if err != nil {
-		return nil, errors.NewInternalError(op, "не удалось получить подпись", err)
-	}
+		if errors.Is(err, errors.ErrNotFound) {
+			return nil, errors.NewAppError(
+				http.StatusNotFound,
+				"Signature not found",
+				err,
+				true,
+			)
+		}
 
+		return nil, errors.NewAppError(
+			errors.InternalServerErrorCode,
+			"Не удалось получить подпись",
+			err,
+			false,
+		)
+	}
 	return signature, nil
 }
 
