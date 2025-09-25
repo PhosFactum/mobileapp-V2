@@ -16,29 +16,20 @@ type PatientResponse struct {
 	PatientGroupID uint `json:"patient_group_id"`
 
 	// Вложенные объекты
-	ExaminationType *ExaminationTypeResponse   `json:"examination_type,omitempty"`
-	ExaminationView *ExaminationViewResponse   `json:"examination_view,omitempty"`
-	HarmPoint       *HarmPointResponse         `json:"harm_point,omitempty"`
-	PersonalInfo    *PersonalInfoResponse      `json:"personal_info,omitempty"`
-	ContactInfo     *ContactInfoResponse       `json:"contact_info,omitempty"`
-	Flg             *FlgResponse               `json:"flg,omitempty"`
-	AnalysisOrder   *AnalysisOrderResponse     `json:"analysis_order,omitempty"`
-	Statistics      *PatientStatisticsResponse `json:"statistics,omitempty"`
+	ExaminationType string `json:"examination_type,omitempty"`
+	ExaminationView string `json:"examination_view,omitempty"`
 
-	Vaccines        []VaccineResponse        `json:"vaccines,omitempty"`
+	HarmPoint     *HarmPointResponse         `json:"harm_point,omitempty"`
+	PersonalInfo  *PersonalInfoResponse      `json:"personal_info,omitempty"`
+	ContactInfo   *ContactInfoResponse       `json:"contact_info,omitempty"`
+	Flg           *FlgResponse               `json:"flg,omitempty"`
+	AnalysisOrder *AnalysisOrderResponse     `json:"analysis_order,omitempty"`
+	Statistics    *PatientStatisticsResponse `json:"statistics,omitempty"`
+
+	// Связанные коллекции
+	Vaccines        []VaccineAllResponse     `json:"vaccines,omitempty"`
 	Receptions      []ReceptionResponse      `json:"receptions,omitempty"`
 	Specializations []SpecializationResponse `json:"specializations,omitempty"`
-}
-
-// Минимальные вложенные типы (расширьте по необходимости)
-type ExaminationTypeResponse struct {
-	ID    uint   `json:"id"`
-	Value string `json:"value"`
-}
-
-type ExaminationViewResponse struct {
-	ID    uint   `json:"id"`
-	Value string `json:"value"`
 }
 
 type HarmPointResponse struct {
@@ -53,12 +44,7 @@ type PersonalInfoResponse struct {
 	SNILS     string `json:"snils"`
 	OMS       string `json:"oms"`
 
-	DocumentType *DocumentTypeResponse `json:"document_type,omitempty"`
-}
-
-type DocumentTypeResponse struct {
-	ID    uint   `json:"id"`
-	Value string `json:"value"`
+	DocumentType string `json:"document_type,omitempty"`
 }
 
 type ContactInfoResponse struct {
@@ -82,16 +68,16 @@ type SpecializationResponse struct {
 }
 
 type CreatePatientData struct {
-	FullName  string    `json:"full_name" binding:"required"`
-	BirthDate time.Time `json:"birth_date" binding:"required"`
-	IsMale    bool      `json:"is_male" binding:"required"`
-	Position  string    `json:"position" binding:"required"`
-	Division  string    `json:"division" binding:"required"`
+	FullName        string    `json:"full_name" binding:"required"`
+	BirthDate       time.Time `json:"birth_date" binding:"required"`
+	IsMale          bool      `json:"is_male" binding:"required"`
+	Position        string    `json:"position" binding:"required"`
+	Division        string    `json:"division" binding:"required"`
+	ExaminationType string    `json:"examination_type_id" binding:"required"`
+	ExaminationView string    `json:"examination_view_id" binding:"required"`
 
 	// Обязательные связи
-	ExaminationTypeID uint `json:"examination_type_id" binding:"required"`
-	ExaminationViewID uint `json:"examination_view_id" binding:"required"`
-	HarmPointID       uint `json:"harm_point_id" binding:"required"`
+	HarmPointID uint `json:"harm_point_id" binding:"required"`
 
 	// Вложенные структуры
 	ContactInfo  CreateContactInfoData  `json:"contact_info" binding:"required"`

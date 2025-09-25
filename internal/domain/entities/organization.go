@@ -11,7 +11,7 @@ type Organization struct {
 	Title string `gorm:"not null" json:"title" example:"Med_Clinic"`
 
 	ManagerID uint    `gorm:"not null;index" json:"-"`
-	Manager   Manager `gorm:"foreignKey:ManagerID" json:"Manager"`
+	Manager   Manager `gorm:"foreignKey:ManagerID" json:"manager"`
 
 	PatientGroups []PatientGroup `gorm:"foreignKey:OrganizationID" json:"patient_groups"`
 	Doctor        []Doctor       `gorm:"many2many:doctor_organizations" json:"-"`

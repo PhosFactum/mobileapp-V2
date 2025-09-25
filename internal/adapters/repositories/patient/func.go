@@ -49,7 +49,6 @@ func (r *PatientRepositoryImpl) CreatePatient(patientData *models.CreatePatientD
 		// ✅ 4. Создаем пустое направление на анализы
 		analysisOrder := &entities.AnalysisOrder{
 			OrderNumber: fmt.Sprintf("ORD-%06d", 0), // Временный номер
-			TotalAmount: 0,                          // Пустое направление
 			CreatedAt:   time.Now(),
 			UpdatedAt:   time.Now(),
 		}
@@ -65,20 +64,20 @@ func (r *PatientRepositoryImpl) CreatePatient(patientData *models.CreatePatientD
 
 		// ✅ 5. Создаем пациента
 		patient := &entities.Patient{
-			FullName:          patientData.FullName,
-			BirthDate:         patientData.BirthDate,
-			IsMale:            patientData.IsMale,
-			Position:          patientData.Position,
-			Division:          patientData.Division,
-			ExaminationTypeID: patientData.ExaminationTypeID,
-			ExaminationViewID: patientData.ExaminationViewID,
-			HarmPointID:       patientData.HarmPointID,
-			PatientGroupID:    group_id,
-			PersonalInfoID:    personalInfo.ID,
-			ContactInfoID:     contactInfo.ID,
-			AnalysisOrderID:   analysisOrder.ID,
-			CreatedAt:         time.Now(),
-			UpdatedAt:         time.Now(),
+			FullName:        patientData.FullName,
+			BirthDate:       patientData.BirthDate,
+			IsMale:          patientData.IsMale,
+			Position:        patientData.Position,
+			Division:        patientData.Division,
+			ExaminationType: patientData.ExaminationType,
+			ExaminationView: patientData.ExaminationView,
+			HarmPointID:     patientData.HarmPointID,
+			PatientGroupID:  group_id,
+			PersonalInfoID:  personalInfo.ID,
+			ContactInfoID:   contactInfo.ID,
+			AnalysisOrderID: analysisOrder.ID,
+			CreatedAt:       time.Now(),
+			UpdatedAt:       time.Now(),
 		}
 
 		if err := tx.Create(patient).Error; err != nil {
@@ -155,29 +154,28 @@ func (r *PatientRepositoryImpl) CreatePatient(patientData *models.CreatePatientD
 }
 
 // GetPatientsByGroup - получение пациентов по группе
-func (r *PatientRepositoryImpl) GetPatientsByGroup(group_id uint) ([]entities.Patient, error) {
+func (r *PatientRepositoryImpl) GetPatientsByGroup(groupID uint) ([]entities.Patient, error) {
 	op := "repo.Patient.GetPatientsByGroup"
 
-	// Основной запрос с предзагрузкой
 	query := r.db.
-		Preload("ExaminationType").
-		Preload("ExaminationView").
 		Preload("HarmPoint").
-		Preload("PersonalInfo.DocumentType").
+		Preload("PersonalInfo").
 		Preload("ContactInfo").
 		Preload("Flg").
 		Preload("AnalysisOrder.OrderItems.Analysis").
 		Preload("Vaccines").
+		Preload("VaccineRefusals").
+		Preload("VaccineWithdrawals").
+		Preload("Titers").
 		Preload("Receptions.Specialization").
 		Preload("Specializations").
 		Preload("Statistics").
-		Where("patient_group_id = ?", group_id).
+		Where("patient_group_id = ?", groupID).
 		Order("full_name")
 
 	var patients []entities.Patient
-	result := query.Find(&patients)
-	if result.Error != nil {
-		return nil, errors.NewDBError(op, result.Error)
+	if err := query.Find(&patients).Error; err != nil {
+		return nil, errors.NewDBError(op, err)
 	}
 
 	return patients, nil

@@ -3,9 +3,7 @@ package entities
 import "time"
 
 type Analysis struct {
-	ID        uint      `gorm:"primarykey" json:"id" example:"1"`
-	CreatedAt time.Time `json:"-"`
-	UpdatedAt time.Time `json:"-"`
+	ID uint `gorm:"primarykey" json:"id" example:"1"`
 
 	Name  string `gorm:"not null" json:"name" example:"EKG"`
 	Price uint   `gorm:"not null" json:"price" example:"100"`
@@ -36,7 +34,6 @@ type AnalysisOrder struct {
 	CreatedAt   time.Time `json:"created_at"`
 	UpdatedAt   time.Time `json:"updated_at"`
 	OrderNumber string    `gorm:"not null;uniqueIndex" json:"order_number"` // Номер направления (уникальный)
-	TotalAmount uint      `gorm:"not null" json:"total_amount"`             // Сумма всех анализов в направлении
 
 	PatientID uint `gorm:"not null;index" json:"patient_id"`
 

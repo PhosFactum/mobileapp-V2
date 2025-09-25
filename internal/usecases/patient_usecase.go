@@ -66,7 +66,6 @@ func (u *PatientUsecase) GetPatientsByGroup(groupID uint) ([]models.PatientRespo
 	return response, nil
 }
 
-// buildPatientResponse — собирает модель пациента для API
 func (u *PatientUsecase) buildPatientResponse(p entities.Patient) models.PatientResponse {
 	return models.PatientResponse{
 		ID:             p.ID,
@@ -78,8 +77,10 @@ func (u *PatientUsecase) buildPatientResponse(p entities.Patient) models.Patient
 		Division:       p.Division,
 		PatientGroupID: p.PatientGroupID,
 
-		ExaminationType: u.mapExaminationType(p.ExaminationType),
-		ExaminationView: u.mapExaminationView(p.ExaminationView),
+		// ✅ Просто копируем строки
+		ExaminationType: p.ExaminationType,
+		ExaminationView: p.ExaminationView,
+
 		HarmPoint:       u.mapHarmPoint(p.HarmPoint),
 		PersonalInfo:    u.mapPersonalInfo(p.PersonalInfo),
 		ContactInfo:     u.mapContactInfo(p.ContactInfo),
@@ -92,7 +93,6 @@ func (u *PatientUsecase) buildPatientResponse(p entities.Patient) models.Patient
 	}
 }
 
-// calculateAge — вычисляет возраст на основе даты рождения
 func (u *PatientUsecase) calculateAge(birthDate time.Time) int {
 	now := time.Now()
 	age := now.Year() - birthDate.Year()
@@ -301,86 +301,5 @@ func (u *PatientUsecase) mapAnalysis(a *entities.Analysis) *models.AnalysisRespo
 		ID:    a.ID,
 		Name:  a.Name,
 		Price: a.Price,
-	}
-}
-
-// Map-функции для вакцин
-func (u *PatientUsecase) mapTitle(t *entities.Title) *models.TitleResponse {
-	if t == nil {
-		return nil
-	}
-	return &models.TitleResponse{
-		ID:    t.ID,
-		Value: t.Value,
-	}
-}
-
-func (u *PatientUsecase) mapMedication(m *entities.Medication) *models.MedicationResponse {
-	if m == nil {
-		return nil
-	}
-	return &models.MedicationResponse{
-		ID:    m.ID,
-		Value: m.Value,
-	}
-}
-
-func (u *PatientUsecase) mapDose(d *entities.Dose) *models.DoseResponse {
-	if d == nil {
-		return nil
-	}
-	return &models.DoseResponse{
-		ID:    d.ID,
-		Value: d.Value,
-	}
-}
-
-func (u *PatientUsecase) mapNumber(n *entities.Number) *models.NumberResponse {
-	if n == nil {
-		return nil
-	}
-	return &models.NumberResponse{
-		ID:    n.ID,
-		Value: n.Value,
-	}
-}
-
-func (u *PatientUsecase) mapCertificateNumber(cn *entities.CertificateNumber) *models.CertificateNumberResponse {
-	if cn == nil {
-		return nil
-	}
-	return &models.CertificateNumberResponse{
-		ID:    cn.ID,
-		Value: cn.Value,
-	}
-}
-
-func (u *PatientUsecase) mapBodyPart(bp *entities.BodyPart) *models.BodyPartResponse {
-	if bp == nil {
-		return nil
-	}
-	return &models.BodyPartResponse{
-		ID:    bp.ID,
-		Value: bp.Value,
-	}
-}
-
-func (u *PatientUsecase) mapMethod(m *entities.Method) *models.MethodResponse {
-	if m == nil {
-		return nil
-	}
-	return &models.MethodResponse{
-		ID:    m.ID,
-		Value: m.Value,
-	}
-}
-
-func (u *PatientUsecase) mapPlace(p *entities.Place) *models.PlaceResponse {
-	if p == nil {
-		return nil
-	}
-	return &models.PlaceResponse{
-		ID:    p.ID,
-		Value: p.Value,
 	}
 }
