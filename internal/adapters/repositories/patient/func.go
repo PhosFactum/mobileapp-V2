@@ -181,16 +181,17 @@ func (r *PatientRepositoryImpl) GetPatientsByGroup(groupID uint) ([]entities.Pat
 
 // getSpecializationsByHarmPoint - получение специальностей через HarmPoint
 func (r *PatientRepositoryImpl) getSpecializationsByHarmPoint(tx *gorm.DB, harmPointID uint) ([]entities.Specialization, error) {
-	op := "repo.Patient.getSpecializationsByHarmPoint"
+	// op := "repo.Patient.getSpecializationsByHarmPoint"
 
-	var specializations []entities.Specialization
-	err := tx.Joins("JOIN harm_points_specializations hps ON hps.specialization_id = specializations.id").
-		Where("hps.harm_point_id = ?", harmPointID).
-		Find(&specializations).Error
+	// var specializations []entities.Specialization
+	// err := tx.Joins("JOIN harm_points_specializations hps ON hps.specialization_id = specializations.id").
+	// 	Where("hps.harm_point_id = ?", harmPointID).
+	// 	Find(&specializations).Error
 
-	if err != nil {
-		return nil, errors.NewDBError(op, err)
-	}
+	// if err != nil {
+	// 	return nil, errors.NewDBError(op, err)
+	// }
 
-	return specializations, nil
+	// return specializations, nil
+	return nil, nil
 }

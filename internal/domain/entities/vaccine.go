@@ -6,7 +6,7 @@ type Vaccine struct {
 	ID        uint      `gorm:"primarykey" json:"id"`
 	CreatedAt time.Time `json:"-"`
 	Date      time.Time `json:"date"`
-	TitleID   uint      `json:"title_id,omitempty"`
+	TitleID   uint      `gorm:"not null" json:"title_id,omitempty"`
 	PatientID uint      `gorm:"index"`
 
 	ResultID            uint `json:"result"`
@@ -25,7 +25,7 @@ type VaccineRefusal struct {
 	ID        uint      `gorm:"primarykey" json:"id"`
 	CreatedAt time.Time `json:"-"`
 	Date      time.Time `json:"date"`
-	TitleID   uint      `json:"title_id,omitempty"`
+	TitleID   uint      `gorm:"not null" json:"title_id"`
 	PatientID uint      `gorm:"index"`
 
 	PhotoURL *string `json:"photo_url,omitempty" example:"https://my-bucket.s3.amazonaws.com/flg/123/photo.jpg"`
@@ -35,7 +35,7 @@ type VaccineWithdrawal struct {
 	ID        uint      `gorm:"primarykey" json:"id"`
 	CreatedAt time.Time `json:"-"`
 	Date      time.Time `json:"date"`
-	TitleID   uint      `json:"title_id,omitempty"`
+	TitleID   uint      `gorm:"not null" json:"title_id"`
 	PatientID uint      `gorm:"index"`
 	Num       int       `json:"med_withdrawl_num"`
 
@@ -46,7 +46,7 @@ type Titr struct {
 	ID        uint      `gorm:"primarykey" json:"id"`
 	CreatedAt time.Time `json:"-"`
 	Date      time.Time `json:"date"`
-	TitleID   uint      `json:"title_id,omitempty"`
+	TitleID   uint      `gorm:"not null" json:"title_id"`
 	PatientID uint      `gorm:"index"`
 	Amount    string    `json:"titer_amount"`
 

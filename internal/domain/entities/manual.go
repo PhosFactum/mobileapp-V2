@@ -26,8 +26,3 @@ type Manual struct {
 	CreatedAt time.Time     `json:"created_at"`
 	UpdatedAt time.Time     `json:"updated_at"`
 }
-
-type ManualNote struct {
-	ID    uint   `gorm:"primarykey" json:"id"`
-	Value string `gorm:"not null" json:"value"` // всегда строка, но парсится по ValueType
-}

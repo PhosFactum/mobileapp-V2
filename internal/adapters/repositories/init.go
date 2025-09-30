@@ -142,7 +142,7 @@ func autoMigrate(db *gorm.DB) error {
 
 	models := []interface{}{
 		// Единственный справочник
-		&entities.ReferenceEntry{},
+		&entities.Manual{},
 
 		// Независимые
 		&entities.Analysis{},
@@ -252,7 +252,7 @@ func seedTestData(db *gorm.DB) error {
 }
 
 func seedReferenceEntries(db *gorm.DB) error {
-	entries := []entities.ReferenceEntry{
+	entries := []entities.Manual{
 		// Document types
 		{Type: entities.RefTypePersonalDocumentType, Value: "Паспорт РФ"},
 		{Type: entities.RefTypePersonalDocumentType, Value: "Свидетельство о рождении"},
@@ -291,10 +291,10 @@ func seedReferenceEntries(db *gorm.DB) error {
 
 func seedAnalyses(db *gorm.DB) error {
 	analyses := []entities.Analysis{
-		{Name: "Общий анализ крови", Price: 500},
-		{Name: "ЭКГ", Price: 400},
-		{Name: "Флюрография", Price: 800},
-		{Name: "Анализ мочи", Price: 300},
+		{Code: "14-1231", Title: "Общий анализ крови", Price: 500},
+		{Code: "15-4214", Title: "ЭКГ", Price: 400},
+		{Code: "10-5423", Title: "Флюрография", Price: 800},
+		{Code: "11-9721", Title: "Анализ мочи", Price: 300},
 	}
 	for _, a := range analyses {
 		db.Create(&a)
@@ -361,8 +361,8 @@ func seedHarmPoints(db *gorm.DB) error {
 	var specs []entities.Specialization
 	db.Find(&specs)
 	hp := []entities.HarmPoint{
-		{Value: 3.1},
-		{Value: 3.2},
+		{Value: "3.1"},
+		{Value: "3.2"},
 	}
 	for i := range hp {
 		db.Create(&hp[i])
@@ -415,7 +415,7 @@ func seedContactInfos(db *gorm.DB) ([]entities.ContactInfo, error) {
 }
 
 func seedPersonalInfos(db *gorm.DB) ([]entities.PersonalInfo, error) {
-	var docTypes []entities.ReferenceEntry
+	var docTypes []entities.Manual
 	db.Where("type = ?", entities.RefTypePersonalDocumentType).Find(&docTypes)
 
 	personal := []entities.PersonalInfo{
@@ -433,8 +433,8 @@ func seedPersonalInfos(db *gorm.DB) ([]entities.PersonalInfo, error) {
 
 func seedFlgs(db *gorm.DB) ([]*uint, error) {
 	flgs := []entities.Flg{
-		{Organization: "Stavropol", Number: 984212, Result: "COVID", Date: time.Now(), IsCompleted: true},
-		{Organization: "Moscow", Number: 984213, Result: "Negative", Date: time.Now(), IsCompleted: false},
+		{Organization: "Stavropol", Number: 984212, Result: "COVID", Date: time.Now()},
+		{Organization: "Moscow", Number: 984213, Result: "Negative", Date: time.Now()},
 	}
 	var ids []*uint
 	for i := range flgs {
@@ -449,8 +449,8 @@ func seedFlgs(db *gorm.DB) ([]*uint, error) {
 func seedPatients(db *gorm.DB) error {
 	var groups []entities.PatientGroup
 	var harmPoints []entities.HarmPoint
-	var examTypes []entities.ReferenceEntry
-	var examViews []entities.ReferenceEntry
+	var examTypes []entities.Manual
+	var examViews []entities.Manual
 	db.Find(&groups)
 	db.Find(&harmPoints)
 	db.Where("type = ?", entities.RefTypePatientExaminationType).Find(&examTypes)
@@ -462,34 +462,34 @@ func seedPatients(db *gorm.DB) error {
 
 	patients := []entities.Patient{
 		{
-			FullName:        "Иванов Иван Иванович",
-			BirthDate:       time.Date(1980, 5, 15, 0, 0, 0, 0, time.UTC),
-			IsMale:          true,
-			Position:        "Программист",
-			Division:        "IT",
-			ExaminationType: "Профосмотр",
-			ExaminationView: "Предварительный",
-			PatientGroupID:  groups[0].ID,
-			HarmPointID:     harmPoints[0].ID,
-			PersonalInfoID:  personal[0].ID,
-			ContactInfoID:   contacts[0].ID,
-			FlgID:           flgIDs[0],
-			AnalysisOrderID: 0, // будет установлен позже
+			FullName:          "Иванов Иван Иванович",
+			BirthDate:         time.Date(1980, 5, 15, 0, 0, 0, 0, time.UTC),
+			IsMale:            true,
+			Position:          "Программист",
+			Division:          "IT",
+			ExaminationTypeID: examTypes[0].ID,
+			ExaminationViewID: examViews[0].ID,
+			PatientGroupID:    groups[0].ID,
+			HarmPointID:       harmPoints[0].ID,
+			PersonalInfoID:    personal[0].ID,
+			ContactInfoID:     contacts[0].ID,
+			FlgID:             flgIDs[0],
+			AnalysisOrderID:   0, // будет установлен позже
 		},
 		{
-			FullName:        "Петрова Мария Сергеевна",
-			BirthDate:       time.Date(1990, 8, 22, 0, 0, 0, 0, time.UTC),
-			IsMale:          false,
-			Position:        "Дизайнер",
-			Division:        "Дизайн",
-			ExaminationType: "Профосмотр",
-			ExaminationView: "Предварительный",
-			PatientGroupID:  groups[1].ID,
-			HarmPointID:     harmPoints[1].ID,
-			PersonalInfoID:  personal[1].ID,
-			ContactInfoID:   contacts[1].ID,
-			FlgID:           flgIDs[1],
-			AnalysisOrderID: 0,
+			FullName:          "Петрова Мария Сергеевна",
+			BirthDate:         time.Date(1990, 8, 22, 0, 0, 0, 0, time.UTC),
+			IsMale:            false,
+			Position:          "Дизайнер",
+			Division:          "Дизайн",
+			ExaminationTypeID: examTypes[1].ID,
+			ExaminationViewID: examViews[1].ID,
+			PatientGroupID:    groups[1].ID,
+			HarmPointID:       harmPoints[1].ID,
+			PersonalInfoID:    personal[1].ID,
+			ContactInfoID:     contacts[1].ID,
+			FlgID:             flgIDs[1],
+			AnalysisOrderID:   0,
 		},
 	}
 
@@ -538,14 +538,15 @@ func seedVaccines(db *gorm.DB) error {
 	}
 
 	// Получаем справочники
-	var titles []entities.ReferenceEntry
-	var meds []entities.ReferenceEntry
-	var doses []entities.ReferenceEntry
-	var nums []entities.ReferenceEntry
-	var certs []entities.ReferenceEntry
-	var bodyParts []entities.ReferenceEntry
-	var methods []entities.ReferenceEntry
-	var places []entities.ReferenceEntry
+	var titles []entities.Manual
+	var meds []entities.Manual
+	var doses []entities.Manual
+	var nums []entities.Manual
+	var certs []entities.Manual
+	var bodyParts []entities.Manual
+	var methods []entities.Manual
+	var places []entities.Manual
+	var results []entities.Manual
 
 	db.Where("type = ?", entities.RefTypeVaccineTitle).Find(&titles)
 	db.Where("type = ?", entities.RefTypeVaccineMedication).Find(&meds)
@@ -555,21 +556,21 @@ func seedVaccines(db *gorm.DB) error {
 	db.Where("type = ?", entities.RefTypeVaccineBodyPart).Find(&bodyParts)
 	db.Where("type = ?", entities.RefTypeVaccineMethod).Find(&methods)
 	db.Where("type = ?", entities.RefTypeVaccinePlace).Find(&places)
+	db.Where("type = ?", entities.RefTypeVaccinePlace).Find(&results)
 
-	for _, p := range patients {
+	for i, p := range patients {
 		vaccine := entities.Vaccine{
-			PatientID:         p.ID,
-			Date:              time.Now().AddDate(0, -1, 0),
-			IsCompleted:       true,
-			Result:            "Успешно",
-			Title:             titles[0].Value,
-			Medication:        meds[0].Value,
-			Dose:              doses[0].Value,
-			Number:            nums[0].Value,
-			CertificateNumber: certs[0].Value,
-			BodyPart:          bodyParts[0].Value,
-			Method:            methods[0].Value,
-			Place:             places[0].Value,
+			PatientID:           p.ID,
+			Date:                time.Now().AddDate(0, -1, 0),
+			ResultID:            results[i%len(results)].ID,
+			TitleID:             titles[i%len(titles)].ID,
+			MedicationID:        meds[i%len(meds)].ID,
+			DoseID:              doses[i%len(doses)].ID,
+			NumberID:            nums[i%len(nums)].ID,
+			CertificateNumberID: certs[i%len(certs)].ID,
+			BodyPartID:          bodyParts[i%len(bodyParts)].ID,
+			MethodID:            methods[i%len(methods)].ID,
+			PlaceID:             places[i%len(places)].ID,
 		}
 		db.Create(&vaccine)
 	}
@@ -578,6 +579,9 @@ func seedVaccines(db *gorm.DB) error {
 }
 
 func seedVaccineRefusals(db *gorm.DB) error {
+	var titles []entities.Manual
+	db.Where("type = ?", entities.RefTypeVaccineTitle).Find(&titles)
+
 	var patients []entities.Patient
 	if err := db.Find(&patients).Error; err != nil {
 		return fmt.Errorf("failed to get patients for vaccine refusals: %w", err)
@@ -591,10 +595,10 @@ func seedVaccineRefusals(db *gorm.DB) error {
 		// Создаём отказ только у ~30% пациентов
 		refusalDate := time.Now().AddDate(0, 0, -rand.Intn(365)) // за последний год
 		refusal := &entities.VaccineRefusal{
-			PatientID:   patient.ID,
-			Date:        refusalDate,
-			IsCompleted: true, // Отказ — всегда "завершён"
-			CreatedAt:   time.Now(),
+			PatientID: patient.ID,
+			TitleID:   titles[0].ID,
+			Date:      refusalDate,
+			CreatedAt: time.Now(),
 		}
 		if err := db.Create(refusal).Error; err != nil {
 			return fmt.Errorf("failed to create vaccine refusal for patient %d: %w", patient.ID, err)
@@ -607,6 +611,9 @@ func seedVaccineRefusals(db *gorm.DB) error {
 }
 
 func seedVaccineWithdrawals(db *gorm.DB) error {
+	var titles []entities.Manual
+	db.Where("type = ?", entities.RefTypeVaccineTitle).Find(&titles)
+
 	var patients []entities.Patient
 	if err := db.Find(&patients).Error; err != nil {
 		return fmt.Errorf("failed to get patients for vaccine withdrawals: %w", err)
@@ -621,11 +628,11 @@ func seedVaccineWithdrawals(db *gorm.DB) error {
 		num := 20240000 + rand.Intn(10000)                          // условный номер приказа/документа
 
 		withdrawal := &entities.VaccineWithdrawal{
-			PatientID:   patient.ID,
-			Date:        withdrawalDate,
-			IsCompleted: true, // Отвод — всегда "завершён"
-			Num:         num,
-			CreatedAt:   time.Now(),
+			PatientID: patient.ID,
+			TitleID:   titles[0].ID,
+			Date:      withdrawalDate,
+			Num:       num,
+			CreatedAt: time.Now(),
 		}
 		if err := db.Create(withdrawal).Error; err != nil {
 			return fmt.Errorf("failed to create vaccine withdrawal for patient %d: %w", patient.ID, err)
@@ -639,6 +646,9 @@ func seedVaccineWithdrawals(db *gorm.DB) error {
 }
 
 func seedTitrs(db *gorm.DB) error {
+	var titles []entities.Manual
+	db.Where("type = ?", entities.RefTypeVaccineTitle).Find(&titles)
+
 	var patients []entities.Patient
 	if err := db.Find(&patients).Error; err != nil {
 		return fmt.Errorf("failed to get patients for titrs: %w", err)
@@ -655,11 +665,10 @@ func seedTitrs(db *gorm.DB) error {
 			amount := 100 + rand.Intn(900)                       // например, титр от 100 до 999
 
 			titr := &entities.Titr{
-				PatientID:   patient.ID,
-				Date:        titrDate,
-				IsCompleted: true, // Титрование — обычно завершено
-				Amount:      amount,
-				CreatedAt:   time.Now(),
+				PatientID: patient.ID,
+				TitleID:   titles[0].ID,
+				Date:      titrDate,
+				CreatedAt: time.Now(),
 			}
 			if err := db.Create(titr).Error; err != nil {
 				return fmt.Errorf("failed to create titer for patient %d: %w", patient.ID, err)

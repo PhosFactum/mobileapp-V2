@@ -17,9 +17,10 @@ type PatientUsecase struct {
 	FilterBuilder interfaces.FilterBuilderService
 }
 
-func NewPatientUsecase(repo interfaces.PatientRepository, contactRepo interfaces.ContactInfoRepository, personalRepo interfaces.PersonalInfoRepository, s interfaces.Service) interfaces.PatientUsecase {
+func NewPatientUsecase(repo interfaces.PatientRepository, manual interfaces.ManualRepository, contactRepo interfaces.ContactInfoRepository, personalRepo interfaces.PersonalInfoRepository, s interfaces.Service) interfaces.PatientUsecase {
 	return &PatientUsecase{
 		repo:          repo,
+		manual:        manual,
 		contactRepo:   contactRepo,
 		personalRepo:  personalRepo,
 		FilterBuilder: s}
@@ -182,7 +183,7 @@ func (u *PatientUsecase) mapVaccineTitle(id uint) (string, *errors.AppError) {
 	if err != nil {
 		return "", errors.NewAppError(
 			errors.InternalServerErrorCode,
-			"Failed to get ExaminationType",
+			"Failed to get VaccineTitle",
 			err,
 			false,
 		)
@@ -193,7 +194,7 @@ func (u *PatientUsecase) mapVaccineTitle(id uint) (string, *errors.AppError) {
 
 // mapVaccineToResponse маппит вакцинацию
 func (u *PatientUsecase) mapVaccineToResponse(v entities.Vaccine) (models.VaccineAllResponse, *errors.AppError) {
-	title, err := u.mapVaccineTitle(v.ID)
+	title, err := u.mapVaccineTitle(v.TitleID)
 	if err != nil {
 		return models.VaccineAllResponse{}, err
 	}
@@ -208,7 +209,7 @@ func (u *PatientUsecase) mapVaccineToResponse(v entities.Vaccine) (models.Vaccin
 
 // mapVaccineRefusalToResponse маппит отказ
 func (u *PatientUsecase) mapVaccineRefusalToResponse(v entities.VaccineRefusal) (models.VaccineAllResponse, *errors.AppError) {
-	title, err := u.mapVaccineTitle(v.ID)
+	title, err := u.mapVaccineTitle(v.TitleID)
 	if err != nil {
 		return models.VaccineAllResponse{}, err
 	}
@@ -223,7 +224,7 @@ func (u *PatientUsecase) mapVaccineRefusalToResponse(v entities.VaccineRefusal) 
 
 // mapVaccineWithdrawalToResponse маппит отвод
 func (u *PatientUsecase) mapVaccineWithdrawalToResponse(v entities.VaccineWithdrawal) (models.VaccineAllResponse, *errors.AppError) {
-	title, err := u.mapVaccineTitle(v.ID)
+	title, err := u.mapVaccineTitle(v.TitleID)
 	if err != nil {
 		return models.VaccineAllResponse{}, err
 	}
@@ -238,7 +239,7 @@ func (u *PatientUsecase) mapVaccineWithdrawalToResponse(v entities.VaccineWithdr
 
 // mapTitrToResponse маппит титрование
 func (u *PatientUsecase) mapTitrToResponse(v entities.Titr) (models.VaccineAllResponse, *errors.AppError) {
-	title, err := u.mapVaccineTitle(v.ID)
+	title, err := u.mapVaccineTitle(v.TitleID)
 	if err != nil {
 		return models.VaccineAllResponse{}, err
 	}
