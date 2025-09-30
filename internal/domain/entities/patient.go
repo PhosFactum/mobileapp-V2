@@ -17,6 +17,8 @@ type Patient struct {
 	Division          string    `gorm:"not null" json:"division" example:"Прогер"`
 	ExaminationTypeID uint      `gorm:"not null" json:"examination_type_id"`
 	ExaminationViewID uint      `gorm:"not null" json:"examination_view_id"`
+	PhotoURL1         *string   `json:"photo_url1,omitempty" example:"https://my-bucket.s3.amazonaws.com/flg/123/photo.jpg"`
+	PhotoURL2         *string   `json:"photo_url2,omitempty" example:"https://my-bucket.s3.amazonaws.com/flg/123/photo.jpg"`
 
 	PatientGroupID uint `gorm:"not null;index" json:"patient_group_id"`
 

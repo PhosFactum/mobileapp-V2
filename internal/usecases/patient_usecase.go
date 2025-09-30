@@ -380,7 +380,6 @@ func (u *PatientUsecase) mapFlg(flg *entities.Flg) *models.FlgResponse {
 	}
 	return &models.FlgResponse{
 		ID:           flg.ID,
-		IsCompleted:  flg.IsCompleted,
 		Organization: flg.Organization,
 		Number:       flg.Number,
 		Result:       flg.Result,
