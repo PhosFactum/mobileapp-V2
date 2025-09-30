@@ -16,6 +16,7 @@ type AnalysisOrderItemResponse struct {
 
 type AnalysisResponse struct {
 	ID    uint   `json:"id"`
-	Name  string `json:"name"`
+	Code  string `json:"code"`
+	Title string `json:"title"`
 	Price uint   `json:"price"`
 }

@@ -25,7 +25,7 @@ func NewUsecases(r interfaces.Repository, s interfaces.Service, conf *config.Con
 
 	return &UseCases{
 		NewDoctorUsecase(r),
-		NewPatientUsecase(r, r, r, s),
+		NewPatientUsecase(r, r, r, r, s),
 		NewAuthUsecase(r, conf.JWTSecret),
 		NewOrganizationUsecase(r),
 		NewPatientGroupUsecase(r),
