@@ -5,7 +5,8 @@ import "time"
 type Analysis struct {
 	ID uint `gorm:"primarykey" json:"id" example:"1"`
 
-	Name  string `gorm:"not null" json:"name" example:"EKG"`
+	Code  string `gorm:"not null" json:"code" example:"12-0739"`
+	Title string `gorm:"not null" json:"title" example:"EKG"`
 	Price uint   `gorm:"not null" json:"price" example:"100"`
 }
 

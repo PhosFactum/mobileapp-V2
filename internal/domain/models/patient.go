@@ -33,8 +33,8 @@ type PatientResponse struct {
 }
 
 type HarmPointResponse struct {
-	ID    uint    `json:"id"`
-	Value float32 `json:"value"`
+	ID    uint   `json:"id"`
+	Value string `json:"value"`
 }
 
 type PersonalInfoResponse struct {
@@ -91,9 +91,9 @@ type CreateContactInfoData struct {
 }
 
 type CreatePersonalInfoData struct {
-	DocNumber      string `json:"doc_number" binding:"required"`
-	DocSeries      string `json:"doc_series" binding:"required"`
-	SNILS          string `json:"snils" binding:"required"`
-	OMS            string `json:"oms" binding:"required"`
-	DocumentTypeID uint   `json:"document_type_id,omitempty"`
+	DocNumber    string `json:"doc_number" binding:"required"`
+	DocSeries    string `json:"doc_series" binding:"required"`
+	SNILS        string `json:"snils" binding:"required"`
+	OMS          string `json:"oms" binding:"required"`
+	DocumentType string `json:"document_type_id,omitempty"`
 }

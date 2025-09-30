@@ -20,11 +20,16 @@ type Repository interface {
 	PatientGroupRepository
 	ReceptionRepository
 	VaccineRepository
+	ManualRepository
 }
 
 type PatientGroupRepository interface {
 	GetPatientGroupsByCodeOrOrgTitle(search string, page, perPage int) ([]entities.PatientGroup, int64, error)
 	GetPatientGroupsByOrganizationID(orgID uint, page, perPage int) ([]entities.PatientGroup, int64, error)
+}
+
+type ManualRepository interface {
+	GetManualValueByTypeAndID(id uint, ref_type entities.ReferenceType) (string, error)
 }
 
 type OrganizationRepository interface {

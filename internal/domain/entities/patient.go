@@ -7,16 +7,16 @@ import (
 // entities/patient.go
 
 type Patient struct {
-	ID              uint      `gorm:"primarykey" json:"id" example:"1"`
-	CreatedAt       time.Time `json:"created_at"`
-	UpdatedAt       time.Time `json:"updated_at"`
-	FullName        string    `gorm:"not null" json:"full_name" example:"Иванов Иван Иванович"`
-	BirthDate       time.Time `gorm:"not null" json:"birth_date" example:"1980-05-15T00:00:00Z"`
-	IsMale          bool      `gorm:"not null" json:"is_male" example:"true"`
-	Position        string    `gorm:"not null" json:"position" example:"Прогер"`
-	Division        string    `gorm:"not null" json:"division" example:"Прогер"`
-	ExaminationType string    `gorm:"not null" json:"examination_type_id"`
-	ExaminationView string    `gorm:"not null" json:"examination_view_id"`
+	ID                uint      `gorm:"primarykey" json:"id" example:"1"`
+	CreatedAt         time.Time `json:"created_at"`
+	UpdatedAt         time.Time `json:"updated_at"`
+	FullName          string    `gorm:"not null" json:"full_name" example:"Иванов Иван Иванович"`
+	BirthDate         time.Time `gorm:"not null" json:"birth_date" example:"1980-05-15T00:00:00Z"`
+	IsMale            bool      `gorm:"not null" json:"is_male" example:"true"`
+	Position          string    `gorm:"not null" json:"position" example:"Прогер"`
+	Division          string    `gorm:"not null" json:"division" example:"Прогер"`
+	ExaminationTypeID uint      `gorm:"not null" json:"examination_type_id"`
+	ExaminationViewID uint      `gorm:"not null" json:"examination_view_id"`
 
 	PatientGroupID uint `gorm:"not null;index" json:"patient_group_id"`
 
@@ -47,8 +47,8 @@ type Patient struct {
 }
 
 type HarmPoint struct {
-	ID    uint    `gorm:"primarykey" json:"id"`
-	Value float32 `gorm:"not null;" json:"value"`
+	ID    uint   `gorm:"primarykey" json:"id"`
+	Value string `gorm:"not null;" json:"value"`
 
 	Specializations []Specialization `gorm:"many2many:harm_points_specializations;" json:"-"`
 }

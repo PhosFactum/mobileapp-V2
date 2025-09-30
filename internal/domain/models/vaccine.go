@@ -1,6 +1,8 @@
 package models
 
-import "time"
+import (
+	"time"
+)
 
 // Возможно добавить количество титров и прочее
 type VaccineAllResponse struct {

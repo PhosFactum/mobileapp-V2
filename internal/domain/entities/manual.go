@@ -19,10 +19,15 @@ const (
 	RefTypePersonalDocumentType     ReferenceType = "personal_document_type"
 )
 
-type ReferenceEntry struct {
+type Manual struct {
 	ID        uint          `gorm:"primarykey" json:"id"`
 	Type      ReferenceType `gorm:"not null;index" json:"type"`
 	Value     string        `gorm:"not null" json:"value"` // всегда строка, но парсится по ValueType
 	CreatedAt time.Time     `json:"created_at"`
 	UpdatedAt time.Time     `json:"updated_at"`
+}
+
+type ManualNote struct {
+	ID    uint   `gorm:"primarykey" json:"id"`
+	Value string `gorm:"not null" json:"value"` // всегда строка, но парсится по ValueType
 }

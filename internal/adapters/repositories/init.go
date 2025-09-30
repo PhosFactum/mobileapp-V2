@@ -16,6 +16,7 @@ import (
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/consent_signatures"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/contactInfo"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/doctor"
+	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/manual"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/organization"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/patient"
 	patientgroup "github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/patient_group"
@@ -42,6 +43,7 @@ type Repository struct {
 	interfaces.OrganizationRepository
 	interfaces.PatientGroupRepository
 	interfaces.ConsentSignatureRepository
+	interfaces.ManualRepository
 }
 
 func NewRepository(cfg *config.Config) (interfaces.Repository, error) {
@@ -88,6 +90,7 @@ func NewRepository(cfg *config.Config) (interfaces.Repository, error) {
 		organization.NewOrganizationRepository(db),
 		patientgroup.NewPatientGroupRepository(db),
 		consent_signatures.NewConsentSignatureRepository(db),
+		manual.NewManualRepository(db),
 	}, nil
 
 }
@@ -248,95 +251,6 @@ func seedTestData(db *gorm.DB) error {
 	return nil
 }
 
-// func seedTestData(db *gorm.DB) error {
-// 	// 1. Создаем справочники
-// 	if err := seedDocumentTypes(db); err != nil {
-// 		return fmt.Errorf("failed to seed document types: %w", err)
-// 	}
-
-// 	if err := seedExaminationTypes(db); err != nil {
-// 		return fmt.Errorf("failed to seed examination types: %w", err)
-// 	}
-
-// 	if err := seedExaminationViews(db); err != nil {
-// 		return fmt.Errorf("failed to seed examination views: %w", err)
-// 	}
-
-// 	if err := seedHarmPoints(db); err != nil {
-// 		return fmt.Errorf("failed to seed harm points: %w", err)
-// 	}
-
-// 	if err := seedSpecializations(db); err != nil {
-// 		return fmt.Errorf("failed to seed specializations: %w", err)
-// 	}
-
-// 	// 2. Создаем менеджеров
-// 	if err := seedManagers(db); err != nil {
-// 		return fmt.Errorf("failed to seed managers: %w", err)
-// 	}
-
-// 	// 3. Создаем организации
-// 	if err := seedOrganizations(db); err != nil {
-// 		return fmt.Errorf("failed to seed organizations: %w", err)
-// 	}
-
-// 	// 4. Создаем группы пациентов
-// 	if err := seedPatientGroups(db); err != nil {
-// 		return fmt.Errorf("failed to seed patient groups: %w", err)
-// 	}
-
-// 	// 5. Создаем докторов
-// 	if err := seedDoctors(db); err != nil {
-// 		return fmt.Errorf("failed to seed doctors: %w", err)
-// 	}
-
-// 	// 6. Создаем справочники для вакцин
-// 	if err := seedVaccineDictionaries(db); err != nil {
-// 		return fmt.Errorf("failed to seed vaccine dictionaries: %w", err)
-// 	}
-
-// 	// 7. Создаем справочники для пациентов
-// 	if err := seedPatientDictionaries(db); err != nil {
-// 		return fmt.Errorf("failed to seed patient dictionaries: %w", err)
-// 	}
-
-// 	// 8. Создаем анализы
-// 	if err := seedAnalyses(db); err != nil {
-// 		return fmt.Errorf("failed to seed analyses: %w", err)
-// 	}
-
-// 	// 9. Создаем пациентов
-// 	if err := seedHarmPointsSpecializations(db); err != nil {
-// 		return fmt.Errorf("failed to seed patients: %w", err)
-// 	}
-
-// 	// 9.1. Создаем пациентов
-// 	if err := seedPatients(db); err != nil {
-// 		return fmt.Errorf("failed to seed patients: %w", err)
-// 	}
-
-// 	// 9.2. Создаем вакцины для пациентов ← ДОБАВИТЬ ЭТОТ БЛОК
-// 	if err := seedVaccines(db); err != nil {
-// 		return fmt.Errorf("failed to seed vaccines: %w", err)
-// 	}
-
-// 	// 10. Создаем статистику пациентов
-// 	if err := seedPatientStatistics(db); err != nil {
-// 		return fmt.Errorf("failed to seed patient statistics: %w", err)
-// 	}
-
-// 	// 11. Создаем направления на анализы
-// 	if err := seedAnalysisOrders(db); err != nil {
-// 		return fmt.Errorf("failed to seed analysis orders: %w", err)
-// 	}
-
-// 	// 12. Создаем приемы
-// 	if err := seedReceptions(db); err != nil {
-// 		return fmt.Errorf("failed to seed receptions: %w", err)
-// 	}
-
-//		return nil
-//	}
 func seedReferenceEntries(db *gorm.DB) error {
 	entries := []entities.ReferenceEntry{
 		// Document types

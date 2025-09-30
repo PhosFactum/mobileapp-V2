@@ -12,6 +12,8 @@ import (
 	"gorm.io/gorm"
 )
 
+// Транзакция прокидывается из юз кейса в репы
+// Раздробить
 // ДОПИЛИТЬ ВАЛИДАЦИЮ (создан ли с таким ФИО) + поля
 // CreatePatient - создание пациента с кэшированием специальностей
 func (r *PatientRepositoryImpl) CreatePatient(patientData *models.CreatePatientData, group_id uint) (*entities.Patient, error) {
