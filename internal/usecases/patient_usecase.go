@@ -1,50 +1,196 @@
 package usecases
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/AlexanderMorozov1919/mobileapp/internal/domain/entities"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/domain/models"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/interfaces"
 	"github.com/AlexanderMorozov1919/mobileapp/pkg/errors"
+	"gorm.io/gorm"
 )
 
 type PatientUsecase struct {
 	repo          interfaces.PatientRepository
-	manual        interfaces.ManualRepository
-	contactRepo   interfaces.ContactInfoRepository
-	personalRepo  interfaces.PersonalInfoRepository
+	manualRepo    interfaces.ManualRepository
 	FilterBuilder interfaces.FilterBuilderService
+	db            *gorm.DB
 }
 
-func NewPatientUsecase(repo interfaces.PatientRepository, manual interfaces.ManualRepository, contactRepo interfaces.ContactInfoRepository, personalRepo interfaces.PersonalInfoRepository, s interfaces.Service) interfaces.PatientUsecase {
+func NewPatientUsecase(repo interfaces.PatientRepository, manualRepo interfaces.ManualRepository, s interfaces.Service, db *gorm.DB) interfaces.PatientUsecase {
 	return &PatientUsecase{
 		repo:          repo,
-		manual:        manual,
-		contactRepo:   contactRepo,
-		personalRepo:  personalRepo,
-		FilterBuilder: s}
+		manualRepo:    manualRepo,
+		FilterBuilder: s,
+		db:            db}
 }
 
-// CreatePatient - создание пациента
-func (u *PatientUsecase) CreatePatient(patientData *models.CreatePatientData, group_id uint) (*entities.Patient, *errors.AppError) {
-	// // 1. Валидация входных данных
-	// if err := u.validateCreatePatientData(patientData); err != nil {
-	//     return nil, errors.NewValidationError(op, err)
-	// }
+// CreatePatient создаёт нового пациента со всеми связанными сущностями
+func (u *PatientUsecase) CreatePatient(req *models.CreatePatientRequest, groupID uint) (*entities.Patient, *errors.AppError) {
+	op := "usecase.Patient.CreatePatient"
 
-	// // 2. Проверяем существование обязательных сущностей
-	// if err := u.validateRequiredEntities(patientData); err != nil {
-	//     return nil, errors.NewValidationError(op, err)
-	// }
+	// 🔁 Начинаем транзакцию
+	tx := u.db.Begin()
+	if tx.Error != nil {
+		return nil, errors.NewDBError(op, tx.Error)
+	}
+	defer func() {
+		if r := recover(); r != nil {
+			tx.Rollback()
+			panic(r)
+		}
+	}()
 
-	// 3. Создаем пациента через репозиторий
-	patient, err := u.repo.CreatePatient(patientData, group_id)
-	if err != nil {
-		return nil, errors.NewAppError(errors.InternalServerErrorCode, "failed to create patient", err, true)
+	// ✅ 1. Создаём ContactInfo
+	contactInfo := &entities.ContactInfo{
+		Phone:     req.ContactInfo.Phone,
+		Email:     req.ContactInfo.Email,
+		Address:   req.ContactInfo.Address,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+	if err := u.repo.CreateContactInfo(tx, contactInfo); err != nil {
+		tx.Rollback()
+		return nil, err // репозиторий уже обернул в NewDBError
 	}
 
-	return patient, nil
+	// ✅ 2. Создаём PersonalInfo
+	personalInfo := &entities.PersonalInfo{
+		DocNumber:      req.PersonalInfo.DocNumber,
+		DocSeries:      req.PersonalInfo.DocSeries,
+		SNILS:          req.PersonalInfo.SNILS,
+		OMS:            req.PersonalInfo.OMS,
+		DocumentTypeID: req.PersonalInfo.DocumentTypeID,
+		CreatedAt:      time.Now(),
+		UpdatedAt:      time.Now(),
+	}
+	if err := u.repo.CreatePersonalInfo(tx, personalInfo); err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	// ✅ 3. Создаём AnalysisOrder (с временным номером)
+	analysisOrder := &entities.AnalysisOrder{
+		OrderNumber: "TEMP",
+		CreatedAt:   time.Now(),
+		UpdatedAt:   time.Now(),
+	}
+	if err := u.repo.CreateAnalysisOrder(tx, analysisOrder); err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	// Обновляем номер на основе ID
+	analysisOrder.OrderNumber = fmt.Sprintf("ORD-%06d", analysisOrder.ID)
+	if err := u.repo.UpdateAnalysisOrder(tx, analysisOrder); err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	// ✅ 4. Получаем шаблоны заключений по HarmPointID
+	templates, err := u.repo.GetReceptionTemplatesByHarmPointID(tx, req.HarmPointID)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	// ✅ 5. Создаём пациента
+	patient := &entities.Patient{
+		FullName:          req.FullName,
+		BirthDate:         req.BirthDate,
+		IsMale:            req.IsMale,
+		Position:          req.Position,
+		Division:          req.Division,
+		ExaminationTypeID: req.ExaminationTypeID,
+		ExaminationViewID: req.ExaminationViewID,
+		HarmPointID:       req.HarmPointID,
+		PatientGroupID:    groupID,
+		PersonalInfoID:    personalInfo.ID,
+		ContactInfoID:     contactInfo.ID,
+		AnalysisOrderID:   analysisOrder.ID,
+		CreatedAt:         time.Now(),
+		UpdatedAt:         time.Now(),
+	}
+	if err := u.repo.CreatePatient(tx, patient); err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	// Обновляем AnalysisOrder.PatientID
+	analysisOrder.PatientID = patient.ID
+	if err := u.repo.UpdateAnalysisOrder(tx, analysisOrder); err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	// ✅ 6. Кэшируем специализации (если всё ещё нужно для UI/отчётов)
+	// Получаем уникальные специализации из шаблонов
+	specializationMap := make(map[uint]entities.Specialization)
+	for _, tmpl := range templates {
+		specializationMap[tmpl.SpecializationID] = entities.Specialization{
+			ID: tmpl.SpecializationID,
+			// Title можно не заполнять — GORM сам подгрузит при Association
+		}
+	}
+	var specializations []entities.Specialization
+	for _, s := range specializationMap {
+		specializations = append(specializations, s)
+	}
+	if len(specializations) > 0 {
+		if err := u.repo.CacheSpecializations(tx, patient, specializations); err != nil {
+			tx.Rollback()
+			return nil, err
+		}
+	}
+
+	// ✅ 7. Создаём пустые приёмы по шаблонам
+	var receptions []entities.Reception
+	initialData := []byte(`{"values": {}}`)
+	for _, tmpl := range templates {
+		receptions = append(receptions, entities.Reception{
+			PatientID:        patient.ID,
+			SpecializationID: tmpl.SpecializationID,
+			TemplateID:       tmpl.ID,
+			IsCompleted:      false,
+			Data:             initialData,
+			CreatedAt:        time.Now(),
+			UpdatedAt:        time.Now(),
+		})
+	}
+	if err := u.repo.CreateReceptions(tx, receptions); err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	// ✅ 8. Создаём статистику
+	statistics := &entities.PatientStatistics{
+		PatientID:              patient.ID,
+		TotalReceptions:        int64(len(templates)),
+		CompletedReceptions:    0,
+		TotalAnalysisOrders:    0,
+		CompletedAnalysisItems: 0,
+		CreatedAt:              time.Now(),
+		UpdatedAt:              time.Now(),
+	}
+	if err := u.repo.CreatePatientStatistics(tx, statistics); err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	// ✅ 9. Предзагружаем пациента со специализациями для возврата
+	createdPatient, err := u.repo.PreloadPatientWithSpecializations(tx, patient.ID)
+	if err != nil {
+		tx.Rollback()
+		return nil, err
+	}
+
+	// ✅ 10. Коммитим транзакцию
+	if err := tx.Commit().Error; err != nil {
+		return nil, errors.NewDBError(op, err)
+	}
+
+	return createdPatient, nil
 }
 
 // GetPatientsByGroup — основной метод
@@ -116,8 +262,8 @@ func (u *PatientUsecase) buildPatientResponse(p entities.Patient) (models.Patien
 	}, nil
 }
 
-func (u *PatientUsecase) mapHarmPoint(point *entities.HarmPoint) *models.HarmPointResponse {
-	return &models.HarmPointResponse{
+func (u *PatientUsecase) mapHarmPoint(point *entities.HarmPoint) models.HarmPointResponse {
+	return models.HarmPointResponse{
 		ID:    point.ID,
 		Value: point.Value,
 	}
@@ -133,7 +279,7 @@ func (u *PatientUsecase) mapExaminationType(id uint) (string, *errors.AppError) 
 		)
 	}
 
-	val, err := u.manual.GetManualValueByTypeAndID(id, entities.RefTypePatientExaminationType)
+	val, err := u.manualRepo.GetManualValueByTypeAndID(id, entities.RefTypePatientExaminationType)
 	if err != nil {
 		return "", errors.NewAppError(
 			errors.InternalServerErrorCode,
@@ -156,7 +302,7 @@ func (u *PatientUsecase) mapExaminationView(id uint) (string, *errors.AppError) 
 		)
 	}
 
-	val, err := u.manual.GetManualValueByTypeAndID(id, entities.RefTypePatientExaminationView)
+	val, err := u.manualRepo.GetManualValueByTypeAndID(id, entities.RefTypePatientExaminationView)
 	if err != nil {
 		return "", errors.NewAppError(
 			errors.InternalServerErrorCode,
@@ -179,7 +325,7 @@ func (u *PatientUsecase) mapVaccineTitle(id uint) (string, *errors.AppError) {
 		)
 	}
 
-	val, err := u.manual.GetManualValueByTypeAndID(id, entities.RefTypeVaccineTitle)
+	val, err := u.manualRepo.GetManualValueByTypeAndID(id, entities.RefTypeVaccineTitle)
 	if err != nil {
 		return "", errors.NewAppError(
 			errors.InternalServerErrorCode,
@@ -300,19 +446,26 @@ func (u *PatientUsecase) mapVaccines(
 	return result, nil
 }
 
+// usecase/patient.go
 func (u *PatientUsecase) mapReceptions(receptions []entities.Reception) []models.ReceptionResponse {
 	if receptions == nil {
 		return nil
 	}
-	var result []models.ReceptionResponse
-	for _, r := range receptions {
-		result = append(result, models.ReceptionResponse{
+
+	result := make([]models.ReceptionResponse, len(receptions))
+	for i, r := range receptions {
+		result[i] = models.ReceptionResponse{
 			ID:               r.ID,
 			IsCompleted:      r.IsCompleted,
 			SpecializationID: r.SpecializationID,
 			Specialization:   u.mapSpecialization(r.Specialization),
-			Data:             r.Data,
-		})
+			Template: models.ReceptionTemplateResponse{
+				ID:     r.Template.ID,
+				Code:   r.Template.Code,
+				Fields: r.Template.Fields,
+			},
+			Data: r.Data,
+		}
 	}
 	return result
 }
@@ -327,7 +480,7 @@ func (u *PatientUsecase) mapDocumentType(id uint) (string, *errors.AppError) {
 		)
 	}
 
-	val, err := u.manual.GetManualValueByTypeAndID(id, entities.RefTypePersonalDocumentType)
+	val, err := u.manualRepo.GetManualValueByTypeAndID(id, entities.RefTypePersonalDocumentType)
 	if err != nil {
 		return "", errors.NewAppError(
 			errors.InternalServerErrorCode,
@@ -340,9 +493,10 @@ func (u *PatientUsecase) mapDocumentType(id uint) (string, *errors.AppError) {
 	return val, nil
 }
 
-func (u *PatientUsecase) mapPersonalInfo(pi *entities.PersonalInfo) (*models.PersonalInfoResponse, *errors.AppError) {
+func (u *PatientUsecase) mapPersonalInfo(pi *entities.PersonalInfo) (models.PersonalInfoResponse, *errors.AppError) {
+	emty := models.PersonalInfoResponse{}
 	if pi == nil {
-		return nil, errors.NewAppError(
+		return emty, errors.NewAppError(
 			errors.InternalServerErrorCode,
 			"NotFound PersonalInfo",
 			errors.ErrEmptyData,
@@ -351,9 +505,9 @@ func (u *PatientUsecase) mapPersonalInfo(pi *entities.PersonalInfo) (*models.Per
 	}
 	docType, err := u.mapDocumentType(pi.ID)
 	if err != nil {
-		return nil, err
+		return emty, err
 	}
-	return &models.PersonalInfoResponse{
+	return models.PersonalInfoResponse{
 		ID:           pi.ID,
 		DocNumber:    pi.DocNumber,
 		DocSeries:    pi.DocSeries,
@@ -363,11 +517,11 @@ func (u *PatientUsecase) mapPersonalInfo(pi *entities.PersonalInfo) (*models.Per
 	}, nil
 }
 
-func (u *PatientUsecase) mapContactInfo(ci *entities.ContactInfo) *models.ContactInfoResponse {
+func (u *PatientUsecase) mapContactInfo(ci *entities.ContactInfo) models.ContactInfoResponse {
 	if ci == nil {
-		return nil
+		return models.ContactInfoResponse{}
 	}
-	return &models.ContactInfoResponse{
+	return models.ContactInfoResponse{
 		ID:      ci.ID,
 		Phone:   ci.Phone,
 		Email:   ci.Email,
@@ -387,11 +541,11 @@ func (u *PatientUsecase) mapFlg(flg *entities.Flg) *models.FlgResponse {
 	}
 }
 
-func (u *PatientUsecase) mapAnalysis(a *entities.Analysis) *models.AnalysisResponse {
+func (u *PatientUsecase) mapAnalysis(a *entities.Analysis) models.AnalysisResponse {
 	if a == nil {
-		return nil
+		return models.AnalysisResponse{}
 	}
-	return &models.AnalysisResponse{
+	return models.AnalysisResponse{
 		ID:    a.ID,
 		Code:  a.Code,
 		Title: a.Title,
@@ -415,16 +569,16 @@ func (u *PatientUsecase) mapAnalysisOrderItems(items []entities.AnalysisOrderIte
 	return result
 }
 
-func (u *PatientUsecase) mapAnalysisOrder(ao *entities.AnalysisOrder) *models.AnalysisOrderResponse {
+func (u *PatientUsecase) mapAnalysisOrder(ao *entities.AnalysisOrder) models.AnalysisOrderResponse {
 	if ao == nil {
-		return nil
+		return models.AnalysisOrderResponse{}
 	}
 	// Вычисляем сумму
 	total := uint(0)
 	for _, item := range ao.OrderItems {
 		total += item.PriceAtAssignment
 	}
-	return &models.AnalysisOrderResponse{
+	return models.AnalysisOrderResponse{
 		ID:          ao.ID,
 		OrderNumber: ao.OrderNumber,
 		TotalAmount: total,
@@ -459,11 +613,11 @@ func (u *PatientUsecase) mapSpecializations(specs []entities.Specialization) []m
 	return result
 }
 
-func (u *PatientUsecase) mapSpecialization(spec *entities.Specialization) *models.SpecializationResponse {
+func (u *PatientUsecase) mapSpecialization(spec *entities.Specialization) models.SpecializationResponse {
 	if spec == nil {
-		return nil
+		return models.SpecializationResponse{}
 	}
-	return &models.SpecializationResponse{
+	return models.SpecializationResponse{
 		ID:    spec.ID,
 		Title: spec.Title,
 	}

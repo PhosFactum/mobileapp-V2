@@ -2,157 +2,12 @@ package patient
 
 import (
 	"github.com/AlexanderMorozov1919/mobileapp/internal/domain/entities"
-	"github.com/AlexanderMorozov1919/mobileapp/internal/domain/models"
 	"github.com/AlexanderMorozov1919/mobileapp/pkg/errors"
 	"gorm.io/gorm"
 )
 
-// Транзакция прокидывается из юз кейса в репы
-// Раздробить
-// ДОПИЛИТЬ ВАЛИДАЦИЮ (создан ли с таким ФИО) + поля
-// CreatePatient - создание пациента с кэшированием специальностей
-func (r *PatientRepositoryImpl) CreatePatient(patientData *models.CreatePatientData, group_id uint) (*entities.Patient, error) {
-	// 	op := "repo.Patient.CreatePatient"
-
-	// 	var createdPatient *entities.Patient
-
-	// 	err := r.db.Transaction(func(tx *gorm.DB) error {
-	// 		// ✅ 1. Создаем контактную информацию
-	// 		contactInfo := &entities.ContactInfo{
-	// 			Phone:     patientData.ContactInfo.Phone,
-	// 			Email:     patientData.ContactInfo.Email,
-	// 			Address:   patientData.ContactInfo.Address,
-	// 			CreatedAt: time.Now(),
-	// 			UpdatedAt: time.Now(),
-	// 		}
-	// 		if err := tx.Create(contactInfo).Error; err != nil {
-	// 			return fmt.Errorf("%s: failed to create contact info: %w", op, err)
-	// 		}
-
-	// 		// ✅ 2. Создаем персональную информацию
-	// 		personalInfo := &entities.PersonalInfo{
-	// 			DocNumber:      patientData.PersonalInfo.DocNumber,
-	// 			DocSeries:      patientData.PersonalInfo.DocSeries,
-	// 			SNILS:          patientData.PersonalInfo.SNILS,
-	// 			OMS:            patientData.PersonalInfo.OMS,
-	// 			DocumentTypeID: patientData.PersonalInfo.DocumentTypeID,
-	// 			CreatedAt:      time.Now(),
-	// 			UpdatedAt:      time.Now(),
-	// 		}
-	// 		if err := tx.Create(personalInfo).Error; err != nil {
-	// 			return fmt.Errorf("%s: failed to create personal info: %w", op, err)
-	// 		}
-
-	// 		// ✅ 4. Создаем пустое направление на анализы
-	// 		analysisOrder := &entities.AnalysisOrder{
-	// 			OrderNumber: fmt.Sprintf("ORD-%06d", 0), // Временный номер
-	// 			CreatedAt:   time.Now(),
-	// 			UpdatedAt:   time.Now(),
-	// 		}
-	// 		if err := tx.Create(analysisOrder).Error; err != nil {
-	// 			return fmt.Errorf("%s: failed to create analysis order: %w", op, err)
-	// 		}
-
-	// 		// Обновляем номер с правильным ID
-	// 		analysisOrder.OrderNumber = fmt.Sprintf("ORD-%06d", analysisOrder.ID)
-	// 		if err := tx.Save(analysisOrder).Error; err != nil {
-	// 			return fmt.Errorf("%s: failed to update analysis order number: %w", op, err)
-	// 		}
-
-	// 		// ✅ 5. Создаем пациента
-	// 		patient := &entities.Patient{
-	// 			FullName:        patientData.FullName,
-	// 			BirthDate:       patientData.BirthDate,
-	// 			IsMale:          patientData.IsMale,
-	// 			Position:        patientData.Position,
-	// 			Division:        patientData.Division,
-	// 			ExaminationType: patientData.ExaminationType,
-	// 			ExaminationView: patientData.ExaminationView,
-	// 			HarmPointID:     patientData.HarmPointID,
-	// 			PatientGroupID:  group_id,
-	// 			PersonalInfoID:  personalInfo.ID,
-	// 			ContactInfoID:   contactInfo.ID,
-	// 			AnalysisOrderID: analysisOrder.ID,
-	// 			CreatedAt:       time.Now(),
-	// 			UpdatedAt:       time.Now(),
-	// 		}
-
-	// 		if err := tx.Create(patient).Error; err != nil {
-	// 			return fmt.Errorf("%s: failed to create patient %s: %w", op, patient.FullName, err)
-	// 		}
-
-	// 		// Обновляем AnalysisOrder с PatientID
-	// 		analysisOrder.PatientID = patient.ID
-	// 		if err := tx.Save(analysisOrder).Error; err != nil {
-	// 			return fmt.Errorf("%s: failed to update analysis order with patient ID: %w", op, err)
-	// 		}
-
-	// 		// ✅ 6. КЭШИРУЕМ специальности пациента (определяем через HarmPoint)
-	// 		specializations, err := r.getSpecializationsByHarmPoint(tx, patientData.HarmPointID)
-	// 		if err != nil {
-	// 			return fmt.Errorf("%s: failed to get specializations by harm point: %w", op, err)
-	// 		}
-
-	// 		// Связываем пациента со специализациями (кэшируем)
-	// 		if err := tx.Model(patient).Association("Specializations").Append(&specializations); err != nil {
-	// 			return fmt.Errorf("%s: failed to cache specializations: %w", op, err)
-	// 		}
-
-	// 		initialData := json.RawMessage(`{"values": {}, "schema": []}`)
-
-	// 		// ✅ 8. Создаем пустые приемы (Reception) по каждой специализации
-	// 		var receptions []entities.Reception
-	// 		for _, spec := range specializations {
-	// 			reception := entities.Reception{
-	// 				PatientID:        patient.ID,
-	// 				SpecializationID: spec.ID,
-	// 				IsCompleted:      false,
-	// 				CreatedAt:        time.Now(),
-	// 				UpdatedAt:        time.Now(),
-	// 				Data:             initialData,
-	// 			}
-	// 			receptions = append(receptions, reception)
-	// 		}
-
-	// 		if len(receptions) > 0 {
-	// 			if err := tx.Create(&receptions).Error; err != nil {
-	// 				return fmt.Errorf("%s: failed to create receptions: %w", op, err)
-	// 			}
-	// 		}
-
-	// 		// ✅ 9. Создаем статистику пациента
-	// 		statistics := &entities.PatientStatistics{
-	// 			PatientID:              patient.ID,
-	// 			TotalReceptions:        int64(len(specializations)),
-	// 			CompletedReceptions:    0,
-	// 			TotalAnalysisOrders:    0,
-	// 			CompletedAnalysisItems: 0,
-	// 			CreatedAt:              time.Now(),
-	// 			UpdatedAt:              time.Now(),
-	// 		}
-
-	// 		if err := tx.Create(statistics).Error; err != nil {
-	// 			if !strings.Contains(err.Error(), "duplicate") {
-	// 				return fmt.Errorf("%s: failed to create statistics: %w", op, err)
-	// 			}
-	// 		}
-
-	// 		// ✅ 10. Предзагружаем кэшированные специальности
-	// 		tx.Preload("Specializations").First(patient, patient.ID)
-
-	// 		// ✅ Сохраняем созданного пациента для возврата
-	// 		createdPatient = patient
-
-	// 		return nil
-	// 	})
-
-	// 	// ✅ Возвращаем пациента и ошибку
-	// 	return createdPatient, err
-	return nil, nil
-}
-
 // GetPatientsByGroup - получение пациентов по группе
-func (r *PatientRepositoryImpl) GetPatientsByGroup(groupID uint) ([]entities.Patient, error) {
+func (r *PatientRepositoryImpl) GetPatientsByGroup(groupID uint) ([]entities.Patient, *errors.AppError) {
 	op := "repo.Patient.GetPatientsByGroup"
 
 	query := r.db.
@@ -166,6 +21,7 @@ func (r *PatientRepositoryImpl) GetPatientsByGroup(groupID uint) ([]entities.Pat
 		Preload("VaccineWithdrawals").
 		Preload("Titers").
 		Preload("Receptions.Specialization").
+		Preload("Receptions.Template").
 		Preload("Specializations").
 		Preload("Statistics").
 		Where("patient_group_id = ?", groupID).
@@ -179,19 +35,112 @@ func (r *PatientRepositoryImpl) GetPatientsByGroup(groupID uint) ([]entities.Pat
 	return patients, nil
 }
 
-// getSpecializationsByHarmPoint - получение специальностей через HarmPoint
-func (r *PatientRepositoryImpl) getSpecializationsByHarmPoint(tx *gorm.DB, harmPointID uint) ([]entities.Specialization, error) {
-	// op := "repo.Patient.getSpecializationsByHarmPoint"
-
-	// var specializations []entities.Specialization
-	// err := tx.Joins("JOIN harm_points_specializations hps ON hps.specialization_id = specializations.id").
-	// 	Where("hps.harm_point_id = ?", harmPointID).
-	// 	Find(&specializations).Error
-
-	// if err != nil {
-	// 	return nil, errors.NewDBError(op, err)
-	// }
-
-	// return specializations, nil
-	return nil, nil
+// CreateContactInfo создаёт контактную информацию
+func (r *PatientRepositoryImpl) CreateContactInfo(tx *gorm.DB, contactInfo *entities.ContactInfo) *errors.AppError {
+	op := "repo.Patient.CreateContactInfo"
+	if err := tx.Create(contactInfo).Error; err != nil {
+		return errors.NewDBError(op, err)
+	}
+	return nil
 }
+
+// CreatePersonalInfo создаёт персональную информацию
+func (r *PatientRepositoryImpl) CreatePersonalInfo(tx *gorm.DB, personalInfo *entities.PersonalInfo) *errors.AppError {
+	op := "repo.Patient.CreatePersonalInfo"
+	if err := tx.Create(personalInfo).Error; err != nil {
+		return errors.NewDBError(op, err)
+	}
+	return nil
+}
+
+// CreateAnalysisOrder создаёт направление на анализы
+func (r *PatientRepositoryImpl) CreateAnalysisOrder(tx *gorm.DB, order *entities.AnalysisOrder) *errors.AppError {
+	op := "repo.Patient.CreateAnalysisOrder"
+	if err := tx.Create(order).Error; err != nil {
+		return errors.NewDBError(op, err)
+	}
+	return nil
+}
+
+// UpdateAnalysisOrder обновляет направление
+func (r *PatientRepositoryImpl) UpdateAnalysisOrder(tx *gorm.DB, order *entities.AnalysisOrder) *errors.AppError {
+	op := "repo.Patient.UpdateAnalysisOrder"
+	if err := tx.Save(order).Error; err != nil {
+		return errors.NewDBError(op, err)
+	}
+	return nil
+}
+
+// CreatePatient создаёт пациента
+func (r *PatientRepositoryImpl) CreatePatient(tx *gorm.DB, patient *entities.Patient) *errors.AppError {
+	op := "repo.Patient.CreatePatient"
+	if err := tx.Create(patient).Error; err != nil {
+		return errors.NewDBError(op, err)
+	}
+	return nil
+}
+
+// CacheSpecializations связывает пациента со специализациями
+func (r *PatientRepositoryImpl) CacheSpecializations(tx *gorm.DB, patient *entities.Patient, specializations []entities.Specialization) *errors.AppError {
+	op := "repo.Patient.CacheSpecializations"
+	if err := tx.Model(patient).Association("Specializations").Append(&specializations); err != nil {
+		return errors.NewDBError(op, err)
+	}
+	return nil
+}
+
+// CreateReceptions создаёт приёмы
+func (r *PatientRepositoryImpl) CreateReceptions(tx *gorm.DB, receptions []entities.Reception) *errors.AppError {
+	if len(receptions) == 0 {
+		return nil
+	}
+	op := "repo.Patient.CreateReceptions"
+	if err := tx.Create(&receptions).Error; err != nil {
+		return errors.NewDBError(op, err)
+	}
+	return nil
+}
+
+// CreatePatientStatistics создаёт статистику пациента
+func (r *PatientRepositoryImpl) CreatePatientStatistics(tx *gorm.DB, stats *entities.PatientStatistics) *errors.AppError {
+	op := "repo.Patient.CreatePatientStatistics"
+	if err := tx.Create(stats).Error; err != nil {
+		return errors.NewDBError(op, err) // ← стандартная обработка, как просили
+	}
+	return nil
+}
+
+// GetReceptionTemplatesByHarmPointID возвращает шаблоны заключений по HarmPointID
+func (r *PatientRepositoryImpl) GetReceptionTemplatesByHarmPointID(tx *gorm.DB, harmPointID uint) ([]entities.ReceptionTemplate, *errors.AppError) {
+	op := "repo.Patient.GetReceptionTemplatesByHarmPointID"
+
+	// Загружаем HarmPoint с предзагрузкой шаблонов
+	var harmPoint entities.HarmPoint
+	if err := tx.Preload("ReceptionTemplates").First(&harmPoint, harmPointID).Error; err != nil {
+		return nil, errors.NewDBError(op, err)
+	}
+
+	return harmPoint.ReceptionTemplates, nil
+}
+
+// PreloadPatientWithSpecializations загружает пациента со специализациями
+func (r *PatientRepositoryImpl) PreloadPatientWithSpecializations(tx *gorm.DB, patientID uint) (*entities.Patient, *errors.AppError) {
+	op := "repo.Patient.PreloadPatientWithSpecializations"
+	var patient entities.Patient
+	if err := tx.Preload("Specializations").First(&patient, patientID).Error; err != nil {
+		return nil, errors.NewDBError(op, err)
+	}
+	return &patient, nil
+}
+
+// func (r *PatientRepositoryImpl) GetReceptionTemplatesByHarmPointFromModel(
+// 	tx *gorm.DB,
+// 	harmPoint *entities.HarmPoint,
+// ) ([]entities.ReceptionTemplate, error) {
+// 	op := "repo.Patient.GetReceptionTemplatesByHarmPointFromModel"
+// 	var templates []entities.ReceptionTemplate
+// 	if err := tx.Model(harmPoint).Association("ReceptionTemplates").Find(&templates); err != nil {
+// 		return nil, errors.NewDBError(op, err)
+// 	}
+// 	return templates, nil
+// }

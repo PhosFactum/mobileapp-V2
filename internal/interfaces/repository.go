@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/AlexanderMorozov1919/mobileapp/internal/domain/entities"
-	"github.com/AlexanderMorozov1919/mobileapp/internal/domain/models"
+	"github.com/AlexanderMorozov1919/mobileapp/pkg/errors"
 	"gorm.io/gorm"
 )
 
@@ -12,8 +12,6 @@ type Repository interface {
 	AuthRepository
 	DoctorRepository
 	PatientRepository
-	ContactInfoRepository
-	PersonalInfoRepository
 	TxRepository
 	ConsentSignatureRepository
 	OrganizationRepository
@@ -70,17 +68,32 @@ type PersonalInfoRepository interface {
 // updated to match the new structure
 type ReceptionRepository interface {
 	GetPatientReceptionsByPatientID(patientID uint) ([]entities.Reception, error)
-	// 	CreateReceptionHospital(reception entities.Reception) error
-	// 	UpdateReception(id uint, updateMap map[string]interface{}) (uint, error)
-	// 	DeleteReception(id uint) error
-	// 	GetReceptionByID(id uint) (entities.Reception, error)
-	// 	GetReceptionByPatientID(patientID uint) ([]entities.Reception, error)
 }
 
 // updated to match the new structured
 type PatientRepository interface {
-	CreatePatient(patientData *models.CreatePatientData, group_id uint) (*entities.Patient, error)
-	GetPatientsByGroup(group_id uint) ([]entities.Patient, error)
+
+	// Работа с зависимыми сущностями
+	CreateContactInfo(tx *gorm.DB, contactInfo *entities.ContactInfo) *errors.AppError
+	CreatePersonalInfo(tx *gorm.DB, personalInfo *entities.PersonalInfo) *errors.AppError
+	CreatePatientStatistics(tx *gorm.DB, stats *entities.PatientStatistics) *errors.AppError
+
+	// Работа с пациентом
+	GetPatientsByGroup(group_id uint) ([]entities.Patient, *errors.AppError)
+	CreatePatient(tx *gorm.DB, patient *entities.Patient) *errors.AppError
+	PreloadPatientWithSpecializations(tx *gorm.DB, patientID uint) (*entities.Patient, *errors.AppError)
+
+	CreateAnalysisOrder(tx *gorm.DB, order *entities.AnalysisOrder) *errors.AppError
+	UpdateAnalysisOrder(tx *gorm.DB, order *entities.AnalysisOrder) *errors.AppError
+
+	// Работа со связями
+	CacheSpecializations(tx *gorm.DB, patient *entities.Patient, specializations []entities.Specialization) *errors.AppError
+
+	// Работа с приёмами
+	CreateReceptions(tx *gorm.DB, receptions []entities.Reception) *errors.AppError
+
+	// Получение шаблонов по вредному фактору
+	GetReceptionTemplatesByHarmPointID(tx *gorm.DB, harmPointID uint) ([]entities.ReceptionTemplate, *errors.AppError)
 }
 
 // updated to match the new structure

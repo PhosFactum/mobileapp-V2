@@ -19,12 +19,12 @@ type PatientResponse struct {
 	ExaminationType string `json:"examination_type,omitempty"`
 	ExaminationView string `json:"examination_view,omitempty"`
 
-	HarmPoint     *HarmPointResponse         `json:"harm_point,omitempty"`
-	PersonalInfo  *PersonalInfoResponse      `json:"personal_info,omitempty"`
-	ContactInfo   *ContactInfoResponse       `json:"contact_info,omitempty"`
-	Flg           *FlgResponse               `json:"flg,omitempty"`
-	AnalysisOrder *AnalysisOrderResponse     `json:"analysis_order,omitempty"`
+	HarmPoint     HarmPointResponse          `json:"harm_point"`
+	PersonalInfo  PersonalInfoResponse       `json:"personal_info"`
+	ContactInfo   ContactInfoResponse        `json:"contact_info"`
+	AnalysisOrder AnalysisOrderResponse      `json:"analysis_order"`
 	Statistics    *PatientStatisticsResponse `json:"statistics,omitempty"`
+	Flg           *FlgResponse               `json:"flg,omitempty"`
 
 	// Связанные коллекции
 	Vaccines        []VaccineAllResponse     `json:"vaccines,omitempty"`
@@ -67,33 +67,33 @@ type SpecializationResponse struct {
 	Title string `json:"title"`
 }
 
-type CreatePatientData struct {
-	FullName        string    `json:"full_name" binding:"required"`
-	BirthDate       time.Time `json:"birth_date" binding:"required"`
-	IsMale          bool      `json:"is_male" binding:"required"`
-	Position        string    `json:"position" binding:"required"`
-	Division        string    `json:"division" binding:"required"`
-	ExaminationType string    `json:"examination_type_id" binding:"required"`
-	ExaminationView string    `json:"examination_view_id" binding:"required"`
+type CreatePatientRequest struct {
+	FullName          string    `json:"full_name" binding:"required"`
+	BirthDate         time.Time `json:"birth_date" binding:"required"`
+	IsMale            bool      `json:"is_male" binding:"required"`
+	Position          string    `json:"position" binding:"required"`
+	Division          string    `json:"division" binding:"required"`
+	ExaminationTypeID uint      `json:"examination_type_id" binding:"required"`
+	ExaminationViewID uint      `json:"examination_view_id" binding:"required"`
 
 	// Обязательные связи
 	HarmPointID uint `json:"harm_point_id" binding:"required"`
 
 	// Вложенные структуры
-	ContactInfo  CreateContactInfoData  `json:"contact_info" binding:"required"`
-	PersonalInfo CreatePersonalInfoData `json:"personal_info" binding:"required"`
+	ContactInfo  CreateContactInfoRequest  `json:"contact_info" binding:"required"`
+	PersonalInfo CreatePersonalInfoRequest `json:"personal_info" binding:"required"`
 }
 
-type CreateContactInfoData struct {
+type CreateContactInfoRequest struct {
 	Phone   string `json:"phone" binding:"required"`
 	Email   string `json:"email" binding:"required,email"`
 	Address string `json:"address" binding:"required"`
 }
 
-type CreatePersonalInfoData struct {
-	DocNumber    string `json:"doc_number" binding:"required"`
-	DocSeries    string `json:"doc_series" binding:"required"`
-	SNILS        string `json:"snils" binding:"required"`
-	OMS          string `json:"oms" binding:"required"`
-	DocumentType string `json:"document_type_id,omitempty"`
+type CreatePersonalInfoRequest struct {
+	DocNumber      string `json:"doc_number" binding:"required"`
+	DocSeries      string `json:"doc_series" binding:"required"`
+	SNILS          string `json:"snils" binding:"required"`
+	OMS            string `json:"oms" binding:"required"`
+	DocumentTypeID uint   `json:"document_type_id,omitempty"`
 }

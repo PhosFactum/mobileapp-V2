@@ -64,25 +64,28 @@ func (h *Handler) CreatePatient(c *gin.Context) {
 	}
 
 	// 2. Биндим JSON
-	var request models.CreatePatientData
+	var request models.CreatePatientRequest // ← обновлённое имя модели
 	if err := c.ShouldBindJSON(&request); err != nil {
 		h.ErrorResponse(c, err, http.StatusBadRequest, "invalid request body", true)
 		return
 	}
 
-	// 3. Валидируем структуру (если используете validator)
+	// 3. Валидация через validator (если используется)
 	if err := validate.Struct(request); err != nil {
 		h.ErrorResponse(c, err, http.StatusUnprocessableEntity, "validation failed", true)
 		return
 	}
 
-	// 4. Вызываем usecase
+	// 4. Вызываем юзкейс
 	patient, appErr := h.usecase.CreatePatient(&request, groupID)
 	if appErr != nil {
 		h.ErrorResponse(c, appErr.Err, appErr.Code, appErr.Message, appErr.IsUserFacing)
 		return
 	}
 
-	// 5. Возвращаем результат
+	// // 5. Маппим сущность в ответную модель
+	// response := h.usecase.MapPatient(*patient) // ← предполагается, что у юзкейса есть метод маппинга
+
+	// 6. Возвращаем результат
 	h.ResultResponse(c, "Patient created successfully", Object, patient)
 }

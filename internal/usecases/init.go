@@ -9,6 +9,7 @@ import (
 	_ "github.com/AlexanderMorozov1919/mobileapp/internal/domain/entities"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/interfaces"
 	_ "github.com/AlexanderMorozov1919/mobileapp/pkg/errors"
+	"gorm.io/gorm"
 )
 
 type UseCases struct {
@@ -21,11 +22,11 @@ type UseCases struct {
 	interfaces.ConsentUsecase
 }
 
-func NewUsecases(r interfaces.Repository, s interfaces.Service, conf *config.Config) interfaces.Usecases {
+func NewUsecases(r interfaces.Repository, s interfaces.Service, conf *config.Config, db *gorm.DB) interfaces.Usecases {
 
 	return &UseCases{
 		NewDoctorUsecase(r),
-		NewPatientUsecase(r, r, r, r, s),
+		NewPatientUsecase(r, r, s, db),
 		NewAuthUsecase(r, conf.JWTSecret),
 		NewOrganizationUsecase(r),
 		NewPatientGroupUsecase(r),

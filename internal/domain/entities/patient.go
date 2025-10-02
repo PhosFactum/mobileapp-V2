@@ -48,13 +48,6 @@ type Patient struct {
 	Specializations []Specialization `gorm:"many2many:patients_specializations;" json:"specializations,omitempty"`
 }
 
-type HarmPoint struct {
-	ID    uint   `gorm:"primarykey" json:"id"`
-	Value string `gorm:"not null;" json:"value"`
-
-	Specializations []Specialization `gorm:"many2many:harm_points_specializations;" json:"-"`
-}
-
 // ContactInfo представляет контактную информацию пациента
 type ContactInfo struct {
 	ID        uint      `gorm:"primarykey;autoIncrement" json:"id"`

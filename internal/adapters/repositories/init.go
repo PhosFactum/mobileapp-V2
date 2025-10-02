@@ -4,23 +4,19 @@ package repository
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"log"
 	"math/rand"
 	"os"
-	"strings"
 	"time"
 
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/auth"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/consent_signatures"
-	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/contactInfo"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/doctor"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/manual"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/organization"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/patient"
 	patientgroup "github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/patient_group"
-	personalInfo "github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/personal_info"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/reception"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/tx"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/config"
@@ -36,8 +32,6 @@ type Repository struct {
 	interfaces.AuthRepository
 	interfaces.DoctorRepository
 	interfaces.PatientRepository
-	interfaces.ContactInfoRepository
-	interfaces.PersonalInfoRepository
 	interfaces.ReceptionRepository
 	interfaces.TxRepository
 	interfaces.OrganizationRepository
@@ -83,8 +77,6 @@ func NewRepository(cfg *config.Config) (interfaces.Repository, error) {
 		auth.NewAuthRepository(db),
 		doctor.NewDoctorRepository(db),
 		patient.NewPatientRepository(db),
-		contactInfo.NewContactInfoRepository(db),
-		personalInfo.NewPersonalInfoRepository(db),
 		reception.NewReceptionRepository(db),
 		tx.NewTxRepository(db),
 		organization.NewOrganizationRepository(db),
@@ -98,6 +90,7 @@ func NewRepository(cfg *config.Config) (interfaces.Repository, error) {
 func autoMigrate(db *gorm.DB) error {
 	tablesToDelete := []string{
 		// Зависимые от Patient
+		"reception_templates",
 		"receptions",
 		"analysis_order_items",
 		"vaccines",
@@ -167,6 +160,7 @@ func autoMigrate(db *gorm.DB) error {
 		&entities.AnalysisOrder{},
 		&entities.AnalysisOrderItem{},
 		&entities.Reception{},
+		&entities.ReceptionTemplate{},
 		&entities.Vaccine{},
 		&entities.VaccineRefusal{},
 		&entities.VaccineWithdrawal{},
@@ -220,6 +214,9 @@ func seedTestData(db *gorm.DB) error {
 	}
 	if err := seedHarmPoints(db); err != nil {
 		return fmt.Errorf("failed to seed harm points: %w", err)
+	}
+	if err := seedReceptionTemplatesAndLinks(db); err != nil {
+		return fmt.Errorf("failed to seed reception templates: %w", err)
 	}
 	if err := seedDoctors(db); err != nil {
 		return fmt.Errorf("failed to seed doctors: %w", err)
@@ -380,6 +377,132 @@ func seedHarmPoints(db *gorm.DB) error {
 	return nil
 }
 
+func seedReceptionTemplatesAndLinks(db *gorm.DB) error {
+	// 1. Загружаем специализации
+	var specializations []entities.Specialization
+	if err := db.Find(&specializations).Error; err != nil {
+		return fmt.Errorf("failed to load specializations: %w", err)
+	}
+
+	// 2. Строим маппинг ID ↔ Title
+	specByID := make(map[uint]string)
+	specByTitle := make(map[string]uint)
+	for _, s := range specializations {
+		specByID[s.ID] = s.Title
+		specByTitle[s.Title] = s.ID
+	}
+
+	// 3. Формируем и сохраняем шаблоны
+	var allTemplates []entities.ReceptionTemplate
+
+	addAndSaveTemplate := func(title, code string, fields []map[string]interface{}) *entities.ReceptionTemplate {
+		specID, exists := specByTitle[title]
+		if !exists {
+			fmt.Printf("⚠️ Specialization '%s' not found, skipping template %s\n", title, code)
+			return nil
+		}
+
+		fieldsJSON, _ := json.Marshal(fields)
+		tmpl := entities.ReceptionTemplate{
+			Code:             code,
+			SpecializationID: specID,
+			Fields:           json.RawMessage(fieldsJSON),
+		}
+
+		// Сохраняем в БД
+		if err := db.FirstOrCreate(&tmpl, entities.ReceptionTemplate{Code: code}).Error; err != nil {
+			fmt.Printf("❌ Failed to seed template %s: %v\n", code, err)
+			return nil
+		}
+
+		allTemplates = append(allTemplates, tmpl)
+		return &tmpl
+	}
+
+	// Создаём шаблоны
+	therapyTmpl := addAndSaveTemplate("Терапевт", "THERAPY_ANAMNESIS_V1", []map[string]interface{}{
+		{"name": "complaints", "type": "string", "required": true},
+		{"name": "bp_systolic", "type": "integer", "required": true, "min": 80, "max": 200},
+		{"name": "bp_diastolic", "type": "integer", "required": true, "min": 50, "max": 120},
+		{"name": "heart_rate", "type": "integer", "required": true, "min": 40, "max": 200},
+		{"name": "temperature", "type": "number", "required": true, "min": 35.0, "max": 42.0},
+		{"name": "diagnosis", "type": "string", "required": true},
+		{"name": "recommendations", "type": "string", "required": false},
+	})
+	neuroTmpl := addAndSaveTemplate("Невролог", "NEURO_EXAM_V1", []map[string]interface{}{
+		{"name": "mental_status", "type": "string", "required": true},
+		{"name": "motor_function", "type": "string", "required": true},
+		{"name": "sensory_function", "type": "string", "required": true},
+		{"name": "reflexes", "type": "string", "required": true},
+		{"name": "diagnosis", "type": "string", "required": true},
+		{"name": "mri_results", "type": "string", "required": false},
+	})
+	traumaTmpl := addAndSaveTemplate("Невролог", "NEURO_EXAM_V1", []map[string]interface{}{
+		{"name": "mental_status", "type": "string", "required": true},
+		{"name": "motor_function", "type": "string", "required": true},
+		{"name": "sensory_function", "type": "string", "required": true},
+		{"name": "reflexes", "type": "string", "required": true},
+		{"name": "diagnosis", "type": "string", "required": true},
+		{"name": "mri_results", "type": "string", "required": false},
+	})
+
+	generalTmpl := addAndSaveTemplate("Общая практика", "GENERAL_EXAM_V1", []map[string]interface{}{
+		{"name": "general_condition", "type": "string", "required": true},
+		{"name": "diagnosis", "type": "string", "required": true},
+		{"name": "notes", "type": "string", "required": false},
+	})
+
+	// 4. Загружаем вредные факторы
+	var harmPoints []entities.HarmPoint
+	db.Find(&harmPoints)
+	if len(harmPoints) == 0 {
+		fmt.Println("⚠️ No harm points found, skipping template links")
+		return nil
+	}
+
+	// 5. Связываем HarmPoint с шаблонами
+	for i, hp := range harmPoints {
+		var templates []*entities.ReceptionTemplate
+
+		// Пример: первый → терапевт + невролог, второй → травматолог и т.д.
+		switch i {
+		case 0:
+			if therapyTmpl != nil {
+				templates = append(templates, therapyTmpl)
+			}
+			if neuroTmpl != nil {
+				templates = append(templates, neuroTmpl)
+			}
+		case 1:
+			if traumaTmpl != nil {
+				templates = append(templates, traumaTmpl)
+			}
+		default:
+			if generalTmpl != nil {
+				templates = append(templates, generalTmpl)
+			}
+		}
+
+		// Преобразуем []*ReceptionTemplate → []ReceptionTemplate
+		var validTemplates []entities.ReceptionTemplate
+		for _, t := range templates {
+			if t != nil {
+				validTemplates = append(validTemplates, *t)
+			}
+		}
+
+		if len(validTemplates) > 0 {
+			if err := db.Model(&hp).Association("ReceptionTemplates").Replace(&validTemplates); err != nil {
+				return fmt.Errorf("failed to link templates to harm point %d: %w", hp.ID, err)
+			}
+			fmt.Printf("✅ Linked %d templates to harm point %d\n", len(validTemplates), hp.ID)
+		}
+	}
+
+	fmt.Printf("✅ Seeded %d reception templates and links\n", len(allTemplates))
+	return nil
+}
+
 func seedDoctors(db *gorm.DB) error {
 	var specs []entities.Specialization
 	var orgs []entities.Organization
@@ -451,8 +574,10 @@ func seedPatients(db *gorm.DB) error {
 	var harmPoints []entities.HarmPoint
 	var examTypes []entities.Manual
 	var examViews []entities.Manual
+	var templates []entities.ReceptionTemplate
 	db.Find(&groups)
 	db.Find(&harmPoints)
+	db.Find(&templates)
 	db.Where("type = ?", entities.RefTypePatientExaminationType).Find(&examTypes)
 	db.Where("type = ?", entities.RefTypePatientExaminationView).Find(&examViews)
 
@@ -508,10 +633,26 @@ func seedPatients(db *gorm.DB) error {
 		// Обновляем направление
 		db.Model(&order).Update("patient_id", patients[i].ID)
 
-		// Связываем со специализациями через HarmPoint
-		var hp entities.HarmPoint
-		db.Preload("Specializations").First(&hp, patients[i].HarmPointID)
-		db.Model(&patients[i]).Association("Specializations").Append(hp.Specializations)
+		for i := range patients {
+			// ... (создание order, пациента)
+
+			// === Получаем специализации ИЗ БД через шаблоны ===
+			specializationMap := make(map[uint]struct{})
+			for _, t := range templates {
+				specializationMap[t.SpecializationID] = struct{}{}
+			}
+
+			var specializations []entities.Specialization
+			for specID := range specializationMap {
+				specializations = append(specializations, entities.Specialization{ID: specID})
+			}
+
+			if len(specializations) > 0 {
+				db.Model(&patients[i]).Association("Specializations").Append(&specializations)
+			}
+
+			// ... (статистика)
+		}
 
 		// Создаём статистику
 		stats := entities.PatientStatistics{
@@ -682,166 +823,101 @@ func seedTitrs(db *gorm.DB) error {
 	return nil
 }
 
-// seed/receptions.go
 func seedReceptions(db *gorm.DB) error {
-	// Получаем всех пациентов
 	var patients []entities.Patient
-	if err := db.Preload("Specializations").Find(&patients).Error; err != nil {
-		return fmt.Errorf("failed to get patients with specializations: %w", err)
+	if err := db.Find(&patients).Error; err != nil {
+		return fmt.Errorf("failed to load patients: %w", err)
 	}
-	if len(patients) == 0 {
-		fmt.Println("⚠️ No patients found, skipping reception seeding")
+
+	var templates []entities.ReceptionTemplate
+	if err := db.Find(&templates).Error; err != nil {
+		return fmt.Errorf("failed to load templates: %w", err)
+	}
+
+	if len(patients) == 0 || len(templates) == 0 {
+		fmt.Println("⚠️ No patients or templates, skipping reception seeding")
 		return nil
 	}
 
-	// Получаем все специализации
-	var specializations []entities.Specialization
-	if err := db.Find(&specializations).Error; err != nil {
-		return fmt.Errorf("failed to get specializations: %w", err)
-	}
-	if len(specializations) == 0 {
-		return errors.New("no specializations found — cannot seed receptions")
-	}
-
-	// Генерируем приёмы для каждого пациента
 	for _, patient := range patients {
-		// Количество приёмов: от 1 до 3
-		receptionCount := 1 + rand.Intn(3)
-
-		for i := 0; i < receptionCount; i++ {
-			// Выбираем случайную специализацию из связанных с пациентом
-			// Если нет — берём любую
-			var selectedSpec *entities.Specialization
-			if len(patient.Specializations) > 0 {
-				selectedSpec = &patient.Specializations[rand.Intn(len(patient.Specializations))]
-			} else {
-				selectedSpec = &specializations[rand.Intn(len(specializations))]
+		for _, tmpl := range templates {
+			var spec entities.Specialization
+			if err := db.Select("title").First(&spec, tmpl.SpecializationID).Error; err != nil {
+				fmt.Printf("⚠️ Skip template %d: specialization %d not found\n", tmpl.ID, tmpl.SpecializationID)
+				continue // или return err, если критично
 			}
 
-			// Генерация даты приёма (за последние 180 дней)
-			daysAgo := rand.Intn(180)
-			receptionDate := time.Now().AddDate(0, 0, -daysAgo)
-
-			// Генерация данных в зависимости от специализации
-			var values map[string]interface{}
-			var schema []map[string]interface{}
-
-			switch selectedSpec.Title {
-			case "Терапевт":
-				values = map[string]interface{}{
-					"complaints":      "Головная боль, слабость",
-					"bp_systolic":     120 + rand.Intn(30),
-					"bp_diastolic":    80 + rand.Intn(20),
-					"heart_rate":      60 + rand.Intn(30),
-					"temperature":     36.6 + rand.Float32()*0.8,
-					"diagnosis":       "ОРВИ",
-					"recommendations": "Постельный режим, обильное питьё",
-				}
-				schema = []map[string]interface{}{
-					{"name": "complaints", "type": "string", "required": true},
-					{"name": "bp_systolic", "type": "integer", "required": true, "min": 80, "max": 200},
-					{"name": "diagnosis", "type": "string", "required": true},
-				}
-
-			case "Невролог":
-				values = map[string]interface{}{
-					"mental_status":    "ясное сознание",
-					"motor_function":   "норма",
-					"sensory_function": "снижена в правой руке",
-					"reflexes":         "живые, симметричные",
-					"diagnosis":        "ДЦП",
-					"mri_results":      "очаговые изменения в белом веществе",
-				}
-				schema = []map[string]interface{}{
-					{"name": "mental_status", "type": "string", "required": true},
-					{"name": "diagnosis", "type": "string", "required": true},
-					{"name": "mri_results", "type": "string", "required": false},
-				}
-
-			case "Травматолог":
-				values = map[string]interface{}{
-					"injury_type":    "Ушиб",
-					"localization":   "Левое колено",
-					"xray_results":   "Переломов нет",
-					"swelling":       true,
-					"treatment_plan": "Покой, холод, НПВС",
-				}
-				schema = []map[string]interface{}{
-					{"name": "injury_type", "type": "string", "required": true},
-					{"name": "xray_results", "type": "string", "required": true},
-					{"name": "swelling", "type": "boolean", "required": true},
-				}
-
-			case "Психиатр":
-				values = map[string]interface{}{
-					"mood":              "депрессивное",
-					"sleep_quality":     "нарушено",
-					"appetite":          "снижено",
-					"suicidal_ideation": false,
-					"diagnosis_icd":     "F32.1",
-					"therapy_plan":      "Антидепрессанты + когнитивно-поведенческая терапия",
-				}
-				schema = []map[string]interface{}{
-					{"name": "mood", "type": "string", "required": true},
-					{"name": "suicidal_ideation", "type": "boolean", "required": true},
-					{"name": "diagnosis_icd", "type": "string", "required": true},
-				}
-
-			default:
-				values = map[string]interface{}{
-					"general_condition": "удовлетворительное",
-					"diagnosis":         "Наблюдение",
-					"notes":             "Без патологий",
-				}
-				schema = []map[string]interface{}{
-					{"name": "diagnosis", "type": "string", "required": true},
-				}
-			}
-
-			// Собираем данные в единый JSON
-			dataMap := map[string]interface{}{
-				"values": values,
-				"schema": schema,
-			}
-			dataJSON, err := json.Marshal(dataMap)
+			values := generateReceptionValues(spec.Title)
+			dataJSON, err := json.Marshal(values)
 			if err != nil {
-				return fmt.Errorf("failed to marshal reception data for patient %d: %w", patient.ID, err)
+				return fmt.Errorf("failed to marshal data for patient %d, template %d: %w", patient.ID, tmpl.ID, err)
 			}
 
-			// Создаём приём
-			reception := &entities.Reception{
+			reception := entities.Reception{
 				PatientID:        patient.ID,
-				SpecializationID: selectedSpec.ID,
-				IsCompleted:      rand.Intn(10) < 8, // 80% завершённых
+				SpecializationID: tmpl.SpecializationID,
+				TemplateID:       tmpl.ID,
 				Data:             json.RawMessage(dataJSON),
-				CreatedAt:        receptionDate,
-				UpdatedAt:        receptionDate.Add(10 * time.Minute),
+				IsCompleted:      true,
+				CreatedAt:        time.Now(),
+				UpdatedAt:        time.Now(),
 			}
 
-			if err := db.Create(reception).Error; err != nil {
-				// Игнорируем дубликаты по составному ключу (если есть ограничение)
-				if !strings.Contains(err.Error(), "duplicate") {
-					return fmt.Errorf("failed to create reception: %w", err)
-				}
+			if err := db.Create(&reception).Error; err != nil {
+				return fmt.Errorf("failed to create reception for patient %d, template %d: %w", patient.ID, tmpl.ID, err)
 			}
-
-			// Обновляем статистику пациента
-			if reception.IsCompleted {
-				db.Model(&entities.PatientStatistics{}).
-					Where("patient_id = ?", patient.ID).
-					UpdateColumn("completed_receptions", gorm.Expr("completed_receptions + 1"))
-			}
-			db.Model(&entities.PatientStatistics{}).
-				Where("patient_id = ?", patient.ID).
-				UpdateColumn("total_receptions", gorm.Expr("total_receptions + 1"))
-
-			fmt.Printf("✅ Created %s reception for %s (completed: %t)\n",
-				selectedSpec.Title, patient.FullName, reception.IsCompleted)
 		}
 	}
 
-	fmt.Printf("✅ Seeded receptions for %d patients\n", len(patients))
+	fmt.Printf("✅ Seeded receptions for %d patients × %d templates\n", len(patients), len(templates))
 	return nil
+}
+
+func generateReceptionValues(specTitle string) map[string]interface{} {
+	switch specTitle {
+	case "Терапевт":
+		return map[string]interface{}{
+			"complaints":      "Головная боль, слабость",
+			"bp_systolic":     120 + rand.Intn(30),
+			"bp_diastolic":    80 + rand.Intn(20),
+			"heart_rate":      60 + rand.Intn(30),
+			"temperature":     36.6 + rand.Float32()*0.8,
+			"diagnosis":       "ОРВИ",
+			"recommendations": "Постельный режим, обильное питьё",
+		}
+	case "Невролог":
+		return map[string]interface{}{
+			"mental_status":    "ясное сознание",
+			"motor_function":   "норма",
+			"sensory_function": "снижена в правой руке",
+			"reflexes":         "живые, симметричные",
+			"diagnosis":        "ДЦП",
+			"mri_results":      "очаговые изменения в белом веществе",
+		}
+	case "Травматолог":
+		return map[string]interface{}{
+			"injury_type":    "Ушиб",
+			"localization":   "Левое колено",
+			"xray_results":   "Переломов нет",
+			"swelling":       true,
+			"treatment_plan": "Покой, холод, НПВС",
+		}
+	case "Психиатр":
+		return map[string]interface{}{
+			"mood":              "депрессивное",
+			"sleep_quality":     "нарушено",
+			"appetite":          "снижено",
+			"suicidal_ideation": false,
+			"diagnosis_icd":     "F32.1",
+			"therapy_plan":      "Антидепрессанты + когнитивно-поведенческая терапия",
+		}
+	default:
+		return map[string]interface{}{
+			"general_condition": "удовлетворительное",
+			"diagnosis":         "Наблюдение",
+			"notes":             "Без патологий",
+		}
+	}
 }
 
 // Вспомогательная функция для хэширования пароля
