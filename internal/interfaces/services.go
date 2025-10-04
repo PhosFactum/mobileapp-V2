@@ -1,10 +1,16 @@
 package interfaces
 
-import "time"
+import (
+	"context"
+	"time"
+
+	"gorm.io/gorm"
+)
 
 type Service interface {
 	ParamsParserService
 	FilterBuilderService
+	TxManager
 }
 
 // ParamsParserService Сервис преобразования типов
@@ -23,4 +29,11 @@ type ParamsParserService interface {
 type FilterBuilderService interface {
 	ParseFilterString(filterStr string, modelFields map[string]string) (string, []interface{}, error)
 	ParseOrderString(orderStr string, modelFields map[string]string) (string, error)
+}
+
+type TxManager interface {
+	Begin(ctx context.Context) (context.Context, error)
+	Commit(ctx context.Context) error
+	Rollback(ctx context.Context) error
+	GetTransaction(ctx context.Context) *gorm.DB
 }

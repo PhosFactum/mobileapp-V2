@@ -47,7 +47,7 @@ type DoctorUsecase interface {
 }
 
 type PatientUsecase interface {
-	CreatePatient(patientData *models.CreatePatientData, group_id uint) (*entities.Patient, *errors.AppError)
+	CreatePatient(ctx context.Context, req *models.CreatePatientRequest, groupID uint) (*entities.Patient, *errors.AppError)
 	GetPatientsByGroup(groupID uint) ([]models.PatientResponse, *errors.AppError)
 }
 

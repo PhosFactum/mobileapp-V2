@@ -8,10 +8,10 @@ type AnalysisOrderResponse struct {
 }
 
 type AnalysisOrderItemResponse struct {
-	ID          uint              `json:"id"`
-	AnalysisID  uint              `json:"analysis_id"`
-	Analysis    *AnalysisResponse `json:"analysis"`
-	IsCompleted bool              `json:"is_completed"`
+	ID          uint             `json:"id"`
+	AnalysisID  uint             `json:"analysis_id"`
+	Analysis    AnalysisResponse `json:"analysis"`
+	IsCompleted bool             `json:"is_completed"`
 }
 
 type AnalysisResponse struct {

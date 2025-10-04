@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/AlexanderMorozov1919/mobileapp/internal/domain/entities"
-	"github.com/AlexanderMorozov1919/mobileapp/internal/domain/models"
+	"github.com/AlexanderMorozov1919/mobileapp/pkg/errors"
 	"gorm.io/gorm"
 )
 
@@ -12,8 +12,6 @@ type Repository interface {
 	AuthRepository
 	DoctorRepository
 	PatientRepository
-	ContactInfoRepository
-	PersonalInfoRepository
 	TxRepository
 	ConsentSignatureRepository
 	OrganizationRepository
@@ -70,17 +68,22 @@ type PersonalInfoRepository interface {
 // updated to match the new structure
 type ReceptionRepository interface {
 	GetPatientReceptionsByPatientID(patientID uint) ([]entities.Reception, error)
-	// 	CreateReceptionHospital(reception entities.Reception) error
-	// 	UpdateReception(id uint, updateMap map[string]interface{}) (uint, error)
-	// 	DeleteReception(id uint) error
-	// 	GetReceptionByID(id uint) (entities.Reception, error)
-	// 	GetReceptionByPatientID(patientID uint) ([]entities.Reception, error)
 }
 
 // updated to match the new structured
 type PatientRepository interface {
-	CreatePatient(patientData *models.CreatePatientData, group_id uint) (*entities.Patient, error)
-	GetPatientsByGroup(group_id uint) ([]entities.Patient, error)
+	// Работа с пациентом
+	GetPatientsByGroup(group_id uint) ([]entities.Patient, *errors.AppError)
+	CreateContactInfo(ctx context.Context, contactInfo *entities.ContactInfo) error
+	CreatePersonalInfo(ctx context.Context, personalInfo *entities.PersonalInfo) error
+	CreateAnalysisOrder(ctx context.Context, order *entities.AnalysisOrder) error
+	UpdateAnalysisOrder(ctx context.Context, order *entities.AnalysisOrder) error
+	CreatePatient(ctx context.Context, patient *entities.Patient) error
+	CacheSpecializations(ctx context.Context, patient *entities.Patient, specializations []entities.Specialization) error
+	CreateReceptions(ctx context.Context, receptions []entities.Reception) error
+	CreatePatientStatistics(ctx context.Context, stats *entities.PatientStatistics) error
+	GetReceptionTemplatesByHarmPointID(ctx context.Context, harmPointID uint) ([]entities.ReceptionTemplate, error)
+	PreloadPatientWithSpecializations(ctx context.Context, patientID uint) (*entities.Patient, error)
 }
 
 // updated to match the new structure
