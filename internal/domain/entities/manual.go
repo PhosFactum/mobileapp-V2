@@ -17,6 +17,8 @@ const (
 	RefTypePatientExaminationType   ReferenceType = "patient_examination_type"
 	RefTypePatientExaminationView   ReferenceType = "patient_examination_view"
 	RefTypePersonalDocumentType     ReferenceType = "personal_document_type"
+	RefTypeMandatoryReception       ReferenceType = "mandatory_reception"
+	RefTypeMandatoryAnalysis        ReferenceType = "mandatory_analysis"
 )
 
 type Manual struct {

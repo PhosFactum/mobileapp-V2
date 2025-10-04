@@ -242,6 +242,14 @@ func seedReferenceEntries(db *gorm.DB) error {
 		{Type: entities.RefTypeVaccineBodyPart, Value: "Левая рука"},
 		{Type: entities.RefTypeVaccineMethod, Value: "Внутримышечно"},
 		{Type: entities.RefTypeVaccinePlace, Value: "Поликлиника №1"},
+
+		// Обязательные заключений
+		{Type: entities.RefTypeMandatoryReception, Value: "THERAPY_ANAMNESIS_V1"},
+		{Type: entities.RefTypeMandatoryReception, Value: "NEURO_EXAM_V1"},
+
+		// Обязательные анализы
+		{Type: entities.RefTypeMandatoryAnalysis, Value: "14-1231"},
+		{Type: entities.RefTypeMandatoryAnalysis, Value: "15-4214"},
 	}
 
 	now := time.Now()

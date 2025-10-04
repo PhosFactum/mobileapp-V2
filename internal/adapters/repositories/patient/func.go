@@ -141,3 +141,56 @@ func (r *PatientRepositoryImpl) PreloadPatientWithSpecializations(ctx context.Co
 	}
 	return &patient, nil
 }
+
+func (r *PatientRepositoryImpl) CreateAnalysisItems(ctx context.Context, items []entities.AnalysisOrderItem) error {
+	op := "repo.Patient.CreateAnalysisItems"
+	if err := r.getDB(ctx).WithContext(ctx).Create(&items).Error; err != nil {
+		return errors.NewDBError(op, err)
+	}
+	return nil
+}
+
+func (r *PatientRepositoryImpl) GetMandatoryReceptionTemplateCodes(ctx context.Context) ([]string, error) {
+	var codes []string
+	if err := r.db.
+		Model(&entities.Manual{}).
+		Where("type = ?", entities.RefTypeMandatoryReception).
+		Pluck("value", &codes).Error; err != nil {
+		return nil, errors.NewDBError("repo.GetMandatoryReceptionTemplateCodes", err)
+	}
+	return codes, nil
+}
+
+func (r *PatientRepositoryImpl) GetMandatoryAnalysisCodes(ctx context.Context) ([]string, error) {
+	var codes []string
+	if err := r.db.
+		Model(&entities.Manual{}).
+		Where("type = ?", entities.RefTypeMandatoryAnalysis).
+		Pluck("value", &codes).Error; err != nil {
+		return nil, errors.NewDBError("repo.GetMandatoryAnalysisCodes", err)
+	}
+	return codes, nil
+}
+
+// PatientRepositoryImpl
+func (r *PatientRepositoryImpl) GetReceptionTemplatesByCodes(ctx context.Context, codes []string) ([]entities.ReceptionTemplate, error) {
+	if len(codes) == 0 {
+		return []entities.ReceptionTemplate{}, nil
+	}
+	var templates []entities.ReceptionTemplate
+	if err := r.getDB(ctx).WithContext(ctx).Where("code IN ?", codes).Find(&templates).Error; err != nil {
+		return nil, errors.NewDBError("repo.GetReceptionTemplatesByCodes", err)
+	}
+	return templates, nil
+}
+
+func (r *PatientRepositoryImpl) GetAnalysesByCodes(ctx context.Context, codes []string) ([]entities.Analysis, error) {
+	if len(codes) == 0 {
+		return []entities.Analysis{}, nil
+	}
+	var analyses []entities.Analysis
+	if err := r.getDB(ctx).WithContext(ctx).Where("code IN ?", codes).Find(&analyses).Error; err != nil {
+		return nil, errors.NewDBError("repo.GetAnalysesByCodes", err)
+	}
+	return analyses, nil
+}
