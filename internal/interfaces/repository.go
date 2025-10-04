@@ -72,28 +72,18 @@ type ReceptionRepository interface {
 
 // updated to match the new structured
 type PatientRepository interface {
-
-	// Работа с зависимыми сущностями
-	CreateContactInfo(tx *gorm.DB, contactInfo *entities.ContactInfo) *errors.AppError
-	CreatePersonalInfo(tx *gorm.DB, personalInfo *entities.PersonalInfo) *errors.AppError
-	CreatePatientStatistics(tx *gorm.DB, stats *entities.PatientStatistics) *errors.AppError
-
 	// Работа с пациентом
 	GetPatientsByGroup(group_id uint) ([]entities.Patient, *errors.AppError)
-	CreatePatient(tx *gorm.DB, patient *entities.Patient) *errors.AppError
-	PreloadPatientWithSpecializations(tx *gorm.DB, patientID uint) (*entities.Patient, *errors.AppError)
-
-	CreateAnalysisOrder(tx *gorm.DB, order *entities.AnalysisOrder) *errors.AppError
-	UpdateAnalysisOrder(tx *gorm.DB, order *entities.AnalysisOrder) *errors.AppError
-
-	// Работа со связями
-	CacheSpecializations(tx *gorm.DB, patient *entities.Patient, specializations []entities.Specialization) *errors.AppError
-
-	// Работа с приёмами
-	CreateReceptions(tx *gorm.DB, receptions []entities.Reception) *errors.AppError
-
-	// Получение шаблонов по вредному фактору
-	GetReceptionTemplatesByHarmPointID(tx *gorm.DB, harmPointID uint) ([]entities.ReceptionTemplate, *errors.AppError)
+	CreateContactInfo(ctx context.Context, contactInfo *entities.ContactInfo) error
+	CreatePersonalInfo(ctx context.Context, personalInfo *entities.PersonalInfo) error
+	CreateAnalysisOrder(ctx context.Context, order *entities.AnalysisOrder) error
+	UpdateAnalysisOrder(ctx context.Context, order *entities.AnalysisOrder) error
+	CreatePatient(ctx context.Context, patient *entities.Patient) error
+	CacheSpecializations(ctx context.Context, patient *entities.Patient, specializations []entities.Specialization) error
+	CreateReceptions(ctx context.Context, receptions []entities.Reception) error
+	CreatePatientStatistics(ctx context.Context, stats *entities.PatientStatistics) error
+	GetReceptionTemplatesByHarmPointID(ctx context.Context, harmPointID uint) ([]entities.ReceptionTemplate, error)
+	PreloadPatientWithSpecializations(ctx context.Context, patientID uint) (*entities.Patient, error)
 }
 
 // updated to match the new structure

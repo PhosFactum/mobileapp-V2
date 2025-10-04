@@ -76,8 +76,9 @@ func (h *Handler) CreatePatient(c *gin.Context) {
 		return
 	}
 
-	// 4. Вызываем юзкейс
-	patient, appErr := h.usecase.CreatePatient(&request, groupID)
+	// 4. Вызываем юзкейс с контекстом из Gin
+	ctx := c.Request.Context() // ← БЕРИ КОНТЕКСТ ОТСЮДА
+	patient, appErr := h.usecase.CreatePatient(ctx, &request, groupID)
 	if appErr != nil {
 		h.ErrorResponse(c, appErr.Err, appErr.Code, appErr.Message, appErr.IsUserFacing)
 		return

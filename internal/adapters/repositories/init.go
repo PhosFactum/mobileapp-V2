@@ -5,9 +5,7 @@ package repository
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"math/rand"
-	"os"
 	"time"
 
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/auth"
@@ -19,13 +17,10 @@ import (
 	patientgroup "github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/patient_group"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/reception"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/tx"
-	"github.com/AlexanderMorozov1919/mobileapp/internal/config"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/domain/entities"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/interfaces"
 	"golang.org/x/crypto/bcrypt"
-	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
-	"gorm.io/gorm/logger"
 )
 
 type Repository struct {
@@ -40,33 +35,7 @@ type Repository struct {
 	interfaces.ManualRepository
 }
 
-func NewRepository(cfg *config.Config) (interfaces.Repository, error) {
-	//logger := logging.NewModuleLogger("ADAPTER", "POSTGRES", parentLogger)
-
-	dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
-		cfg.Database.Host,
-		cfg.Database.Username,
-		cfg.Database.Password,
-		cfg.Database.DBName,
-		cfg.Database.Port,
-	)
-
-	newLogger := logger.New(
-		log.New(os.Stdout, "\r\n", log.LstdFlags), // Вывод в stdout
-		logger.Config{
-			SlowThreshold:             200 * time.Millisecond, // Порог для медленных запросов
-			LogLevel:                  logger.Info,            // Уровень логирования (Info - все запросы)
-			IgnoreRecordNotFoundError: true,                   // Игнорировать ошибки "запись не найдена"
-			Colorful:                  true,                   // Цветной вывод
-		},
-	)
-
-	// Подключение к базе данных
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{Logger: newLogger})
-	if err != nil {
-		return nil, fmt.Errorf("ошибка подключения к базе данных: %w", err)
-	}
-
+func NewRepository(db *gorm.DB) (interfaces.Repository, error) {
 	// Выполнение автомиграций
 	if err := autoMigrate(db); err != nil {
 		return nil, fmt.Errorf("ошибка выполнения автомиграций: %w", err)
@@ -90,6 +59,7 @@ func NewRepository(cfg *config.Config) (interfaces.Repository, error) {
 func autoMigrate(db *gorm.DB) error {
 	tablesToDelete := []string{
 		// Зависимые от Patient
+		"harm_point_reception_templates",
 		"reception_templates",
 		"receptions",
 		"analysis_order_items",
@@ -122,7 +92,7 @@ func autoMigrate(db *gorm.DB) error {
 
 		// Независимые
 		"analyses",
-		"reference_entries", // ✅ ЕДИНСТВЕННЫЙ справочник
+		"manuals",
 	}
 
 	for _, table := range tablesToDelete {

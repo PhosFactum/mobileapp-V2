@@ -1,6 +1,7 @@
 package usecases
 
 import (
+	"context"
 	"fmt"
 	"time"
 
@@ -8,37 +9,36 @@ import (
 	"github.com/AlexanderMorozov1919/mobileapp/internal/domain/models"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/interfaces"
 	"github.com/AlexanderMorozov1919/mobileapp/pkg/errors"
-	"gorm.io/gorm"
 )
 
 type PatientUsecase struct {
-	repo          interfaces.PatientRepository
-	manualRepo    interfaces.ManualRepository
-	FilterBuilder interfaces.FilterBuilderService
-	db            *gorm.DB
+	repo       interfaces.PatientRepository
+	manualRepo interfaces.ManualRepository
+	txManager  interfaces.TxManager
 }
 
-func NewPatientUsecase(repo interfaces.PatientRepository, manualRepo interfaces.ManualRepository, s interfaces.Service, db *gorm.DB) interfaces.PatientUsecase {
+func NewPatientUsecase(repo interfaces.PatientRepository, manualRepo interfaces.ManualRepository, txManager interfaces.TxManager) interfaces.PatientUsecase {
 	return &PatientUsecase{
-		repo:          repo,
-		manualRepo:    manualRepo,
-		FilterBuilder: s,
-		db:            db}
+		repo:       repo,
+		manualRepo: manualRepo,
+		txManager:  txManager,
+	}
 }
 
 // CreatePatient создаёт нового пациента со всеми связанными сущностями
-func (u *PatientUsecase) CreatePatient(req *models.CreatePatientRequest, groupID uint) (*entities.Patient, *errors.AppError) {
+func (u *PatientUsecase) CreatePatient(ctx context.Context, req *models.CreatePatientRequest, groupID uint) (*entities.Patient, *errors.AppError) {
 	op := "usecase.Patient.CreatePatient"
 
-	// 🔁 Начинаем транзакцию
-	tx := u.db.Begin()
-	if tx.Error != nil {
-		return nil, errors.NewDBError(op, tx.Error)
+	// Начинаем транзакцию
+	ctx, err := u.txManager.Begin(ctx)
+	if err != nil {
+		return nil, errors.NewDBError(op, err)
 	}
+
+	// Отложенный откат/коммит
 	defer func() {
-		if r := recover(); r != nil {
-			tx.Rollback()
-			panic(r)
+		if err != nil {
+			u.txManager.Rollback(ctx)
 		}
 	}()
 
@@ -50,9 +50,8 @@ func (u *PatientUsecase) CreatePatient(req *models.CreatePatientRequest, groupID
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
-	if err := u.repo.CreateContactInfo(tx, contactInfo); err != nil {
-		tx.Rollback()
-		return nil, err // репозиторий уже обернул в NewDBError
+	if err = u.repo.CreateContactInfo(ctx, contactInfo); err != nil {
+		return nil, errors.NewDBError(op, err)
 	}
 
 	// ✅ 2. Создаём PersonalInfo
@@ -65,9 +64,8 @@ func (u *PatientUsecase) CreatePatient(req *models.CreatePatientRequest, groupID
 		CreatedAt:      time.Now(),
 		UpdatedAt:      time.Now(),
 	}
-	if err := u.repo.CreatePersonalInfo(tx, personalInfo); err != nil {
-		tx.Rollback()
-		return nil, err
+	if err = u.repo.CreatePersonalInfo(ctx, personalInfo); err != nil {
+		return nil, errors.NewDBError(op, err)
 	}
 
 	// ✅ 3. Создаём AnalysisOrder (с временным номером)
@@ -76,23 +74,20 @@ func (u *PatientUsecase) CreatePatient(req *models.CreatePatientRequest, groupID
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
 	}
-	if err := u.repo.CreateAnalysisOrder(tx, analysisOrder); err != nil {
-		tx.Rollback()
-		return nil, err
+	if err = u.repo.CreateAnalysisOrder(ctx, analysisOrder); err != nil {
+		return nil, errors.NewDBError(op, err)
 	}
 
 	// Обновляем номер на основе ID
 	analysisOrder.OrderNumber = fmt.Sprintf("ORD-%06d", analysisOrder.ID)
-	if err := u.repo.UpdateAnalysisOrder(tx, analysisOrder); err != nil {
-		tx.Rollback()
-		return nil, err
+	if err = u.repo.UpdateAnalysisOrder(ctx, analysisOrder); err != nil {
+		return nil, errors.NewDBError(op, err)
 	}
 
 	// ✅ 4. Получаем шаблоны заключений по HarmPointID
-	templates, err := u.repo.GetReceptionTemplatesByHarmPointID(tx, req.HarmPointID)
+	templates, err := u.repo.GetReceptionTemplatesByHarmPointID(ctx, req.HarmPointID)
 	if err != nil {
-		tx.Rollback()
-		return nil, err
+		return nil, errors.NewDBError(op, err)
 	}
 
 	// ✅ 5. Создаём пациента
@@ -112,35 +107,28 @@ func (u *PatientUsecase) CreatePatient(req *models.CreatePatientRequest, groupID
 		CreatedAt:         time.Now(),
 		UpdatedAt:         time.Now(),
 	}
-	if err := u.repo.CreatePatient(tx, patient); err != nil {
-		tx.Rollback()
-		return nil, err
+	if err = u.repo.CreatePatient(ctx, patient); err != nil {
+		return nil, errors.NewDBError(op, err)
 	}
 
 	// Обновляем AnalysisOrder.PatientID
 	analysisOrder.PatientID = patient.ID
-	if err := u.repo.UpdateAnalysisOrder(tx, analysisOrder); err != nil {
-		tx.Rollback()
-		return nil, err
+	if err = u.repo.UpdateAnalysisOrder(ctx, analysisOrder); err != nil {
+		return nil, errors.NewDBError(op, err)
 	}
 
-	// ✅ 6. Кэшируем специализации (если всё ещё нужно для UI/отчётов)
-	// Получаем уникальные специализации из шаблонов
+	// ✅ 6. Кэшируем специализации
 	specializationMap := make(map[uint]entities.Specialization)
 	for _, tmpl := range templates {
-		specializationMap[tmpl.SpecializationID] = entities.Specialization{
-			ID: tmpl.SpecializationID,
-			// Title можно не заполнять — GORM сам подгрузит при Association
-		}
+		specializationMap[tmpl.SpecializationID] = entities.Specialization{ID: tmpl.SpecializationID}
 	}
 	var specializations []entities.Specialization
 	for _, s := range specializationMap {
 		specializations = append(specializations, s)
 	}
 	if len(specializations) > 0 {
-		if err := u.repo.CacheSpecializations(tx, patient, specializations); err != nil {
-			tx.Rollback()
-			return nil, err
+		if err = u.repo.CacheSpecializations(ctx, patient, specializations); err != nil {
+			return nil, errors.NewDBError(op, err)
 		}
 	}
 
@@ -158,9 +146,8 @@ func (u *PatientUsecase) CreatePatient(req *models.CreatePatientRequest, groupID
 			UpdatedAt:        time.Now(),
 		})
 	}
-	if err := u.repo.CreateReceptions(tx, receptions); err != nil {
-		tx.Rollback()
-		return nil, err
+	if err = u.repo.CreateReceptions(ctx, receptions); err != nil {
+		return nil, errors.NewDBError(op, err)
 	}
 
 	// ✅ 8. Создаём статистику
@@ -173,25 +160,47 @@ func (u *PatientUsecase) CreatePatient(req *models.CreatePatientRequest, groupID
 		CreatedAt:              time.Now(),
 		UpdatedAt:              time.Now(),
 	}
-	if err := u.repo.CreatePatientStatistics(tx, statistics); err != nil {
-		tx.Rollback()
-		return nil, err
+	if err = u.repo.CreatePatientStatistics(ctx, statistics); err != nil {
+		return nil, errors.NewDBError(op, err)
 	}
 
 	// ✅ 9. Предзагружаем пациента со специализациями для возврата
-	createdPatient, err := u.repo.PreloadPatientWithSpecializations(tx, patient.ID)
+	createdPatient, err := u.repo.PreloadPatientWithSpecializations(ctx, patient.ID)
 	if err != nil {
-		tx.Rollback()
-		return nil, err
+		return nil, errors.NewDBError(op, err)
 	}
 
-	// ✅ 10. Коммитим транзакцию
-	if err := tx.Commit().Error; err != nil {
+	// Коммитим транзакцию
+	if err = u.txManager.Commit(ctx); err != nil {
 		return nil, errors.NewDBError(op, err)
 	}
 
 	return createdPatient, nil
 }
+
+// // GetPatientsByGroup — без транзакции
+// func (u *PatientUsecase) GetPatientsByGroup(ctx context.Context, groupID uint) ([]models.PatientResponse, *errors.AppError) {
+// 	patients, err := u.repo.GetPatientsByGroup(ctx, groupID)
+// 	if err != nil {
+// 		return nil, errors.NewAppError(
+// 			errors.InternalServerErrorCode,
+// 			"failed to get patients",
+// 			err,
+// 			true,
+// 		)
+// 	}
+
+// 	var response []models.PatientResponse
+// 	for _, p := range patients {
+// 		resp, err := u.buildPatientResponse(p)
+// 		if err != nil {
+// 			return nil, err
+// 		}
+// 		response = append(response, resp)
+// 	}
+
+// 	return response, nil
+// }
 
 // GetPatientsByGroup — основной метод
 func (u *PatientUsecase) GetPatientsByGroup(groupID uint) ([]models.PatientResponse, *errors.AppError) {
@@ -270,15 +279,6 @@ func (u *PatientUsecase) mapHarmPoint(point *entities.HarmPoint) models.HarmPoin
 }
 
 func (u *PatientUsecase) mapExaminationType(id uint) (string, *errors.AppError) {
-	if id == 0 {
-		return "", errors.NewAppError(
-			errors.InternalServerErrorCode,
-			"NotFound ExamType",
-			errors.ErrEmptyData,
-			true,
-		)
-	}
-
 	val, err := u.manualRepo.GetManualValueByTypeAndID(id, entities.RefTypePatientExaminationType)
 	if err != nil {
 		return "", errors.NewAppError(
@@ -293,15 +293,6 @@ func (u *PatientUsecase) mapExaminationType(id uint) (string, *errors.AppError) 
 }
 
 func (u *PatientUsecase) mapExaminationView(id uint) (string, *errors.AppError) {
-	if id == 0 {
-		return "", errors.NewAppError(
-			errors.InternalServerErrorCode,
-			"NotFound ExamView",
-			errors.ErrEmptyData,
-			true,
-		)
-	}
-
 	val, err := u.manualRepo.GetManualValueByTypeAndID(id, entities.RefTypePatientExaminationView)
 	if err != nil {
 		return "", errors.NewAppError(
@@ -316,15 +307,6 @@ func (u *PatientUsecase) mapExaminationView(id uint) (string, *errors.AppError) 
 }
 
 func (u *PatientUsecase) mapVaccineTitle(id uint) (string, *errors.AppError) {
-	if id == 0 {
-		return "", errors.NewAppError(
-			errors.InternalServerErrorCode,
-			"NotFound DocType",
-			errors.ErrEmptyData,
-			true,
-		)
-	}
-
 	val, err := u.manualRepo.GetManualValueByTypeAndID(id, entities.RefTypeVaccineTitle)
 	if err != nil {
 		return "", errors.NewAppError(
@@ -471,15 +453,6 @@ func (u *PatientUsecase) mapReceptions(receptions []entities.Reception) []models
 }
 
 func (u *PatientUsecase) mapDocumentType(id uint) (string, *errors.AppError) {
-	if id == 0 {
-		return "", errors.NewAppError(
-			errors.InternalServerErrorCode,
-			"NotFound DocType",
-			errors.ErrEmptyData,
-			true,
-		)
-	}
-
 	val, err := u.manualRepo.GetManualValueByTypeAndID(id, entities.RefTypePersonalDocumentType)
 	if err != nil {
 		return "", errors.NewAppError(
@@ -503,7 +476,7 @@ func (u *PatientUsecase) mapPersonalInfo(pi *entities.PersonalInfo) (models.Pers
 			true,
 		)
 	}
-	docType, err := u.mapDocumentType(pi.ID)
+	docType, err := u.mapDocumentType(pi.DocumentTypeID)
 	if err != nil {
 		return emty, err
 	}
