@@ -85,10 +85,24 @@ func (u *PatientUsecase) CreatePatient(ctx context.Context, req *models.CreatePa
 	}
 
 	// ✅ 4. Получаем шаблоны заключений по HarmPointID
-	templates, err := u.repo.GetReceptionTemplatesByHarmPointID(ctx, req.HarmPointID)
+	templates1, err := u.repo.GetReceptionTemplatesByHarmPointID(ctx, req.HarmPointID)
 	if err != nil {
 		return nil, errors.NewDBError(op, err)
 	}
+
+	// ✅ Получаем коды обязательных элементов
+	templateCodes, err := u.repo.GetMandatoryReceptionTemplateCodes(ctx)
+	if err != nil {
+		return nil, errors.NewDBError(op, err)
+	}
+
+	// ✅ Получаем сами шаблоны и анализы (в той же транзакции!)
+	templates2, err := u.repo.GetReceptionTemplatesByCodes(ctx, templateCodes)
+	if err != nil {
+		return nil, errors.NewDBError(op, err)
+	}
+
+	templates := append(templates1, templates2...)
 
 	// ✅ 5. Создаём пациента
 	patient := &entities.Patient{
@@ -109,6 +123,35 @@ func (u *PatientUsecase) CreatePatient(ctx context.Context, req *models.CreatePa
 	}
 	if err = u.repo.CreatePatient(ctx, patient); err != nil {
 		return nil, errors.NewDBError(op, err)
+	}
+
+	// В CreatePatient юзкейса
+
+	analysisCodes, err := u.repo.GetMandatoryAnalysisCodes(ctx)
+	if err != nil {
+		return nil, errors.NewDBError(op, err)
+	}
+
+	analyses, err := u.repo.GetAnalysesByCodes(ctx, analysisCodes)
+	if err != nil {
+		return nil, errors.NewDBError(op, err)
+	}
+
+	// ✅ Создаём элементы анализа
+	var analysisItems []entities.AnalysisOrderItem
+	for _, analysis := range analyses {
+		analysisItems = append(analysisItems, entities.AnalysisOrderItem{
+			OrderID:     analysisOrder.ID,
+			AnalysisID:  analysis.ID,
+			IsCompleted: false,
+			CreatedAt:   time.Now(),
+			UpdatedAt:   time.Now(),
+		})
+	}
+	if len(analysisItems) > 0 {
+		if err = u.repo.CreateAnalysisItems(ctx, analysisItems); err != nil {
+			return nil, errors.NewDBError(op, err)
+		}
 	}
 
 	// Обновляем AnalysisOrder.PatientID
@@ -155,7 +198,7 @@ func (u *PatientUsecase) CreatePatient(ctx context.Context, req *models.CreatePa
 		PatientID:              patient.ID,
 		TotalReceptions:        int64(len(templates)),
 		CompletedReceptions:    0,
-		TotalAnalysisOrders:    0,
+		TotalAnalysisOrders:    int64(len(analyses)),
 		CompletedAnalysisItems: 0,
 		CreatedAt:              time.Now(),
 		UpdatedAt:              time.Now(),

@@ -19,6 +19,7 @@ type UseCases struct {
 	interfaces.PatientGroupUseCase
 	interfaces.ReceptionUsecase
 	interfaces.ConsentUsecase
+	interfaces.ManualUseCase
 }
 
 func NewUsecases(r interfaces.Repository, s interfaces.Service, conf *config.Config) interfaces.Usecases {
@@ -31,6 +32,7 @@ func NewUsecases(r interfaces.Repository, s interfaces.Service, conf *config.Con
 		NewPatientGroupUsecase(r),
 		NewReceptionUsecase(r, s),
 		NewConsentUsecase(r),
+		NewManualUseCase(r),
 	}
 
 }

@@ -28,6 +28,7 @@ type PatientGroupRepository interface {
 
 type ManualRepository interface {
 	GetManualValueByTypeAndID(id uint, ref_type entities.ReferenceType) (string, error)
+	GetAllManuals(ctx context.Context) ([]entities.Manual, error)
 }
 
 type OrganizationRepository interface {
@@ -84,6 +85,12 @@ type PatientRepository interface {
 	CreatePatientStatistics(ctx context.Context, stats *entities.PatientStatistics) error
 	GetReceptionTemplatesByHarmPointID(ctx context.Context, harmPointID uint) ([]entities.ReceptionTemplate, error)
 	PreloadPatientWithSpecializations(ctx context.Context, patientID uint) (*entities.Patient, error)
+	GetMandatoryReceptionTemplateCodes(ctx context.Context) ([]string, error)
+	GetMandatoryAnalysisCodes(ctx context.Context) ([]string, error)
+	GetReceptionTemplatesByCodes(ctx context.Context, codes []string) ([]entities.ReceptionTemplate, error)
+	GetAnalysesByCodes(ctx context.Context, codes []string) ([]entities.Analysis, error)
+
+	CreateAnalysisItems(ctx context.Context, items []entities.AnalysisOrderItem) error
 }
 
 // updated to match the new structure

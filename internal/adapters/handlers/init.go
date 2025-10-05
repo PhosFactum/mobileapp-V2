@@ -66,11 +66,6 @@ func ProvideRouter(h *Handler, cfg *config.Config, swagCfg *swagger.Config) http
 	protected := baseRouter.Group("/")
 	protected.Use(jwtMiddleware.JWTAuth(cfg.JWTSecret))
 
-	// Доктора
-	doctorGroup := protected.Group("/doctors")
-	doctorGroup.GET("/:doc_id", h.GetDoctorByID)
-	doctorGroup.PUT("/:doc_id", h.UpdateDoctor)
-
 	// // Приёмы больницы
 	// hospitalGroup := protected.Group("/hospital")
 	// hospitalGroup.GET("/receptions/patients/:pat_id", h.GetAllReceptionsByPatientID) // Все приемы пациента
@@ -101,8 +96,14 @@ func ProvideRouter(h *Handler, cfg *config.Config, swagCfg *swagger.Config) http
 	patientGroup.GET("/:group_id", h.GetPatientsByGroup)
 	patientGroup.POST("/:group_id/create", h.CreatePatient)
 
-	// Пациенты
-	// receptionGroup := baseRouter.Group("/reception")
+	// Справочники
+	manualGroup := baseRouter.Group("/manuals")
+	manualGroup.GET("/getAll", h.GetAllManuals)
+
+	// Доктора
+	doctorGroup := baseRouter.Group("/doctors")
+	doctorGroup.GET("/:doc_id", h.GetDoctorByID)
+	doctorGroup.PUT("/:doc_id", h.UpdateDoctor)
 
 	consentGroup := protected.Group("/consent")
 	consentGroup.GET("/personal-data", h.GetPersonalDataConsent)

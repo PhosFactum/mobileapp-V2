@@ -1,7 +1,6 @@
 package usecases
 
 import (
-	"log"
 	"time"
 
 	"github.com/AlexanderMorozov1919/mobileapp/internal/domain/entities"
@@ -48,15 +47,34 @@ func NewDoctorUsecase(repo interfaces.DoctorRepository) interfaces.DoctorUsecase
 // 	return createdDoctor, nil
 // }
 
-func (u *DoctorUsecase) GetDoctorByID(id uint) (entities.Doctor, *errors.AppError) {
-	log.Println("in usecase before get doctor repo")
-	doctor, err := u.repo.GetDoctorByID(id)
-	log.Println("in usecase after get doctor repo")
+func (u *DoctorUsecase) GetDoctorByID(id uint) (*models.DoctorResponse, *errors.AppError) {
+	// 1. Получаем доктора из репозитория (с предзагрузкой специализаций)
+	doc, err := u.repo.GetDoctorByID(id)
 	if err != nil {
-		return entities.Doctor{}, errors.NewAppError(errors.InternalServerErrorCode, "failed to get doctor", err, true)
+		return nil, errors.NewAppError(
+			errors.InternalServerErrorCode,
+			"failed to get doctor",
+			err,
+			true,
+		)
 	}
-	log.Println("return doctor in repo")
-	return doctor, nil
+
+	// 2. Маппим специализации
+	specializations := make([]models.SpecializationResponse, len(doc.Specializations))
+	for i, spec := range doc.Specializations {
+		specializations[i] = models.SpecializationResponse{
+			ID:    spec.ID,
+			Title: spec.Title,
+		}
+	}
+
+	// 3. Создаём и возвращаем модель ответа
+	response := &models.DoctorResponse{
+		FullName:        doc.FullName,
+		Specializations: specializations,
+	}
+
+	return response, nil
 }
 
 func (u *DoctorUsecase) UpdateDoctor(input *models.UpdateDoctorRequest) (entities.Doctor, *errors.AppError) {
