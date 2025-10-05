@@ -15,6 +15,11 @@ type Usecases interface {
 	AuthUsecase
 	OrganizationUseCase
 	PatientGroupUseCase
+	ManualUseCase
+}
+
+type ManualUseCase interface {
+	GetAllManuals(ctx context.Context) ([]models.ManualResponse, *errors.AppError)
 }
 
 type PatientGroupUseCase interface {
@@ -41,7 +46,7 @@ type ContactInfoUsecase interface {
 
 type DoctorUsecase interface {
 	// CreateDoctor(doctor *models.CreateDoctorRequest) (entities.Doctor, *errors.AppError)
-	GetDoctorByID(doctorId uint) (entities.Doctor, *errors.AppError)
+	GetDoctorByID(id uint) (*models.DoctorResponse, *errors.AppError)
 	UpdateDoctor(doctor *models.UpdateDoctorRequest) (entities.Doctor, *errors.AppError)
 	DeleteDoctor(doctorId uint) *errors.AppError
 }

@@ -9,7 +9,7 @@ import (
 func (r *DoctorRepository) GetDoctorByID(id uint) (entities.Doctor, error) {
 	var doctor entities.Doctor
 	if err := r.db.
-		Preload("Specialization").
+		Preload("Specializations").
 		First(&doctor, id).
 		Error; err != nil {
 		return entities.Doctor{}, errors.NewDBError("Error Get Doctor By Id", err)

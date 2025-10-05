@@ -28,6 +28,7 @@ type PatientGroupRepository interface {
 
 type ManualRepository interface {
 	GetManualValueByTypeAndID(id uint, ref_type entities.ReferenceType) (string, error)
+	GetAllManuals(ctx context.Context) ([]entities.Manual, error)
 }
 
 type OrganizationRepository interface {
