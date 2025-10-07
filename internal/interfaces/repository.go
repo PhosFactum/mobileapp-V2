@@ -26,7 +26,7 @@ type PatientGroupRepository interface {
 }
 
 type ManualRepository interface {
-	GetManualValueByTypeAndID(id uint, ref_type entities.ReferenceType) (string, error)
+	GetManualValueByTypeAndID(ctx context.Context, id uint, refType entities.ReferenceType) (string, error)
 	GetManualValuesByType(ctx context.Context, refType entities.ReferenceType) ([]string, error)
 	GetAllManuals(ctx context.Context) ([]entities.Manual, error)
 }
@@ -65,7 +65,7 @@ type AnalysisRepository interface {
 // updated to match the new structured
 type PatientRepository interface {
 	// Работа с пациентом
-	GetPatientsByGroup(group_id uint) ([]entities.Patient, *errors.AppError)
+	GetPatientsByGroup(ctx context.Context, groupID uint) ([]entities.Patient, *errors.AppError)
 	CreateContactInfo(ctx context.Context, contactInfo *entities.ContactInfo) error
 	CreatePersonalInfo(ctx context.Context, personalInfo *entities.PersonalInfo) error
 	CreatePatient(ctx context.Context, patient *entities.Patient) error
@@ -92,6 +92,10 @@ type ConsentSignatureRepository interface {
 }
 
 type VaccineRepository interface {
+	CreateVaccine(ctx context.Context, vaccine *entities.Vaccine) error
+	CreateVaccineRefusal(ctx context.Context, refusal *entities.VaccineRefusal) error
+	CreateVaccineWithdrawal(ctx context.Context, withdrawal *entities.VaccineWithdrawal) error
+	CreateTitr(ctx context.Context, titr *entities.Titr) error
 }
 
 // updated to match the new structure

@@ -1,15 +1,17 @@
 package vaccine
 
 import (
+	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/base"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/interfaces"
 	"gorm.io/gorm"
 )
 
-type VaccineRepository struct {
-	db *gorm.DB
+type VaccineRepositoryImpl struct {
+	*base.BaseRepository // ← ВСТРАИВАЕМ
 }
 
 func NewVaccineRepository(db *gorm.DB) interfaces.VaccineRepository {
-	repo := &VaccineRepository{db: db}
-	return repo
+	return &VaccineRepositoryImpl{
+		BaseRepository: base.NewBaseRepository(db),
+	}
 }
