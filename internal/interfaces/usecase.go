@@ -59,7 +59,7 @@ type PatientUsecase interface {
 type PersonalInfoUsecase interface{}
 
 type AuthUsecase interface {
-	LoginDoctor(ctx context.Context, phone, password string) (uint, string, *errors.AppError)
+	LoginDoctor(ctx context.Context, req models.DoctorLoginRequest) (uint, string, *errors.AppError)
 	LogoutDoctor(ctx context.Context, token string) *errors.AppError
 }
 

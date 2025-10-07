@@ -8,6 +8,14 @@ import (
 	"gorm.io/gorm"
 )
 
+// getDB извлекает транзакцию из контекста или возвращает основное подключение
+func (r *PatientRepositoryImpl) getDB(ctx context.Context) *gorm.DB {
+	if tx, ok := ctx.Value(txContextKey).(*gorm.DB); ok && tx != nil {
+		return tx
+	}
+	return r.db
+}
+
 // GetPatientsByGroup - получение пациентов по группе
 func (r *PatientRepositoryImpl) GetPatientsByGroup(groupID uint) ([]entities.Patient, *errors.AppError) {
 	op := "repo.Patient.GetPatientsByGroup"
@@ -35,14 +43,6 @@ func (r *PatientRepositoryImpl) GetPatientsByGroup(groupID uint) ([]entities.Pat
 	}
 
 	return patients, nil
-}
-
-// getDB извлекает транзакцию из контекста или возвращает основное подключение
-func (r *PatientRepositoryImpl) getDB(ctx context.Context) *gorm.DB {
-	if tx, ok := ctx.Value(txContextKey).(*gorm.DB); ok && tx != nil {
-		return tx
-	}
-	return r.db
 }
 
 // CreateContactInfo создаёт контактную информацию

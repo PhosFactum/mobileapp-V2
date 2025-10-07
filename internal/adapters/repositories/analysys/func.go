@@ -52,3 +52,14 @@ func (r *AnalysisRepositoryImpl) GetAnalysesByCodes(ctx context.Context, codes [
 	}
 	return analyses, nil
 }
+
+func (a *AnalysisRepositoryImpl) GetAnalysesByHarmPointID(ctx context.Context, harmPointID uint) ([]entities.Analysis, error) {
+	op := "repo.Analysis.GetAnalysesByHarmPointID"
+
+	var harmPoint entities.HarmPoint
+	if err := a.getDB(ctx).WithContext(ctx).Preload("Analyses").First(&harmPoint, harmPointID).Error; err != nil {
+		return nil, errors.NewDBError(op, err)
+	}
+
+	return harmPoint.Analyses, nil
+}

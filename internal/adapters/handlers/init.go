@@ -101,9 +101,8 @@ func ProvideRouter(h *Handler, cfg *config.Config, swagCfg *swagger.Config) http
 	manualGroup.GET("/getAll", h.GetAllManuals)
 
 	// Доктора
-	doctorGroup := baseRouter.Group("/doctors")
-	doctorGroup.GET("/:doc_id", h.GetDoctorByID)
-	doctorGroup.PUT("/:doc_id", h.UpdateDoctor)
+	doctorGroup := protected.Group("/doctors")
+	doctorGroup.GET("/current", h.GetDoctorByID)
 
 	consentGroup := protected.Group("/consent")
 	consentGroup.GET("/personal-data", h.GetPersonalDataConsent)

@@ -5,4 +5,5 @@ type HarmPoint struct {
 	Value string `gorm:"not null;" json:"value"`
 
 	ReceptionTemplates []ReceptionTemplate `gorm:"many2many:harm_point_reception_templates;"`
+	Analyses           []Analysis          `gorm:"many2many:harm_point_analyses;"`
 }

@@ -87,26 +87,55 @@ func (u *PatientUsecase) CreatePatient(ctx context.Context, req *models.CreatePa
 	}
 
 	// ✅ 4. Получаем шаблоны заключений по HarmPointID
-	templates1, err := u.receptionRepo.GetReceptionTemplatesByHarmPointID(ctx, req.HarmPointID)
+	templatesFromHarmPoint, err := u.receptionRepo.GetReceptionTemplatesByHarmPointID(ctx, req.HarmPointID)
 	if err != nil {
 		return nil, errors.NewDBError(op, err)
 	}
 
-	// ✅ Получаем коды обязательных элементов
-	templateCodes, err := u.manualRepo.GetManualValuesByType(ctx, entities.RefTypeMandatoryReception)
+	// ✅ Получаем обязательные шаблоны по кодам
+	mandatoryTemplateCodes, err := u.manualRepo.GetManualValuesByType(ctx, entities.RefTypeMandatoryReception)
+	if err != nil {
+		return nil, errors.NewDBError(op, err)
+	}
+	mandatoryTemplates, err := u.receptionRepo.GetReceptionTemplatesByCodes(ctx, mandatoryTemplateCodes)
 	if err != nil {
 		return nil, errors.NewDBError(op, err)
 	}
 
-	// ✅ Получаем сами шаблоны и анализы (в той же транзакции!)
-	templates2, err := u.receptionRepo.GetReceptionTemplatesByCodes(ctx, templateCodes)
+	// Объединяем шаблоны
+	templates := append(templatesFromHarmPoint, mandatoryTemplates...)
+
+	// ✅ 5. Получаем анализы по HarmPointID
+	analysesFromHarmPoint, err := u.analysisRepo.GetAnalysesByHarmPointID(ctx, req.HarmPointID)
 	if err != nil {
 		return nil, errors.NewDBError(op, err)
 	}
 
-	templates := append(templates1, templates2...)
+	// ✅ Получаем обязательные анализы по кодам
+	mandatoryAnalysisCodes, err := u.manualRepo.GetManualValuesByType(ctx, entities.RefTypeMandatoryAnalysis)
+	if err != nil {
+		return nil, errors.NewDBError(op, err)
+	}
+	mandatoryAnalyses, err := u.analysisRepo.GetAnalysesByCodes(ctx, mandatoryAnalysisCodes)
+	if err != nil {
+		return nil, errors.NewDBError(op, err)
+	}
 
-	// ✅ 5. Создаём пациента
+	// ✅ Объединяем анализы, исключая дубликаты по ID
+	analysisMap := make(map[uint]entities.Analysis)
+	for _, a := range analysesFromHarmPoint {
+		analysisMap[a.ID] = a
+	}
+	for _, a := range mandatoryAnalyses {
+		analysisMap[a.ID] = a
+	}
+
+	var allAnalyses []entities.Analysis
+	for _, a := range analysisMap {
+		allAnalyses = append(allAnalyses, a)
+	}
+
+	// ✅ 6. Создаём пациента
 	patient := &entities.Patient{
 		FullName:          req.FullName,
 		BirthDate:         req.BirthDate,
@@ -127,21 +156,9 @@ func (u *PatientUsecase) CreatePatient(ctx context.Context, req *models.CreatePa
 		return nil, errors.NewDBError(op, err)
 	}
 
-	// В CreatePatient юзкейса
-
-	analysisCodes, err := u.manualRepo.GetManualValuesByType(ctx, entities.RefTypeMandatoryAnalysis)
-	if err != nil {
-		return nil, errors.NewDBError(op, err)
-	}
-
-	analyses, err := u.analysisRepo.GetAnalysesByCodes(ctx, analysisCodes)
-	if err != nil {
-		return nil, errors.NewDBError(op, err)
-	}
-
-	// ✅ Создаём элементы анализа
+	// ✅ 7. Создаём элементы анализа
 	var analysisItems []entities.AnalysisOrderItem
-	for _, analysis := range analyses {
+	for _, analysis := range allAnalyses {
 		analysisItems = append(analysisItems, entities.AnalysisOrderItem{
 			OrderID:     analysisOrder.ID,
 			AnalysisID:  analysis.ID,
@@ -156,13 +173,13 @@ func (u *PatientUsecase) CreatePatient(ctx context.Context, req *models.CreatePa
 		}
 	}
 
-	// Обновляем AnalysisOrder.PatientID
+	// ✅ 8. Привязываем заказ к пациенту
 	analysisOrder.PatientID = patient.ID
 	if err = u.analysisRepo.UpdateAnalysisOrder(ctx, analysisOrder); err != nil {
 		return nil, errors.NewDBError(op, err)
 	}
 
-	// ✅ 6. Кэшируем специализации
+	// ✅ 9. Кэшируем специализации
 	specializationMap := make(map[uint]entities.Specialization)
 	for _, tmpl := range templates {
 		specializationMap[tmpl.SpecializationID] = entities.Specialization{ID: tmpl.SpecializationID}
@@ -177,7 +194,7 @@ func (u *PatientUsecase) CreatePatient(ctx context.Context, req *models.CreatePa
 		}
 	}
 
-	// ✅ 7. Создаём пустые приёмы по шаблонам
+	// ✅ 10. Создаём пустые приёмы по шаблонам
 	var receptions []entities.Reception
 	initialData := []byte(`{"values": {}}`)
 	for _, tmpl := range templates {
@@ -195,21 +212,21 @@ func (u *PatientUsecase) CreatePatient(ctx context.Context, req *models.CreatePa
 		return nil, errors.NewDBError(op, err)
 	}
 
-	// ✅ 8. Создаём статистику
+	// ✅ 11. Создаём статистику
 	statistics := &entities.PatientStatistics{
-		PatientID:              patient.ID,
-		TotalReceptions:        int64(len(templates)),
-		CompletedReceptions:    0,
-		TotalAnalysisOrders:    int64(len(analyses)),
-		CompletedAnalysisItems: 0,
-		CreatedAt:              time.Now(),
-		UpdatedAt:              time.Now(),
+		PatientID:               patient.ID,
+		TotalReceptions:         int64(len(templates)),
+		CompletedReceptions:     0,
+		TotalAnalysisOrderItems: int64(len(allAnalyses)),
+		CompletedAnalysisItems:  0,
+		CreatedAt:               time.Now(),
+		UpdatedAt:               time.Now(),
 	}
 	if err = u.repo.CreatePatientStatistics(ctx, statistics); err != nil {
 		return nil, errors.NewDBError(op, err)
 	}
 
-	// ✅ 9. Предзагружаем пациента со специализациями для возврата
+	// ✅ 12. Предзагружаем пациента со специализациями для возврата
 	createdPatient, err := u.repo.PreloadPatientWithSpecializations(ctx, patient.ID)
 	if err != nil {
 		return nil, errors.NewDBError(op, err)
@@ -612,7 +629,7 @@ func (u *PatientUsecase) mapStatistics(stat *entities.PatientStatistics) *models
 		ID:                     stat.ID,
 		TotalReceptions:        stat.TotalReceptions,
 		CompletedReceptions:    stat.CompletedReceptions,
-		TotalAnalysisOrders:    stat.TotalAnalysisOrders,
+		TotalAnalysisOrders:    stat.TotalAnalysisOrderItems,
 		CompletedAnalysisItems: stat.CompletedAnalysisItems,
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/AlexanderMorozov1919/mobileapp/internal/domain/models"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/interfaces"
 	"github.com/AlexanderMorozov1919/mobileapp/pkg/errors"
 	"github.com/golang-jwt/jwt/v4"
@@ -22,15 +23,16 @@ func NewAuthUsecase(repo interfaces.Repository, secretKey string) *AuthUsecase {
 	}
 }
 
-func (u *AuthUsecase) LoginDoctor(ctx context.Context, phone, password string) (uint, string, *errors.AppError) {
+// LoginDoctor аутентифицирует врача по данным из запроса и возвращает ID, JWT-токен или ошибку
+func (u *AuthUsecase) LoginDoctor(ctx context.Context, req models.DoctorLoginRequest) (uint, string, *errors.AppError) {
 	op := "usecase.Auth.LoginDoctor"
 
-	user, err := u.repo.GetByLogin(ctx, phone)
+	user, err := u.repo.GetByLogin(ctx, req.Phone)
 	if err != nil || user == nil || user.ID == 0 {
 		return 0, "", errors.NewUnauthorizedError(op, "invalid credentials")
 	}
 
-	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(password)); err != nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(req.Password)); err != nil {
 		return 0, "", errors.NewUnauthorizedError(op, "invalid credentials")
 	}
 

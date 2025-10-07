@@ -59,6 +59,7 @@ type AnalysisRepository interface {
 	CreateAnalysisOrder(ctx context.Context, order *entities.AnalysisOrder) error
 	GetAnalysesByCodes(ctx context.Context, codes []string) ([]entities.Analysis, error)
 	CreateAnalysisItems(ctx context.Context, items []entities.AnalysisOrderItem) error
+	GetAnalysesByHarmPointID(ctx context.Context, harmPointID uint) ([]entities.Analysis, error)
 }
 
 // updated to match the new structured

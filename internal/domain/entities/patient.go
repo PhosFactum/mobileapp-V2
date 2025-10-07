@@ -78,9 +78,9 @@ type PatientStatistics struct {
 	CreatedAt time.Time `json:"-"`
 	UpdatedAt time.Time `json:"updated_at"`
 
-	PatientID              uint  `gorm:"not null;uniqueIndex" json:"-"`
-	TotalReceptions        int64 `gorm:"not null;default:0" json:"total_receptions"`
-	CompletedReceptions    int64 `gorm:"not null;default:0" json:"completed_receptions"`
-	TotalAnalysisOrders    int64 `gorm:"not null;default:0" json:"total_analysis_orders"`
-	CompletedAnalysisItems int64 `gorm:"not null;default:0" json:"completed_analysis_items"`
+	PatientID               uint  `gorm:"not null;uniqueIndex" json:"-"`
+	TotalReceptions         int64 `gorm:"not null;default:0" json:"total_receptions"`
+	CompletedReceptions     int64 `gorm:"not null;default:0" json:"completed_receptions"`
+	TotalAnalysisOrderItems int64 `gorm:"not null;default:0" json:"total_analysis_orders"`
+	CompletedAnalysisItems  int64 `gorm:"not null;default:0" json:"completed_analysis_items"`
 }

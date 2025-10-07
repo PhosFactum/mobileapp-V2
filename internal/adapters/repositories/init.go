@@ -62,6 +62,7 @@ func NewRepository(db *gorm.DB) (interfaces.Repository, error) {
 func autoMigrate(db *gorm.DB) error {
 	tablesToDelete := []string{
 		// Зависимые от Patient
+		"harm_point_analyses",
 		"harm_point_reception_templates",
 		"reception_templates",
 		"receptions",
@@ -269,13 +270,30 @@ func seedReferenceEntries(db *gorm.DB) error {
 
 func seedAnalyses(db *gorm.DB) error {
 	analyses := []entities.Analysis{
+		// Обязательные (уже есть в RefTypeMandatoryAnalysis)
 		{Code: "14-1231", Title: "Общий анализ крови", Price: 500},
 		{Code: "15-4214", Title: "ЭКГ", Price: 400},
-		{Code: "10-5423", Title: "Флюрография", Price: 800},
-		{Code: "11-9721", Title: "Анализ мочи", Price: 300},
+
+		// Дополнительные (могут быть привязаны к HarmPoint)
+		{Code: "10-5423", Title: "Флюорография", Price: 800},
+		{Code: "11-9721", Title: "Общий анализ мочи", Price: 300},
+		{Code: "20-8810", Title: "Биохимия крови (АЛТ, АСТ)", Price: 600},
+		{Code: "21-3344", Title: "Глюкоза крови", Price: 250},
+		{Code: "22-7766", Title: "Холестерин общий", Price: 300},
+		{Code: "23-1122", Title: "Мазок на флору", Price: 450},
+		{Code: "24-9900", Title: "ПЦР на ВИЧ", Price: 1200},
+		{Code: "25-5566", Title: "УЗИ брюшной полости", Price: 1500},
 	}
+
 	for _, a := range analyses {
-		db.Create(&a)
+		// Проверим, не существует ли уже анализ с таким кодом
+		var count int64
+		db.Model(&entities.Analysis{}).Where("code = ?", a.Code).Count(&count)
+		if count == 0 {
+			if err := db.Create(&a).Error; err != nil {
+				return fmt.Errorf("failed to create analysis %s: %w", a.Code, err)
+			}
+		}
 	}
 	fmt.Println("✅ Seeded analyses")
 	return nil
@@ -336,151 +354,225 @@ func seedSpecializations(db *gorm.DB) error {
 }
 
 func seedHarmPoints(db *gorm.DB) error {
-	var specs []entities.Specialization
-	db.Find(&specs)
+	var templates []entities.ReceptionTemplate
+	var analyses []entities.Analysis
+
+	db.Find(&templates)
+	db.Find(&analyses)
+
+	// Получаем обязательные коды
+	var mandatoryReceptionCodes, mandatoryAnalysisCodes []string
+	db.Model(&entities.Manual{}).
+		Where("type = ?", entities.RefTypeMandatoryReception).
+		Pluck("value", &mandatoryReceptionCodes)
+	db.Model(&entities.Manual{}).
+		Where("type = ?", entities.RefTypeMandatoryAnalysis).
+		Pluck("value", &mandatoryAnalysisCodes)
+
+	mandatoryReceptionSet := make(map[string]struct{})
+	mandatoryAnalysisSet := make(map[string]struct{})
+	for _, c := range mandatoryReceptionCodes {
+		mandatoryReceptionSet[c] = struct{}{}
+	}
+	for _, c := range mandatoryAnalysisCodes {
+		mandatoryAnalysisSet[c] = struct{}{}
+	}
+
+	// Фильтруем: только НЕ обязательные
+	var harmPointTemplates []entities.ReceptionTemplate
+	var harmPointAnalyses []entities.Analysis
+
+	for _, t := range templates {
+		if _, isMandatory := mandatoryReceptionSet[t.Code]; !isMandatory {
+			harmPointTemplates = append(harmPointTemplates, t)
+		}
+	}
+	for _, a := range analyses {
+		if _, isMandatory := mandatoryAnalysisSet[a.Code]; !isMandatory {
+			harmPointAnalyses = append(harmPointAnalyses, a)
+		}
+	}
+
 	hp := []entities.HarmPoint{
 		{Value: "3.1"},
 		{Value: "3.2"},
+		{Value: "3.3"},
 	}
+
 	for i := range hp {
-		db.Create(&hp[i])
-		// Связываем с 1-2 специализациями
-		linked := specs[i%len(specs):]
-		if len(linked) == 0 {
-			linked = specs
+		if err := db.Create(&hp[i]).Error; err != nil {
+			return fmt.Errorf("create harm point: %w", err)
 		}
-		if len(linked) > 2 {
-			linked = linked[:2]
+
+		// 🔗 Привязываем ТОЛЬКО шаблоны и анализы
+		if len(harmPointTemplates) > 0 {
+			start := i % len(harmPointTemplates)
+			end := start + 2
+			if end > len(harmPointTemplates) {
+				end = len(harmPointTemplates)
+			}
+			if err := db.Model(&hp[i]).Association("ReceptionTemplates").Append(harmPointTemplates[start:end]); err != nil {
+				return fmt.Errorf("link reception templates: %w", err)
+			}
 		}
-		db.Model(&hp[i]).Association("Specializations").Append(linked)
+
+		if len(harmPointAnalyses) > 0 {
+			start := i % len(harmPointAnalyses)
+			end := start + 3
+			if end > len(harmPointAnalyses) {
+				end = len(harmPointAnalyses)
+			}
+			if err := db.Model(&hp[i]).Association("Analyses").Append(harmPointAnalyses[start:end]); err != nil {
+				return fmt.Errorf("link analyses: %w", err)
+			}
+		}
 	}
-	fmt.Println("✅ Seeded harm points with specializations")
+
+	fmt.Println("✅ Seeded harm points with templates and analyses (no specializations)")
 	return nil
 }
 
 func seedReceptionTemplatesAndLinks(db *gorm.DB) error {
-	// 1. Загружаем специализации
 	var specializations []entities.Specialization
 	if err := db.Find(&specializations).Error; err != nil {
 		return fmt.Errorf("failed to load specializations: %w", err)
 	}
 
-	// 2. Строим маппинг ID ↔ Title
-	specByID := make(map[uint]string)
-	specByTitle := make(map[string]uint)
-	for _, s := range specializations {
-		specByID[s.ID] = s.Title
-		specByTitle[s.Title] = s.ID
+	if len(specializations) == 0 {
+		return fmt.Errorf("no specializations found")
 	}
 
-	// 3. Формируем и сохраняем шаблоны
-	var allTemplates []entities.ReceptionTemplate
+	// Соберём текущие обязательные коды из справочника
+	var mandatoryReceptionCodes []string
+	db.Model(&entities.Manual{}).
+		Where("type = ?", entities.RefTypeMandatoryReception).
+		Pluck("value", &mandatoryReceptionCodes)
 
-	addAndSaveTemplate := func(title, code string, fields []map[string]interface{}) *entities.ReceptionTemplate {
-		specID, exists := specByTitle[title]
-		if !exists {
-			fmt.Printf("⚠️ Specialization '%s' not found, skipping template %s\n", title, code)
-			return nil
-		}
+	mandatorySet := make(map[string]struct{})
+	for _, code := range mandatoryReceptionCodes {
+		mandatorySet[code] = struct{}{}
+	}
 
+	// Генератор шаблонов
+	createTemplate := func(specID uint, code string, fields []map[string]interface{}) error {
 		fieldsJSON, _ := json.Marshal(fields)
 		tmpl := entities.ReceptionTemplate{
 			Code:             code,
 			SpecializationID: specID,
 			Fields:           json.RawMessage(fieldsJSON),
 		}
-
-		// Сохраняем в БД
-		if err := db.FirstOrCreate(&tmpl, entities.ReceptionTemplate{Code: code}).Error; err != nil {
-			fmt.Printf("❌ Failed to seed template %s: %v\n", code, err)
-			return nil
-		}
-
-		allTemplates = append(allTemplates, tmpl)
-		return &tmpl
+		return db.FirstOrCreate(&tmpl, entities.ReceptionTemplate{Code: code}).Error
 	}
 
-	// Создаём шаблоны
-	therapyTmpl := addAndSaveTemplate("Терапевт", "THERAPY_ANAMNESIS_V1", []map[string]interface{}{
-		{"name": "complaints", "type": "string", "required": true},
-		{"name": "bp_systolic", "type": "integer", "required": true, "min": 80, "max": 200},
-		{"name": "bp_diastolic", "type": "integer", "required": true, "min": 50, "max": 120},
-		{"name": "heart_rate", "type": "integer", "required": true, "min": 40, "max": 200},
-		{"name": "temperature", "type": "number", "required": true, "min": 35.0, "max": 42.0},
-		{"name": "diagnosis", "type": "string", "required": true},
-		{"name": "recommendations", "type": "string", "required": false},
-	})
-	neuroTmpl := addAndSaveTemplate("Невролог", "NEURO_EXAM_V1", []map[string]interface{}{
-		{"name": "mental_status", "type": "string", "required": true},
-		{"name": "motor_function", "type": "string", "required": true},
-		{"name": "sensory_function", "type": "string", "required": true},
-		{"name": "reflexes", "type": "string", "required": true},
-		{"name": "diagnosis", "type": "string", "required": true},
-		{"name": "mri_results", "type": "string", "required": false},
-	})
-	traumaTmpl := addAndSaveTemplate("Невролог", "NEURO_EXAM_V1", []map[string]interface{}{
-		{"name": "mental_status", "type": "string", "required": true},
-		{"name": "motor_function", "type": "string", "required": true},
-		{"name": "sensory_function", "type": "string", "required": true},
-		{"name": "reflexes", "type": "string", "required": true},
-		{"name": "diagnosis", "type": "string", "required": true},
-		{"name": "mri_results", "type": "string", "required": false},
-	})
-
-	generalTmpl := addAndSaveTemplate("Общая практика", "GENERAL_EXAM_V1", []map[string]interface{}{
-		{"name": "general_condition", "type": "string", "required": true},
-		{"name": "diagnosis", "type": "string", "required": true},
-		{"name": "notes", "type": "string", "required": false},
-	})
-
-	// 4. Загружаем вредные факторы
-	var harmPoints []entities.HarmPoint
-	db.Find(&harmPoints)
-	if len(harmPoints) == 0 {
-		fmt.Println("⚠️ No harm points found, skipping template links")
-		return nil
-	}
-
-	// 5. Связываем HarmPoint с шаблонами
-	for i, hp := range harmPoints {
-		var templates []*entities.ReceptionTemplate
-
-		// Пример: первый → терапевт + невролог, второй → травматолог и т.д.
-		switch i {
-		case 0:
-			if therapyTmpl != nil {
-				templates = append(templates, therapyTmpl)
+	// === 1. Обязательные шаблоны (уже есть в RefTypeMandatoryReception) ===
+	// Они НЕ должны быть привязаны к HarmPoint напрямую
+	for _, spec := range specializations {
+		switch spec.Title {
+		case "Терапевт":
+			if _, ok := mandatorySet["THERAPY_ANAMNESIS_V1"]; ok {
+				createTemplate(spec.ID, "THERAPY_ANAMNESIS_V1", []map[string]interface{}{
+					{"name": "complaints", "type": "string", "required": true},
+					{"name": "bp_systolic", "type": "integer", "required": true, "min": 80, "max": 200},
+					{"name": "bp_diastolic", "type": "integer", "required": true, "min": 50, "max": 120},
+					{"name": "heart_rate", "type": "integer", "required": true, "min": 40, "max": 200},
+					{"name": "temperature", "type": "number", "required": true, "min": 35.0, "max": 42.0},
+					{"name": "diagnosis", "type": "string", "required": true},
+				})
 			}
-			if neuroTmpl != nil {
-				templates = append(templates, neuroTmpl)
+			// Дополнительный обязательный (если нужен)
+			if _, ok := mandatorySet["THERAPY_FOLLOWUP_V1"]; ok {
+				createTemplate(spec.ID, "THERAPY_FOLLOWUP_V1", []map[string]interface{}{
+					{"name": "previous_diagnosis", "type": "string", "required": true},
+					{"name": "current_symptoms", "type": "string", "required": true},
+					{"name": "medication_effect", "type": "string", "required": false},
+					{"name": "new_diagnosis", "type": "string", "required": true},
+				})
 			}
-		case 1:
-			if traumaTmpl != nil {
-				templates = append(templates, traumaTmpl)
-			}
-		default:
-			if generalTmpl != nil {
-				templates = append(templates, generalTmpl)
-			}
-		}
 
-		// Преобразуем []*ReceptionTemplate → []ReceptionTemplate
-		var validTemplates []entities.ReceptionTemplate
-		for _, t := range templates {
-			if t != nil {
-				validTemplates = append(validTemplates, *t)
+		case "Невролог":
+			if _, ok := mandatorySet["NEURO_EXAM_V1"]; ok {
+				createTemplate(spec.ID, "NEURO_EXAM_V1", []map[string]interface{}{
+					{"name": "mental_status", "type": "string", "required": true},
+					{"name": "motor_function", "type": "string", "required": true},
+					{"name": "sensory_function", "type": "string", "required": true},
+					{"name": "reflexes", "type": "string", "required": true},
+					{"name": "diagnosis", "type": "string", "required": true},
+				})
 			}
-		}
 
-		if len(validTemplates) > 0 {
-			if err := db.Model(&hp).Association("ReceptionTemplates").Replace(&validTemplates); err != nil {
-				return fmt.Errorf("failed to link templates to harm point %d: %w", hp.ID, err)
+		case "Травматолог":
+			if _, ok := mandatorySet["TRAUMA_INITIAL_V1"]; ok {
+				createTemplate(spec.ID, "TRAUMA_INITIAL_V1", []map[string]interface{}{
+					{"name": "injury_type", "type": "string", "required": true},
+					{"name": "localization", "type": "string", "required": true},
+					{"name": "xray_results", "type": "string", "required": false},
+					{"name": "swelling", "type": "boolean", "required": true},
+					{"name": "treatment_plan", "type": "string", "required": true},
+				})
 			}
-			fmt.Printf("✅ Linked %d templates to harm point %d\n", len(validTemplates), hp.ID)
+
+		case "Психиатр":
+			if _, ok := mandatorySet["PSYCH_INITIAL_V1"]; ok {
+				createTemplate(spec.ID, "PSYCH_INITIAL_V1", []map[string]interface{}{
+					{"name": "mood", "type": "string", "required": true},
+					{"name": "sleep_quality", "type": "string", "required": true},
+					{"name": "appetite", "type": "string", "required": true},
+					{"name": "suicidal_ideation", "type": "boolean", "required": true},
+					{"name": "diagnosis_icd", "type": "string", "required": true},
+				})
+			}
 		}
 	}
 
-	fmt.Printf("✅ Seeded %d reception templates and links\n", len(allTemplates))
+	// === 2. Дополнительные шаблоны (НЕ обязательные, могут быть привязаны к HarmPoint) ===
+	// Их коды НЕ должны быть в mandatorySet
+	extraTemplates := []struct {
+		SpecTitle string
+		Code      string
+		Fields    []map[string]interface{}
+	}{
+		{"Терапевт", "THERAPY_CARDIO_V1", []map[string]interface{}{
+			{"name": "ecg_result", "type": "string", "required": true},
+			{"name": "cholesterol", "type": "number", "required": true},
+			{"name": "cardio_diagnosis", "type": "string", "required": true},
+		}},
+		{"Терапевт", "THERAPY_PULMO_V1", []map[string]interface{}{
+			{"name": "respiratory_rate", "type": "integer", "required": true},
+			{"name": "o2_saturation", "type": "number", "required": true},
+			{"name": "lung_exam", "type": "string", "required": true},
+		}},
+		{"Невролог", "NEURO_EEG_V1", []map[string]interface{}{
+			{"name": "eeg_result", "type": "string", "required": true},
+			{"name": "seizure_history", "type": "string", "required": true},
+			{"name": "neuro_diagnosis", "type": "string", "required": true},
+		}},
+		{"Травматолог", "TRAUMA_FOLLOWUP_V1", []map[string]interface{}{
+			{"name": "healing_progress", "type": "string", "required": true},
+			{"name": "pain_level", "type": "integer", "required": true, "min": 0, "max": 10},
+			{"name": "rehab_plan", "type": "string", "required": true},
+		}},
+	}
+
+	for _, et := range extraTemplates {
+		specID, exists := func() (uint, bool) {
+			for _, s := range specializations {
+				if s.Title == et.SpecTitle {
+					return s.ID, true
+				}
+			}
+			return 0, false
+		}()
+		if !exists {
+			continue
+		}
+		// Убедимся, что код не в mandatory
+		if _, isMandatory := mandatorySet[et.Code]; isMandatory {
+			continue // пропускаем, если вдруг оказался обязательным
+		}
+		createTemplate(specID, et.Code, et.Fields)
+	}
+
+	fmt.Println("✅ Seeded reception templates (mandatory + extra)")
 	return nil
 }
 
@@ -537,8 +629,8 @@ func seedPersonalInfos(db *gorm.DB) ([]entities.PersonalInfo, error) {
 
 func seedFlgs(db *gorm.DB) ([]*uint, error) {
 	flgs := []entities.Flg{
-		{Organization: "Stavropol", Number: 984212, Result: "COVID", Date: time.Now()},
-		{Organization: "Moscow", Number: 984213, Result: "Negative", Date: time.Now()},
+		{Organization: "Stavropol", Number: "984212", Result: "COVID", Date: time.Now()},
+		{Organization: "Moscow", Number: "984213", Result: "Negative", Date: time.Now()},
 	}
 	var ids []*uint
 	for i := range flgs {
@@ -555,10 +647,8 @@ func seedPatients(db *gorm.DB) error {
 	var harmPoints []entities.HarmPoint
 	var examTypes []entities.Manual
 	var examViews []entities.Manual
-	var templates []entities.ReceptionTemplate
 	db.Find(&groups)
 	db.Find(&harmPoints)
-	db.Find(&templates)
 	db.Where("type = ?", entities.RefTypePatientExaminationType).Find(&examTypes)
 	db.Where("type = ?", entities.RefTypePatientExaminationView).Find(&examViews)
 
@@ -580,7 +670,6 @@ func seedPatients(db *gorm.DB) error {
 			PersonalInfoID:    personal[0].ID,
 			ContactInfoID:     contacts[0].ID,
 			FlgID:             flgIDs[0],
-			AnalysisOrderID:   0, // будет установлен позже
 		},
 		{
 			FullName:          "Петрова Мария Сергеевна",
@@ -595,58 +684,122 @@ func seedPatients(db *gorm.DB) error {
 			PersonalInfoID:    personal[1].ID,
 			ContactInfoID:     contacts[1].ID,
 			FlgID:             flgIDs[1],
-			AnalysisOrderID:   0,
 		},
 	}
 
 	for i := range patients {
-		// Создаём направление
+
+		// === 2. Создаём AnalysisOrder ===
 		order := entities.AnalysisOrder{
 			OrderNumber: fmt.Sprintf("ORD-%06d", i+1),
-			PatientID:   0, // временно
+			CreatedAt:   time.Now(),
+			UpdatedAt:   time.Now(),
 		}
 		db.Create(&order)
-		patients[i].AnalysisOrderID = order.ID
 
-		// Создаём пациента
-		db.Create(&patients[i])
+		// === 3. Получаем анализы для пациента ===
+		var mandatoryAnalysisCodes []string
+		db.Model(&entities.Manual{}).
+			Where("type = ?", entities.RefTypeMandatoryAnalysis).
+			Pluck("value", &mandatoryAnalysisCodes)
 
-		// Обновляем направление
-		db.Model(&order).Update("patient_id", patients[i].ID)
-
-		for i := range patients {
-			// ... (создание order, пациента)
-
-			// === Получаем специализации ИЗ БД через шаблоны ===
-			specializationMap := make(map[uint]struct{})
-			for _, t := range templates {
-				specializationMap[t.SpecializationID] = struct{}{}
-			}
-
-			var specializations []entities.Specialization
-			for specID := range specializationMap {
-				specializations = append(specializations, entities.Specialization{ID: specID})
-			}
-
-			if len(specializations) > 0 {
-				db.Model(&patients[i]).Association("Specializations").Append(&specializations)
-			}
-
-			// ... (статистика)
+		var mandatoryAnalyses []entities.Analysis
+		if len(mandatoryAnalysisCodes) > 0 {
+			db.Where("code IN ?", mandatoryAnalysisCodes).Find(&mandatoryAnalyses)
 		}
 
-		// Создаём статистику
+		var harmPoint entities.HarmPoint
+		db.Preload("Analyses").First(&harmPoint, patients[i].HarmPointID)
+		harmPointAnalyses := harmPoint.Analyses
+
+		analysisMap := make(map[uint]entities.Analysis)
+		for _, a := range mandatoryAnalyses {
+			analysisMap[a.ID] = a
+		}
+		for _, a := range harmPointAnalyses {
+			analysisMap[a.ID] = a
+		}
+
+		var allAnalyses []entities.Analysis
+		for _, a := range analysisMap {
+			allAnalyses = append(allAnalyses, a)
+		}
+
+		// === 4. Создаём AnalysisOrderItem ===
+		var orderItems []entities.AnalysisOrderItem
+		for _, analysis := range allAnalyses {
+			orderItems = append(orderItems, entities.AnalysisOrderItem{
+				OrderID:           order.ID,
+				AnalysisID:        analysis.ID,
+				PriceAtAssignment: analysis.Price,
+				IsCompleted:       false,
+				CreatedAt:         time.Now(),
+				UpdatedAt:         time.Now(),
+			})
+		}
+		if len(orderItems) > 0 {
+			db.Create(&orderItems)
+		}
+
+		// === 5. Создаём пациента (уже с AnalysisOrderID) ===
+		patients[i].AnalysisOrderID = order.ID
+		db.Create(&patients[i])
+
+		// Обновляем заказ с PatientID
+		db.Model(&order).Update("patient_id", patients[i].ID)
+
+		// === 6. Получаем шаблоны для пациента (для специализаций) ===
+		var harmPointForTemplates entities.HarmPoint
+		db.Preload("ReceptionTemplates").First(&harmPointForTemplates, patients[i].HarmPointID)
+		harmPointTemplates := harmPointForTemplates.ReceptionTemplates
+
+		var mandatoryTemplateCodes []string
+		db.Model(&entities.Manual{}).
+			Where("type = ?", entities.RefTypeMandatoryReception).
+			Pluck("value", &mandatoryTemplateCodes)
+
+		var mandatoryTemplates []entities.ReceptionTemplate
+		if len(mandatoryTemplateCodes) > 0 {
+			db.Where("code IN ?", mandatoryTemplateCodes).Find(&mandatoryTemplates)
+		}
+
+		templateMap := make(map[uint]entities.ReceptionTemplate)
+		for _, t := range harmPointTemplates {
+			templateMap[t.ID] = t
+		}
+		for _, t := range mandatoryTemplates {
+			templateMap[t.ID] = t
+		}
+
+		// Собираем уникальные специализации
+		specializationMap := make(map[uint]entities.Specialization)
+		for _, tmpl := range templateMap {
+			specializationMap[tmpl.SpecializationID] = entities.Specialization{ID: tmpl.SpecializationID}
+		}
+
+		var specializations []entities.Specialization
+		for _, s := range specializationMap {
+			specializations = append(specializations, s)
+		}
+
+		if len(specializations) > 0 {
+			db.Model(&patients[i]).Association("Specializations").Append(specializations)
+		}
+
+		// === 7. Создаём статистику с реальными числами ===
 		stats := entities.PatientStatistics{
-			PatientID:              patients[i].ID,
-			TotalReceptions:        0,
-			CompletedReceptions:    0,
-			TotalAnalysisOrders:    0,
-			CompletedAnalysisItems: 0,
-			UpdatedAt:              time.Now(),
+			PatientID:               patients[i].ID,
+			TotalReceptions:         int64(len(templateMap)), // по количеству шаблонов
+			CompletedReceptions:     0,
+			TotalAnalysisOrderItems: int64(len(allAnalyses)), // по количеству анализов
+			CompletedAnalysisItems:  0,
+			CreatedAt:               time.Now(),
+			UpdatedAt:               time.Now(),
 		}
 		db.Create(&stats)
 	}
-	fmt.Println("✅ Seeded patients with orders, stats, and specializations")
+
+	fmt.Println("✅ Seeded patients with orders, items, specializations, and stats")
 	return nil
 }
 
@@ -807,50 +960,42 @@ func seedTitrs(db *gorm.DB) error {
 func seedReceptions(db *gorm.DB) error {
 	var patients []entities.Patient
 	if err := db.Find(&patients).Error; err != nil {
-		return fmt.Errorf("failed to load patients: %w", err)
+		return fmt.Errorf("load patients: %w", err)
 	}
 
-	var templates []entities.ReceptionTemplate
-	if err := db.Find(&templates).Error; err != nil {
-		return fmt.Errorf("failed to load templates: %w", err)
-	}
-
-	if len(patients) == 0 || len(templates) == 0 {
-		fmt.Println("⚠️ No patients or templates, skipping reception seeding")
-		return nil
-	}
-
+	// Для каждого пациента: по 1 приёму на специализацию
 	for _, patient := range patients {
-		for _, tmpl := range templates {
-			var spec entities.Specialization
-			if err := db.Select("title").First(&spec, tmpl.SpecializationID).Error; err != nil {
-				fmt.Printf("⚠️ Skip template %d: specialization %d not found\n", tmpl.ID, tmpl.SpecializationID)
-				continue // или return err, если критично
+		// Получим все уникальные специализации пациента
+		var specializations []entities.Specialization
+		if err := db.Model(&patient).Association("Specializations").Find(&specializations); err != nil {
+			return fmt.Errorf("load patient specializations: %w", err)
+		}
+
+		for _, spec := range specializations {
+			// Возьмём первый шаблон для этой специализации
+			var template entities.ReceptionTemplate
+			if err := db.Where("specialization_id = ?", spec.ID).First(&template).Error; err != nil {
+				fmt.Printf("⚠️ No template for specialization %s, skip\n", spec.Title)
+				continue
 			}
 
 			values := generateReceptionValues(spec.Title)
-			dataJSON, err := json.Marshal(values)
-			if err != nil {
-				return fmt.Errorf("failed to marshal data for patient %d, template %d: %w", patient.ID, tmpl.ID, err)
-			}
+			dataJSON, _ := json.Marshal(values)
 
 			reception := entities.Reception{
 				PatientID:        patient.ID,
-				SpecializationID: tmpl.SpecializationID,
-				TemplateID:       tmpl.ID,
+				SpecializationID: spec.ID,
+				TemplateID:       template.ID,
 				Data:             json.RawMessage(dataJSON),
 				IsCompleted:      true,
 				CreatedAt:        time.Now(),
 				UpdatedAt:        time.Now(),
 			}
-
-			if err := db.Create(&reception).Error; err != nil {
-				return fmt.Errorf("failed to create reception for patient %d, template %d: %w", patient.ID, tmpl.ID, err)
-			}
+			db.Create(&reception)
 		}
 	}
 
-	fmt.Printf("✅ Seeded receptions for %d patients × %d templates\n", len(patients), len(templates))
+	fmt.Printf("✅ Seeded receptions (1 per specialization per patient)\n")
 	return nil
 }
 

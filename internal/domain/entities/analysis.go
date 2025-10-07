@@ -5,9 +5,10 @@ import "time"
 type Analysis struct {
 	ID uint `gorm:"primarykey" json:"id" example:"1"`
 
-	Code  string `gorm:"not null" json:"code" example:"12-0739"`
-	Title string `gorm:"not null" json:"title" example:"EKG"`
-	Price uint   `gorm:"not null" json:"price" example:"100"`
+	Code      string      `gorm:"not null" json:"code" example:"12-0739"`
+	Title     string      `gorm:"not null" json:"title" example:"EKG"`
+	Price     uint        `gorm:"not null" json:"price" example:"100"`
+	HarmPoint []HarmPoint `gorm:"many2many:harm_point_analyses;"`
 }
 
 type AnalysisOrderItem struct {
