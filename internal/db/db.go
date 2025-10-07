@@ -16,7 +16,7 @@ func NewDB(cfg *config.Config) (*gorm.DB, error) {
 	dsn := fmt.Sprintf(
 		"host=%s user=%s password=%s dbname=%s port=%s sslmode=disable TimeZone=Europe/Moscow",
 		cfg.Database.Host,
-		cfg.Database.Username, // ← исправлено: было User, а в конфиге Username
+		cfg.Database.Username,
 		cfg.Database.Password,
 		cfg.Database.DBName,
 		cfg.Database.Port,
@@ -34,6 +34,17 @@ func NewDB(cfg *config.Config) (*gorm.DB, error) {
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{Logger: newLogger})
 	if err != nil {
 		return nil, fmt.Errorf("ошибка подключения к базе данных: %w", err)
+	}
+
+	// Получаем "сырое" соединение *sql.DB для выполнения Ping
+	sqlDB, err := db.DB()
+	if err != nil {
+		return nil, fmt.Errorf("не удалось получить объект *sql.DB из gorm.DB: %w", err)
+	}
+
+	// Проверяем живость подключения
+	if err := sqlDB.Ping(); err != nil {
+		return nil, fmt.Errorf("не удалось выполнить ping до базы данных: %w", err)
 	}
 
 	return db, nil
