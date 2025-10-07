@@ -21,12 +21,20 @@ import (
 // @Failure 500 {object} InternalServerError "Внутренняя ошибка"
 // @Router /doctors/{doc_id} [get]
 func (h *Handler) GetDoctorByID(c *gin.Context) {
-	id, err := h.service.ParseUintString(c.Param("doc_id"))
-	if err != nil {
-		h.ErrorResponse(c, err, http.StatusBadRequest, "parameter 'id' must be an integer", false)
+	doctorIDAny, exists := c.Get("user_id")
+	if !exists {
+		h.ErrorResponse(c, nil, http.StatusUnauthorized, "Doctor ID not found in context", false)
 		return
 	}
-	doctor, eerr := h.usecase.GetDoctorByID(id)
+
+	// 2.1. Парсим doctor_id
+	doctorID, err := h.service.ParseUint(doctorIDAny)
+	if err != nil {
+		h.ErrorResponse(c, err, http.StatusInternalServerError, "Invalid doctor ID", false)
+		return
+	}
+
+	doctor, eerr := h.usecase.GetDoctorByID(doctorID)
 	if eerr != nil {
 		h.ErrorResponse(c, eerr.Err, eerr.Code, eerr.Message, eerr.IsUserFacing)
 		return

@@ -5,6 +5,10 @@ import (
 	"gorm.io/gorm"
 )
 
+type contextKey string
+
+const txContextKey contextKey = "db_transaction"
+
 type ReceptionRepositoryImpl struct {
 	db *gorm.DB
 }
