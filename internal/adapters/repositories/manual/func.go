@@ -30,3 +30,18 @@ func (r *ManualRepositoryImpl) GetAllManuals(ctx context.Context) ([]entities.Ma
 	}
 	return manuals, nil
 }
+
+func (r *ManualRepositoryImpl) GetManualValuesByType(ctx context.Context, refType entities.ReferenceType) ([]string, error) {
+	op := "repo.Manual.GetManualValuesByType"
+
+	var values []string
+	err := r.db.WithContext(ctx).
+		Model(&entities.Manual{}).
+		Where("type = ?", refType).
+		Pluck("value", &values).
+		Error
+	if err != nil {
+		return nil, errors.NewDBError(op, err)
+	}
+	return values, nil
+}

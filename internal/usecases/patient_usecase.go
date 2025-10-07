@@ -12,9 +12,11 @@ import (
 )
 
 type PatientUsecase struct {
-	repo       interfaces.PatientRepository
-	manualRepo interfaces.ManualRepository
-	txManager  interfaces.TxManager
+	repo          interfaces.PatientRepository
+	manualRepo    interfaces.ManualRepository
+	txManager     interfaces.TxManager
+	receptionRepo interfaces.ReceptionRepository
+	analysisRepo  interfaces.AnalysisRepository
 }
 
 func NewPatientUsecase(repo interfaces.PatientRepository, manualRepo interfaces.ManualRepository, txManager interfaces.TxManager) interfaces.PatientUsecase {
@@ -74,30 +76,30 @@ func (u *PatientUsecase) CreatePatient(ctx context.Context, req *models.CreatePa
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
 	}
-	if err = u.repo.CreateAnalysisOrder(ctx, analysisOrder); err != nil {
+	if err = u.analysisRepo.CreateAnalysisOrder(ctx, analysisOrder); err != nil {
 		return nil, errors.NewDBError(op, err)
 	}
 
 	// Обновляем номер на основе ID
 	analysisOrder.OrderNumber = fmt.Sprintf("ORD-%06d", analysisOrder.ID)
-	if err = u.repo.UpdateAnalysisOrder(ctx, analysisOrder); err != nil {
+	if err = u.analysisRepo.UpdateAnalysisOrder(ctx, analysisOrder); err != nil {
 		return nil, errors.NewDBError(op, err)
 	}
 
 	// ✅ 4. Получаем шаблоны заключений по HarmPointID
-	templates1, err := u.repo.GetReceptionTemplatesByHarmPointID(ctx, req.HarmPointID)
+	templates1, err := u.receptionRepo.GetReceptionTemplatesByHarmPointID(ctx, req.HarmPointID)
 	if err != nil {
 		return nil, errors.NewDBError(op, err)
 	}
 
 	// ✅ Получаем коды обязательных элементов
-	templateCodes, err := u.repo.GetMandatoryReceptionTemplateCodes(ctx)
+	templateCodes, err := u.manualRepo.GetManualValuesByType(ctx, entities.RefTypeMandatoryReception)
 	if err != nil {
 		return nil, errors.NewDBError(op, err)
 	}
 
 	// ✅ Получаем сами шаблоны и анализы (в той же транзакции!)
-	templates2, err := u.repo.GetReceptionTemplatesByCodes(ctx, templateCodes)
+	templates2, err := u.receptionRepo.GetReceptionTemplatesByCodes(ctx, templateCodes)
 	if err != nil {
 		return nil, errors.NewDBError(op, err)
 	}
@@ -127,12 +129,12 @@ func (u *PatientUsecase) CreatePatient(ctx context.Context, req *models.CreatePa
 
 	// В CreatePatient юзкейса
 
-	analysisCodes, err := u.repo.GetMandatoryAnalysisCodes(ctx)
+	analysisCodes, err := u.manualRepo.GetManualValuesByType(ctx, entities.RefTypeMandatoryAnalysis)
 	if err != nil {
 		return nil, errors.NewDBError(op, err)
 	}
 
-	analyses, err := u.repo.GetAnalysesByCodes(ctx, analysisCodes)
+	analyses, err := u.analysisRepo.GetAnalysesByCodes(ctx, analysisCodes)
 	if err != nil {
 		return nil, errors.NewDBError(op, err)
 	}
@@ -149,14 +151,14 @@ func (u *PatientUsecase) CreatePatient(ctx context.Context, req *models.CreatePa
 		})
 	}
 	if len(analysisItems) > 0 {
-		if err = u.repo.CreateAnalysisItems(ctx, analysisItems); err != nil {
+		if err = u.analysisRepo.CreateAnalysisItems(ctx, analysisItems); err != nil {
 			return nil, errors.NewDBError(op, err)
 		}
 	}
 
 	// Обновляем AnalysisOrder.PatientID
 	analysisOrder.PatientID = patient.ID
-	if err = u.repo.UpdateAnalysisOrder(ctx, analysisOrder); err != nil {
+	if err = u.analysisRepo.UpdateAnalysisOrder(ctx, analysisOrder); err != nil {
 		return nil, errors.NewDBError(op, err)
 	}
 
@@ -189,7 +191,7 @@ func (u *PatientUsecase) CreatePatient(ctx context.Context, req *models.CreatePa
 			UpdatedAt:        time.Now(),
 		})
 	}
-	if err = u.repo.CreateReceptions(ctx, receptions); err != nil {
+	if err = u.receptionRepo.CreateReceptions(ctx, receptions); err != nil {
 		return nil, errors.NewDBError(op, err)
 	}
 

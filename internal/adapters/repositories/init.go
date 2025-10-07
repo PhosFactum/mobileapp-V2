@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"time"
 
+	analysis "github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/analysys"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/auth"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/consent_signatures"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/doctor"
@@ -16,7 +17,7 @@ import (
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/patient"
 	patientgroup "github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/patient_group"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/reception"
-	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/tx"
+	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/vaccine"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/domain/entities"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/interfaces"
 	"golang.org/x/crypto/bcrypt"
@@ -28,11 +29,12 @@ type Repository struct {
 	interfaces.DoctorRepository
 	interfaces.PatientRepository
 	interfaces.ReceptionRepository
-	interfaces.TxRepository
 	interfaces.OrganizationRepository
 	interfaces.PatientGroupRepository
 	interfaces.ConsentSignatureRepository
 	interfaces.ManualRepository
+	interfaces.AnalysisRepository
+	interfaces.VaccineRepository
 }
 
 func NewRepository(db *gorm.DB) (interfaces.Repository, error) {
@@ -47,11 +49,12 @@ func NewRepository(db *gorm.DB) (interfaces.Repository, error) {
 		doctor.NewDoctorRepository(db),
 		patient.NewPatientRepository(db),
 		reception.NewReceptionRepository(db),
-		tx.NewTxRepository(db),
 		organization.NewOrganizationRepository(db),
 		patientgroup.NewPatientGroupRepository(db),
 		consent_signatures.NewConsentSignatureRepository(db),
 		manual.NewManualRepository(db),
+		analysis.NewAnalysisRepository(db),
+		vaccine.NewVaccineRepository(db),
 	}, nil
 
 }
