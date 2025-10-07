@@ -7,14 +7,15 @@ import (
 	"github.com/AlexanderMorozov1919/mobileapp/pkg/errors"
 )
 
-func (r *ManualRepositoryImpl) GetManualValueByTypeAndID(id uint, ref_type entities.ReferenceType) (string, error) {
-	op := "repo.Manual.GetDocumentTypeValueByID"
+// internal/adapters/repositories/manual/manual_repository.go
+func (r *ManualRepositoryImpl) GetManualValueByTypeAndID(ctx context.Context, id uint, refType entities.ReferenceType) (string, error) {
+	op := "repo.Manual.GetManualValueByTypeAndID"
 	if id == 0 {
 		return "", nil
 	}
 	var entry entities.Manual
-	err := r.db.
-		Where("id = ? AND type = ?", id, ref_type).
+	err := r.GetDB(ctx).WithContext(ctx).
+		Where("id = ? AND type = ?", id, refType).
 		First(&entry).
 		Error
 	if err != nil {
@@ -24,18 +25,18 @@ func (r *ManualRepositoryImpl) GetManualValueByTypeAndID(id uint, ref_type entit
 }
 
 func (r *ManualRepositoryImpl) GetAllManuals(ctx context.Context) ([]entities.Manual, error) {
+	op := "repo.Manual.GetAllManuals"
 	var manuals []entities.Manual
-	if err := r.db.WithContext(ctx).Find(&manuals).Error; err != nil {
-		return nil, errors.NewDBError("repo.Manual.GetAllManuals", err)
+	if err := r.GetDB(ctx).WithContext(ctx).Find(&manuals).Error; err != nil {
+		return nil, errors.NewDBError(op, err)
 	}
 	return manuals, nil
 }
 
 func (r *ManualRepositoryImpl) GetManualValuesByType(ctx context.Context, refType entities.ReferenceType) ([]string, error) {
 	op := "repo.Manual.GetManualValuesByType"
-
 	var values []string
-	err := r.db.WithContext(ctx).
+	err := r.GetDB(ctx).WithContext(ctx).
 		Model(&entities.Manual{}).
 		Where("type = ?", refType).
 		Pluck("value", &values).

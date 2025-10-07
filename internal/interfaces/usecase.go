@@ -16,6 +16,7 @@ type Usecases interface {
 	OrganizationUseCase
 	PatientGroupUseCase
 	ManualUseCase
+	VaccineUsecase
 }
 
 type ManualUseCase interface {
@@ -53,7 +54,7 @@ type DoctorUsecase interface {
 
 type PatientUsecase interface {
 	CreatePatient(ctx context.Context, req *models.CreatePatientRequest, groupID uint) (*entities.Patient, *errors.AppError)
-	GetPatientsByGroup(groupID uint) ([]models.PatientResponse, *errors.AppError)
+	GetPatientsByGroup(ctx context.Context, groupID uint) ([]models.PatientResponse, *errors.AppError)
 }
 
 type PersonalInfoUsecase interface{}
@@ -67,4 +68,11 @@ type ConsentUsecase interface {
 	SaveConsent(patientID uint, signature []byte) *errors.AppError
 	GetSignature(patientID uint) ([]byte, *errors.AppError)
 	GetConsentByPatientID(patientID uint) (*entities.ConsentSignature, *errors.AppError)
+}
+
+type VaccineUsecase interface {
+	CreateVaccine(ctx context.Context, req *models.CreateVaccineRequest) (*entities.Vaccine, *errors.AppError)
+	CreateVaccineRefusal(ctx context.Context, req *models.CreateVaccineRefusalRequest) (*entities.VaccineRefusal, *errors.AppError)
+	CreateVaccineWithdrawal(ctx context.Context, req *models.CreateVaccineWithdrawalRequest) (*entities.VaccineWithdrawal, *errors.AppError)
+	CreateTitr(ctx context.Context, req *models.CreateTitrRequest) (*entities.Titr, *errors.AppError)
 }

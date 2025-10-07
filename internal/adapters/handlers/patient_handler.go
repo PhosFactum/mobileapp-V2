@@ -30,8 +30,9 @@ func (h *Handler) GetPatientsByGroup(c *gin.Context) {
 		h.ErrorResponse(c, err, http.StatusBadRequest, "parameter 'group_id' must be an uint", false)
 		return
 	}
+	ctx := c.Request.Context()
+	patients, appErr := h.usecase.GetPatientsByGroup(ctx, group_id)
 
-	patients, appErr := h.usecase.GetPatientsByGroup(group_id)
 	if appErr != nil {
 		h.ErrorResponse(c, appErr.Err, appErr.Code, appErr.Message, appErr.IsUserFacing)
 		return

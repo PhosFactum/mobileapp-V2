@@ -265,8 +265,8 @@ func (u *PatientUsecase) CreatePatient(ctx context.Context, req *models.CreatePa
 // }
 
 // GetPatientsByGroup — основной метод
-func (u *PatientUsecase) GetPatientsByGroup(groupID uint) ([]models.PatientResponse, *errors.AppError) {
-	patients, err := u.repo.GetPatientsByGroup(groupID)
+func (u *PatientUsecase) GetPatientsByGroup(ctx context.Context, groupID uint) ([]models.PatientResponse, *errors.AppError) {
+	patients, err := u.repo.GetPatientsByGroup(ctx, groupID)
 	if err != nil {
 		return nil, errors.NewAppError(
 			errors.InternalServerErrorCode,
@@ -279,7 +279,7 @@ func (u *PatientUsecase) GetPatientsByGroup(groupID uint) ([]models.PatientRespo
 	// Преобразуем сущности → DTO
 	var response []models.PatientResponse
 	for _, p := range patients {
-		resp, err := u.buildPatientResponse(p)
+		resp, err := u.buildPatientResponse(ctx, p)
 		if err != nil {
 			return nil, err
 		}
@@ -289,21 +289,21 @@ func (u *PatientUsecase) GetPatientsByGroup(groupID uint) ([]models.PatientRespo
 	return response, nil
 }
 
-func (u *PatientUsecase) buildPatientResponse(p entities.Patient) (models.PatientResponse, *errors.AppError) {
-	examType, err := u.mapExaminationType(p.ExaminationTypeID)
+func (u *PatientUsecase) buildPatientResponse(ctx context.Context, p entities.Patient) (models.PatientResponse, *errors.AppError) {
+	examType, err := u.mapExaminationType(ctx, p.ExaminationTypeID)
 	if err != nil {
 		return models.PatientResponse{}, err
 	}
-	examView, err := u.mapExaminationView(p.ExaminationViewID)
+	examView, err := u.mapExaminationView(ctx, p.ExaminationViewID)
 	if err != nil {
 		return models.PatientResponse{}, err
 	}
-	vaccines, err := u.mapVaccines(p.Vaccines, p.VaccineRefusals, p.VaccineWithdrawals, p.Titers)
+	vaccines, err := u.mapVaccines(p.Vaccines, p.VaccineRefusals, p.VaccineWithdrawals, p.Titers, ctx)
 	if err != nil {
 		return models.PatientResponse{}, err
 	}
 
-	personalInfo, err := u.mapPersonalInfo(p.PersonalInfo)
+	personalInfo, err := u.mapPersonalInfo(ctx, p.PersonalInfo)
 	if err != nil {
 		return models.PatientResponse{}, err
 	}
@@ -340,8 +340,8 @@ func (u *PatientUsecase) mapHarmPoint(point *entities.HarmPoint) models.HarmPoin
 	}
 }
 
-func (u *PatientUsecase) mapExaminationType(id uint) (string, *errors.AppError) {
-	val, err := u.manualRepo.GetManualValueByTypeAndID(id, entities.RefTypePatientExaminationType)
+func (u *PatientUsecase) mapExaminationType(ctx context.Context, id uint) (string, *errors.AppError) {
+	val, err := u.manualRepo.GetManualValueByTypeAndID(ctx, id, entities.RefTypePatientExaminationType)
 	if err != nil {
 		return "", errors.NewAppError(
 			errors.InternalServerErrorCode,
@@ -354,8 +354,8 @@ func (u *PatientUsecase) mapExaminationType(id uint) (string, *errors.AppError) 
 	return val, nil
 }
 
-func (u *PatientUsecase) mapExaminationView(id uint) (string, *errors.AppError) {
-	val, err := u.manualRepo.GetManualValueByTypeAndID(id, entities.RefTypePatientExaminationView)
+func (u *PatientUsecase) mapExaminationView(ctx context.Context, id uint) (string, *errors.AppError) {
+	val, err := u.manualRepo.GetManualValueByTypeAndID(ctx, id, entities.RefTypePatientExaminationView)
 	if err != nil {
 		return "", errors.NewAppError(
 			errors.InternalServerErrorCode,
@@ -368,8 +368,8 @@ func (u *PatientUsecase) mapExaminationView(id uint) (string, *errors.AppError) 
 	return val, nil
 }
 
-func (u *PatientUsecase) mapVaccineTitle(id uint) (string, *errors.AppError) {
-	val, err := u.manualRepo.GetManualValueByTypeAndID(id, entities.RefTypeVaccineTitle)
+func (u *PatientUsecase) mapVaccineTitle(ctx context.Context, id uint) (string, *errors.AppError) {
+	val, err := u.manualRepo.GetManualValueByTypeAndID(ctx, id, entities.RefTypeVaccineTitle)
 	if err != nil {
 		return "", errors.NewAppError(
 			errors.InternalServerErrorCode,
@@ -383,8 +383,8 @@ func (u *PatientUsecase) mapVaccineTitle(id uint) (string, *errors.AppError) {
 }
 
 // mapVaccineToResponse маппит вакцинацию
-func (u *PatientUsecase) mapVaccineToResponse(v entities.Vaccine) (models.VaccineAllResponse, *errors.AppError) {
-	title, err := u.mapVaccineTitle(v.TitleID)
+func (u *PatientUsecase) mapVaccineToResponse(ctx context.Context, v entities.Vaccine) (models.VaccineAllResponse, *errors.AppError) {
+	title, err := u.mapVaccineTitle(ctx, v.TitleID)
 	if err != nil {
 		return models.VaccineAllResponse{}, err
 	}
@@ -398,8 +398,8 @@ func (u *PatientUsecase) mapVaccineToResponse(v entities.Vaccine) (models.Vaccin
 }
 
 // mapVaccineRefusalToResponse маппит отказ
-func (u *PatientUsecase) mapVaccineRefusalToResponse(v entities.VaccineRefusal) (models.VaccineAllResponse, *errors.AppError) {
-	title, err := u.mapVaccineTitle(v.TitleID)
+func (u *PatientUsecase) mapVaccineRefusalToResponse(ctx context.Context, v entities.VaccineRefusal) (models.VaccineAllResponse, *errors.AppError) {
+	title, err := u.mapVaccineTitle(ctx, v.TitleID)
 	if err != nil {
 		return models.VaccineAllResponse{}, err
 	}
@@ -413,8 +413,8 @@ func (u *PatientUsecase) mapVaccineRefusalToResponse(v entities.VaccineRefusal) 
 }
 
 // mapVaccineWithdrawalToResponse маппит отвод
-func (u *PatientUsecase) mapVaccineWithdrawalToResponse(v entities.VaccineWithdrawal) (models.VaccineAllResponse, *errors.AppError) {
-	title, err := u.mapVaccineTitle(v.TitleID)
+func (u *PatientUsecase) mapVaccineWithdrawalToResponse(ctx context.Context, v entities.VaccineWithdrawal) (models.VaccineAllResponse, *errors.AppError) {
+	title, err := u.mapVaccineTitle(ctx, v.TitleID)
 	if err != nil {
 		return models.VaccineAllResponse{}, err
 	}
@@ -428,8 +428,8 @@ func (u *PatientUsecase) mapVaccineWithdrawalToResponse(v entities.VaccineWithdr
 }
 
 // mapTitrToResponse маппит титрование
-func (u *PatientUsecase) mapTitrToResponse(v entities.Titr) (models.VaccineAllResponse, *errors.AppError) {
-	title, err := u.mapVaccineTitle(v.TitleID)
+func (u *PatientUsecase) mapTitrToResponse(ctx context.Context, v entities.Titr) (models.VaccineAllResponse, *errors.AppError) {
+	title, err := u.mapVaccineTitle(ctx, v.TitleID)
 	if err != nil {
 		return models.VaccineAllResponse{}, err
 	}
@@ -447,13 +447,14 @@ func (u *PatientUsecase) mapVaccines(
 	refusals []entities.VaccineRefusal,
 	withdrawals []entities.VaccineWithdrawal,
 	titers []entities.Titr,
+	ctx context.Context,
 ) ([]models.VaccineAllResponse, *errors.AppError) {
 
 	var result []models.VaccineAllResponse
 
 	// Маппинг вакцинаций
 	for _, v := range vaccines {
-		resp, err := u.mapVaccineToResponse(v)
+		resp, err := u.mapVaccineToResponse(ctx, v)
 		if err != nil {
 			return nil, err
 		}
@@ -462,7 +463,7 @@ func (u *PatientUsecase) mapVaccines(
 
 	// Маппинг отказов
 	for _, r := range refusals {
-		resp, err := u.mapVaccineRefusalToResponse(r)
+		resp, err := u.mapVaccineRefusalToResponse(ctx, r)
 		if err != nil {
 			return nil, err
 		}
@@ -471,7 +472,7 @@ func (u *PatientUsecase) mapVaccines(
 
 	// Маппинг отводов
 	for _, w := range withdrawals {
-		resp, err := u.mapVaccineWithdrawalToResponse(w)
+		resp, err := u.mapVaccineWithdrawalToResponse(ctx, w)
 		if err != nil {
 			return nil, err
 		}
@@ -480,7 +481,7 @@ func (u *PatientUsecase) mapVaccines(
 
 	// Маппинг титров
 	for _, t := range titers {
-		resp, err := u.mapTitrToResponse(t)
+		resp, err := u.mapTitrToResponse(ctx, t)
 		if err != nil {
 			return nil, err
 		}
@@ -514,8 +515,8 @@ func (u *PatientUsecase) mapReceptions(receptions []entities.Reception) []models
 	return result
 }
 
-func (u *PatientUsecase) mapDocumentType(id uint) (string, *errors.AppError) {
-	val, err := u.manualRepo.GetManualValueByTypeAndID(id, entities.RefTypePersonalDocumentType)
+func (u *PatientUsecase) mapDocumentType(ctx context.Context, id uint) (string, *errors.AppError) {
+	val, err := u.manualRepo.GetManualValueByTypeAndID(ctx, id, entities.RefTypePersonalDocumentType)
 	if err != nil {
 		return "", errors.NewAppError(
 			errors.InternalServerErrorCode,
@@ -528,7 +529,7 @@ func (u *PatientUsecase) mapDocumentType(id uint) (string, *errors.AppError) {
 	return val, nil
 }
 
-func (u *PatientUsecase) mapPersonalInfo(pi *entities.PersonalInfo) (models.PersonalInfoResponse, *errors.AppError) {
+func (u *PatientUsecase) mapPersonalInfo(ctx context.Context, pi *entities.PersonalInfo) (models.PersonalInfoResponse, *errors.AppError) {
 	emty := models.PersonalInfoResponse{}
 	if pi == nil {
 		return emty, errors.NewAppError(
@@ -538,7 +539,7 @@ func (u *PatientUsecase) mapPersonalInfo(pi *entities.PersonalInfo) (models.Pers
 			true,
 		)
 	}
-	docType, err := u.mapDocumentType(pi.DocumentTypeID)
+	docType, err := u.mapDocumentType(ctx, pi.DocumentTypeID)
 	if err != nil {
 		return emty, err
 	}

@@ -5,37 +5,27 @@ import (
 
 	"github.com/AlexanderMorozov1919/mobileapp/internal/domain/entities"
 	"github.com/AlexanderMorozov1919/mobileapp/pkg/errors"
-	"gorm.io/gorm"
 )
 
-// getDB извлекает транзакцию из контекста или возвращает основное подключение
-func (r *PatientRepositoryImpl) getDB(ctx context.Context) *gorm.DB {
-	if tx, ok := ctx.Value(txContextKey).(*gorm.DB); ok && tx != nil {
-		return tx
-	}
-	return r.db
-}
-
-// GetPatientsByGroup - получение пациентов по группе
-func (r *PatientRepositoryImpl) GetPatientsByGroup(groupID uint) ([]entities.Patient, *errors.AppError) {
+func (r *PatientRepositoryImpl) GetPatientsByGroup(ctx context.Context, groupID uint) ([]entities.Patient, *errors.AppError) {
 	op := "repo.Patient.GetPatientsByGroup"
 
-	query := r.db.
-		Preload("HarmPoint").
-		Preload("PersonalInfo").
-		Preload("ContactInfo").
-		Preload("Flg").
-		Preload("AnalysisOrder.OrderItems.Analysis").
-		Preload("Vaccines").
-		Preload("VaccineRefusals").
-		Preload("VaccineWithdrawals").
-		Preload("Titers").
-		Preload("Receptions.Specialization").
-		Preload("Receptions.Template").
-		Preload("Specializations").
-		Preload("Statistics").
-		Where("patient_group_id = ?", groupID).
-		Order("full_name")
+	query := r.GetDB(ctx).WithContext(ctx). // ← теперь с контекстом
+						Preload("HarmPoint").
+						Preload("PersonalInfo").
+						Preload("ContactInfo").
+						Preload("Flg").
+						Preload("AnalysisOrder.OrderItems.Analysis").
+						Preload("Vaccines").
+						Preload("VaccineRefusals").
+						Preload("VaccineWithdrawals").
+						Preload("Titers").
+						Preload("Receptions.Specialization").
+						Preload("Receptions.Template").
+						Preload("Specializations").
+						Preload("Statistics").
+						Where("patient_group_id = ?", groupID).
+						Order("full_name")
 
 	var patients []entities.Patient
 	if err := query.Find(&patients).Error; err != nil {
@@ -48,7 +38,7 @@ func (r *PatientRepositoryImpl) GetPatientsByGroup(groupID uint) ([]entities.Pat
 // CreateContactInfo создаёт контактную информацию
 func (r *PatientRepositoryImpl) CreateContactInfo(ctx context.Context, contactInfo *entities.ContactInfo) error {
 	op := "repo.Patient.CreateContactInfo"
-	if err := r.getDB(ctx).WithContext(ctx).Create(contactInfo).Error; err != nil {
+	if err := r.GetDB(ctx).WithContext(ctx).Create(contactInfo).Error; err != nil {
 		return errors.NewDBError(op, err)
 	}
 	return nil
@@ -57,7 +47,7 @@ func (r *PatientRepositoryImpl) CreateContactInfo(ctx context.Context, contactIn
 // CreatePersonalInfo создаёт персональную информацию
 func (r *PatientRepositoryImpl) CreatePersonalInfo(ctx context.Context, personalInfo *entities.PersonalInfo) error {
 	op := "repo.Patient.CreatePersonalInfo"
-	if err := r.getDB(ctx).WithContext(ctx).Create(personalInfo).Error; err != nil {
+	if err := r.GetDB(ctx).WithContext(ctx).Create(personalInfo).Error; err != nil {
 		return errors.NewDBError(op, err)
 	}
 	return nil
@@ -66,7 +56,7 @@ func (r *PatientRepositoryImpl) CreatePersonalInfo(ctx context.Context, personal
 // CreatePatient создаёт пациента
 func (r *PatientRepositoryImpl) CreatePatient(ctx context.Context, patient *entities.Patient) error {
 	op := "repo.Patient.CreatePatient"
-	if err := r.getDB(ctx).WithContext(ctx).Create(patient).Error; err != nil {
+	if err := r.GetDB(ctx).WithContext(ctx).Create(patient).Error; err != nil {
 		return errors.NewDBError(op, err)
 	}
 	return nil
@@ -75,7 +65,7 @@ func (r *PatientRepositoryImpl) CreatePatient(ctx context.Context, patient *enti
 // CacheSpecializations связывает пациента со специализациями
 func (r *PatientRepositoryImpl) CacheSpecializations(ctx context.Context, patient *entities.Patient, specializations []entities.Specialization) error {
 	op := "repo.Patient.CacheSpecializations"
-	if err := r.getDB(ctx).WithContext(ctx).Model(patient).Association("Specializations").Append(&specializations); err != nil {
+	if err := r.GetDB(ctx).WithContext(ctx).Model(patient).Association("Specializations").Append(&specializations); err != nil {
 		return errors.NewDBError(op, err)
 	}
 	return nil
@@ -84,7 +74,7 @@ func (r *PatientRepositoryImpl) CacheSpecializations(ctx context.Context, patien
 // CreatePatientStatistics создаёт статистику пациента
 func (r *PatientRepositoryImpl) CreatePatientStatistics(ctx context.Context, stats *entities.PatientStatistics) error {
 	op := "repo.Patient.CreatePatientStatistics"
-	if err := r.getDB(ctx).WithContext(ctx).Create(stats).Error; err != nil {
+	if err := r.GetDB(ctx).WithContext(ctx).Create(stats).Error; err != nil {
 		return errors.NewDBError(op, err)
 	}
 	return nil
@@ -93,7 +83,7 @@ func (r *PatientRepositoryImpl) CreatePatientStatistics(ctx context.Context, sta
 func (r *PatientRepositoryImpl) PreloadPatientWithSpecializations(ctx context.Context, patientID uint) (*entities.Patient, error) {
 	op := "repo.Patient.PreloadPatientWithSpecializations"
 	var patient entities.Patient
-	if err := r.getDB(ctx).WithContext(ctx).Preload("Specializations").First(&patient, patientID).Error; err != nil {
+	if err := r.GetDB(ctx).WithContext(ctx).Preload("Specializations").First(&patient, patientID).Error; err != nil {
 		return nil, errors.NewDBError(op, err)
 	}
 	return &patient, nil
