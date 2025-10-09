@@ -14,6 +14,7 @@ type Doctor struct {
 	Phone        string `gorm:"unique;not null" json:"phone" example:"+79991234567"`
 	PasswordHash string `gorm:"not null" json:"-"`
 
-	Specializations []Specialization `gorm:"many2many:doctor_specializations" json:"-"`
-	Organizations   []Organization   `gorm:"many2many:doctor_organizations" json:"-"`
+	Specializations  []Specialization `gorm:"many2many:doctor_specializations" json:"-"`
+	Organizations    []Organization   `gorm:"many2many:doctor_organizations" json:"-"`
+	DownloadedGroups []PatientGroup   `gorm:"many2many:doctor_patient_groups" json:"downloaded_groups,omitempty"`
 }

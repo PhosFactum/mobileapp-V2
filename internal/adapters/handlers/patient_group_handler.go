@@ -7,79 +7,32 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// GetPatientGroupsByCodeOrOrgTitle godoc
-// @Summary Получить группы пациентов по их коду или названию их организаций
-// @Description Возвращает список экстренных приёмов, назначенных врачу на указанную дату, с пагинацией
-// @Tags SMP
-// @Accept json
-// @Produce json
-// @Param doc_id path uint true "ID врача"
-// @Param date query string false "Дата в формате YYYY-MM-DD"
-// @Param page query int false "Номер страницы" default(1)
-// @Param perPage query int false "Количество записей на страницу" default(5)
-// @Success 200 {array} models.PatientGroupShortResponse "Список приёмов"
-// @Failure 400 {object} IncorrectFormatError "Некорректный запрос"
-// @Failure 500 {object} InternalServerError "Внутренняя ошибка"
-// @Router /emergency/{doc_id} [get]
-// GetPatientGroupsByCodeOrOrgTitle — поиск групп пациентов по коду или названию организации
-func (h *Handler) GetPatientGroupsByCodeOrOrgTitle(c *gin.Context) {
-	// 1. Парсим page
-	pageStr := c.DefaultQuery("page", "1")
-	page, err := h.service.ParseUintString(pageStr)
-	if err != nil {
-		h.ErrorResponse(c, err, http.StatusBadRequest, "parameter 'page' must be an integer", false)
-		return
-	}
-	if page == 0 {
-		h.ErrorResponse(c, errors.New("page must be greater than 0"), http.StatusBadRequest, "parameter 'page' must be greater than 0", true)
-		return
-	}
-
-	// 2. Парсим perPage
-	perPageStr := c.DefaultQuery("perPage", "10")
-	perPage, err := h.service.ParseUintString(perPageStr)
-	if err != nil {
-		h.ErrorResponse(c, err, http.StatusBadRequest, "parameter 'perPage' must be an integer", false)
-		return
-	}
-	if perPage == 0 || perPage > 100 {
-		h.ErrorResponse(c, errors.New("perPage must be between 1 and 100"), http.StatusBadRequest, "parameter 'perPage' must be between 1 and 100", true)
-		return
-	}
-
-	// 3. Получаем search
-	search := c.Query("search")
-
-	// 4. Вызываем usecase
-	groups, appErr := h.usecase.GetPatientGroupsByCodeOrOrgTitle(search, int(page), int(perPage))
-	if appErr != nil {
-		h.ErrorResponse(c, appErr.Err, appErr.Code, appErr.Message, appErr.IsUserFacing)
-		return
-	}
-
-	// 5. Возвращаем результат
-	h.ResultResponse(c, "Success fetch patient groups", Object, groups)
-}
-
-// GetPatientGroupsByOrganization godoc
-// @Summary Получить группы пациентов организации
-// @Description Возвращает список групп пациентов конкретной организации с пагинацией
+// GetPatientGroupsByDoctorID godoc
+// @Summary Получить группы пациентов, скачанные врачом
+// @Description Возвращает список групп пациентов, которые врач добавил в "скачанные", с возможностью поиска по коду группы и пагинацией
 // @Tags PatientGroups
 // @Accept json
 // @Produce json
-// @Param org_id path uint true "ID организации"
+// @Param doctor_id path uint true "ID врача"
+// @Param search query string false "Поиск по коду группы"
 // @Param page query int false "Номер страницы" default(1)
 // @Param perPage query int false "Количество записей на страницу" default(10)
-// @Success 200 {object} models.PatientGroupShortResponse
-// @Failure 400 {object} map[string]string
-// @Failure 500 {object} map[string]string
-// @Security BearerAuth
-// @Router /organizations/{org_id}/groups [get]
-func (h *Handler) GetPatientGroupsByOrganization(c *gin.Context) {
-	// 1. Парсим org_id из URL
-	orgID, err := h.service.ParseUintString(c.Param("org_id"))
+// @Success 200 {object} models.FilterResponse[[]models.PatientGroupShortResponse] "Список групп"
+// @Failure 400 {object} errors.AppError "Некорректный запрос"
+// @Failure 500 {object} errors.AppError "Внутренняя ошибка"
+// @Router /doctors/{doctor_id}/patient-groups [get]
+func (h *Handler) GetPatientGroupsByDoctorID(c *gin.Context) {
+	// 1. Получаем doctor_id из контекста
+	doctorIDAny, exists := c.Get("user_id")
+	if !exists {
+		h.ErrorResponse(c, nil, http.StatusUnauthorized, "Doctor ID not found in context", false)
+		return
+	}
+
+	// 2.1. Парсим doctor_id
+	doctorID, err := h.service.ParseUint(doctorIDAny)
 	if err != nil {
-		h.ErrorResponse(c, err, http.StatusBadRequest, "parameter 'org_id' must be an uint", false)
+		h.ErrorResponse(c, err, http.StatusInternalServerError, "Invalid doctor ID", false)
 		return
 	}
 
@@ -107,13 +60,80 @@ func (h *Handler) GetPatientGroupsByOrganization(c *gin.Context) {
 		return
 	}
 
-	// 4. Вызываем usecase
-	groups, appErr := h.usecase.GetPatientGroupsByOrganizationID(orgID, int(page), int(perPage))
+	// 4. Получаем search (опционально)
+	search := c.Query("search")
+
+	// 5. Вызываем usecase
+	groups, appErr := h.usecase.GetPatientGroupsByDoctorID(doctorID, search, int(page), int(perPage))
 	if appErr != nil {
 		h.ErrorResponse(c, appErr.Err, appErr.Code, appErr.Message, appErr.IsUserFacing)
 		return
 	}
 
-	// 5. Возвращаем результат
-	h.ResultResponse(c, "Success fetch patient groups by organization", Object, groups)
+	// 6. Возвращаем результат
+	h.ResultResponse(c, "Successfully fetched patient groups for doctor", Object, groups)
+}
+
+// GetPatientGroupsByOrganizationID godoc
+// @Summary Получить группы пациентов по организации
+// @Description Возвращает список групп пациентов, принадлежащих указанной организации, с возможностью поиска по коду группы и пагинацией
+// @Tags PatientGroups
+// @Accept json
+// @Produce json
+// @Param organization_id path uint true "ID организации"
+// @Param search query string false "Поиск по коду группы (case-insensitive)"
+// @Param page query int false "Номер страницы" default(1)
+// @Param perPage query int false "Количество записей на страницу" default(10)
+// @Success 200 {object} models.FilterResponse[[]models.PatientGroupShortResponse] "Список групп"
+// @Failure 400 {object} errors.AppError "Некорректный запрос"
+// @Failure 500 {object} errors.AppError "Внутренняя ошибка"
+// @Router /organizations/{organization_id}/patient-groups [get]
+func (h *Handler) GetPatientGroupsByOrganizationID(c *gin.Context) {
+	// 1. Получаем organization_id из пути
+	orgIDStr := c.Param("organization_id")
+	orgID, err := h.service.ParseUintString(orgIDStr)
+	if err != nil {
+		h.ErrorResponse(c, err, http.StatusBadRequest, "parameter 'organization_id' must be a valid integer", false)
+		return
+	}
+	if orgID == 0 {
+		h.ErrorResponse(c, errors.New("organization_id must be greater than 0"), http.StatusBadRequest, "parameter 'organization_id' must be greater than 0", true)
+		return
+	}
+
+	// 2. Парсим page
+	pageStr := c.DefaultQuery("page", "1")
+	page, err := h.service.ParseUintString(pageStr)
+	if err != nil {
+		h.ErrorResponse(c, err, http.StatusBadRequest, "parameter 'page' must be an integer", false)
+		return
+	}
+	if page == 0 {
+		h.ErrorResponse(c, errors.New("page must be greater than 0"), http.StatusBadRequest, "parameter 'page' must be greater than 0", true)
+		return
+	}
+
+	// 3. Парсим perPage
+	perPageStr := c.DefaultQuery("perPage", "10")
+	perPage, err := h.service.ParseUintString(perPageStr)
+	if err != nil {
+		h.ErrorResponse(c, err, http.StatusBadRequest, "parameter 'perPage' must be an integer", false)
+		return
+	}
+	if perPage == 0 || perPage > 100 {
+		perPage = 10
+	}
+
+	// 4. Получаем search (опционально)
+	search := c.Query("search")
+
+	// 5. Вызываем usecase
+	groups, appErr := h.usecase.GetPatientGroupsByOrganizationID(orgID, search, int(page), int(perPage))
+	if appErr != nil {
+		h.ErrorResponse(c, appErr.Err, appErr.Code, appErr.Message, appErr.IsUserFacing)
+		return
+	}
+
+	// 6. Возвращаем результат
+	h.ResultResponse(c, "Successfully fetched patient groups for organization", Object, groups)
 }

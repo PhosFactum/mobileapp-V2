@@ -19,11 +19,13 @@ type PatientUsecase struct {
 	analysisRepo  interfaces.AnalysisRepository
 }
 
-func NewPatientUsecase(repo interfaces.PatientRepository, manualRepo interfaces.ManualRepository, txManager interfaces.TxManager) interfaces.PatientUsecase {
+func NewPatientUsecase(repo interfaces.PatientRepository, manualRepo interfaces.ManualRepository, receptionRepo interfaces.ReceptionRepository, analysisRepo interfaces.AnalysisRepository, txManager interfaces.TxManager) interfaces.PatientUsecase {
 	return &PatientUsecase{
-		repo:       repo,
-		manualRepo: manualRepo,
-		txManager:  txManager,
+		repo:          repo,
+		manualRepo:    manualRepo,
+		receptionRepo: receptionRepo,
+		analysisRepo:  analysisRepo,
+		txManager:     txManager,
 	}
 }
 
@@ -37,10 +39,11 @@ func (u *PatientUsecase) CreatePatient(ctx context.Context, req *models.CreatePa
 		return nil, errors.NewDBError(op, err)
 	}
 
-	// Отложенный откат/коммит
+	shouldRollback := true
 	defer func() {
-		if err != nil {
-			u.txManager.Rollback(ctx)
+		if shouldRollback {
+			// Игнорируем ошибку Rollback — главное попытаться откатить
+			_ = u.txManager.Rollback(ctx)
 		}
 	}()
 
@@ -232,37 +235,14 @@ func (u *PatientUsecase) CreatePatient(ctx context.Context, req *models.CreatePa
 		return nil, errors.NewDBError(op, err)
 	}
 
-	// Коммитим транзакцию
+	// Отключаем откат перед коммитом
+	shouldRollback = false
 	if err = u.txManager.Commit(ctx); err != nil {
 		return nil, errors.NewDBError(op, err)
 	}
 
 	return createdPatient, nil
 }
-
-// // GetPatientsByGroup — без транзакции
-// func (u *PatientUsecase) GetPatientsByGroup(ctx context.Context, groupID uint) ([]models.PatientResponse, *errors.AppError) {
-// 	patients, err := u.repo.GetPatientsByGroup(ctx, groupID)
-// 	if err != nil {
-// 		return nil, errors.NewAppError(
-// 			errors.InternalServerErrorCode,
-// 			"failed to get patients",
-// 			err,
-// 			true,
-// 		)
-// 	}
-
-// 	var response []models.PatientResponse
-// 	for _, p := range patients {
-// 		resp, err := u.buildPatientResponse(p)
-// 		if err != nil {
-// 			return nil, err
-// 		}
-// 		response = append(response, resp)
-// 	}
-
-// 	return response, nil
-// }
 
 // GetPatientsByGroup — основной метод
 func (u *PatientUsecase) GetPatientsByGroup(ctx context.Context, groupID uint) ([]models.PatientResponse, *errors.AppError) {

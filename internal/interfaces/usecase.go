@@ -24,12 +24,12 @@ type ManualUseCase interface {
 }
 
 type PatientGroupUseCase interface {
-	GetPatientGroupsByCodeOrOrgTitle(search string, page, perPage int) (*models.FilterResponse[[]models.PatientGroupShortResponse], *errors.AppError)
-	GetPatientGroupsByOrganizationID(orgID uint, page, perPage int) (*models.FilterResponse[[]models.PatientGroupShortResponse], *errors.AppError)
+	GetPatientGroupsByDoctorID(doctorID uint, search string, page, perPage int) (*models.FilterResponse[[]models.PatientGroupShortResponse], *errors.AppError)
+	GetPatientGroupsByOrganizationID(orgID uint, search string, page, perPage int) (*models.FilterResponse[[]models.PatientGroupShortResponse], *errors.AppError)
 }
 
 type OrganizationUseCase interface {
-	GetAllOrganizations(doctorID uint, page, perPage int) (*models.FilterResponse[[]models.OrganizationShortResponse], *errors.AppError)
+	GetAllDoctorOrganizations(doctorID uint, search string, page, perPage int) (*models.FilterResponse[[]models.OrganizationShortResponse], *errors.AppError)
 }
 
 type ReceptionUsecase interface {

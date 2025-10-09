@@ -21,8 +21,8 @@ type Repository interface {
 }
 
 type PatientGroupRepository interface {
-	GetPatientGroupsByCodeOrOrgTitle(search string, page, perPage int) ([]entities.PatientGroup, int64, error)
-	GetPatientGroupsByOrganizationID(orgID uint, page, perPage int) ([]entities.PatientGroup, int64, error)
+	GetPatientGroupsByDoctorID(doctorID uint, search string, page, perPage int) ([]entities.PatientGroup, int64, error)
+	GetPatientGroupsByOrganizationID(orgID uint, search string, page, perPage int) ([]entities.PatientGroup, int64, error)
 }
 
 type ManualRepository interface {
@@ -32,7 +32,7 @@ type ManualRepository interface {
 }
 
 type OrganizationRepository interface {
-	GetAllOrganizations(doctorID uint, page, perPage int) ([]entities.Organization, int64, error)
+	GetAllDoctorOrganizations(doctorID uint, search string, page, perPage int) ([]entities.Organization, int64, error)
 }
 
 // updated to match the new structure

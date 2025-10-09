@@ -18,10 +18,13 @@ func NewOrganizationUsecase(repo interfaces.OrganizationRepository) interfaces.O
 		repo: repo}
 }
 
-func (u *OrganizationUsecase) GetAllOrganizations(doctorID uint, page, perPage int,
+func (u *OrganizationUsecase) GetAllDoctorOrganizations(
+	doctorID uint,
+	search string,
+	page, perPage int,
 ) (*models.FilterResponse[[]models.OrganizationShortResponse], *errors.AppError) {
-	// Получаем данные из репозитория
-	organizations, total, err := u.repo.GetAllOrganizations(doctorID, page, perPage)
+
+	organizations, total, err := u.repo.GetAllDoctorOrganizations(doctorID, search, page, perPage)
 	if err != nil {
 		return nil, errors.NewAppError(
 			errors.InternalServerErrorCode,
@@ -31,7 +34,6 @@ func (u *OrganizationUsecase) GetAllOrganizations(doctorID uint, page, perPage i
 		)
 	}
 
-	// Преобразуем в DTO
 	response := make([]models.OrganizationShortResponse, len(organizations))
 	for i, org := range organizations {
 		response[i] = u.mapOrganizationShort(org)

@@ -62,8 +62,7 @@ func NewRepository(db *gorm.DB) (interfaces.Repository, error) {
 func autoMigrate(db *gorm.DB) error {
 	tablesToDelete := []string{
 		// Зависимые от Patient
-		"harm_point_analyses",
-		"harm_point_reception_templates",
+
 		"reception_templates",
 		"receptions",
 		"analysis_order_items",
@@ -74,6 +73,9 @@ func autoMigrate(db *gorm.DB) error {
 		"patient_statistics",
 
 		// Many-to-many
+		"doctor_patient_groups",
+		"harm_point_analyses",
+		"harm_point_reception_templates",
 		"patients_specializations",
 		"doctor_specializations",
 		"doctor_organizations",
@@ -579,20 +581,44 @@ func seedReceptionTemplatesAndLinks(db *gorm.DB) error {
 func seedDoctors(db *gorm.DB) error {
 	var specs []entities.Specialization
 	var orgs []entities.Organization
+	var groups []entities.PatientGroup // ← добавили
+
 	db.Find(&specs)
 	db.Find(&orgs)
+	db.Find(&groups) // ← загружаем все группы
 
 	doctors := []entities.Doctor{
 		{FullName: "Смирнова А.М.", Phone: "+79161111111", PasswordHash: hashPassword("123")},
 		{FullName: "Козлов В.П.", Phone: "+79162222222", PasswordHash: hashPassword("123")},
 	}
+
 	for i := range doctors {
-		db.Create(&doctors[i])
+		if err := db.Create(&doctors[i]).Error; err != nil {
+			return fmt.Errorf("failed to create doctor: %w", err)
+		}
+
 		// Связываем со специализацией и организацией
-		db.Model(&doctors[i]).Association("Specializations").Append(&specs[i%len(specs)])
-		db.Model(&doctors[i]).Association("Organizations").Append(&orgs[i%len(orgs)])
+		if len(specs) > 0 {
+			db.Model(&doctors[i]).Association("Specializations").Append(&specs[i%len(specs)])
+		}
+		if len(orgs) > 0 {
+			db.Model(&doctors[i]).Association("Organizations").Append(&orgs[i%len(orgs)])
+		}
+
+		// 🔗 Связываем с группами пациентов (например, первые 2 группы)
+		if len(groups) > 0 {
+			// Выбираем подмножество групп для врача (например, 1–2 группы)
+			start := i % len(groups)
+			end := start + 2
+			if end > len(groups) {
+				end = len(groups)
+			}
+			if err := db.Model(&doctors[i]).Association("DownloadedGroups").Append(groups[start:end]); err != nil {
+				return fmt.Errorf("failed to link downloaded groups for doctor %d: %w", doctors[i].ID, err)
+			}
+		}
 	}
-	fmt.Println("✅ Seeded doctors")
+	fmt.Println("✅ Seeded doctors with specializations, organizations, and downloaded groups")
 	return nil
 }
 

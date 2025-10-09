@@ -19,13 +19,17 @@ func NewPatientGroupUsecase(repo interfaces.PatientGroupRepository) interfaces.P
 		repo: repo}
 }
 
-func (u *PatientGroupUsecase) GetPatientGroupsByCodeOrOrgTitle(search string, page, perPage int,
+func (u *PatientGroupUsecase) GetPatientGroupsByDoctorID(
+	doctorID uint,
+	search string,
+	page, perPage int,
 ) (*models.FilterResponse[[]models.PatientGroupShortResponse], *errors.AppError) {
-	patientGroups, total, err := u.repo.GetPatientGroupsByCodeOrOrgTitle(search, page, perPage)
+
+	patientGroups, total, err := u.repo.GetPatientGroupsByDoctorID(doctorID, search, page, perPage)
 	if err != nil {
 		return nil, errors.NewAppError(
 			errors.InternalServerErrorCode,
-			"Failed to get patientGroups",
+			"Failed to get patient groups for doctor",
 			err,
 			false,
 		)
@@ -47,13 +51,14 @@ func (u *PatientGroupUsecase) GetPatientGroupsByCodeOrOrgTitle(search string, pa
 	}, nil
 }
 
-func (u *PatientGroupUsecase) GetPatientGroupsByOrganizationID(orgID uint, page, perPage int,
-) (*models.FilterResponse[[]models.PatientGroupShortResponse], *errors.AppError) {
-	patientGroups, total, err := u.repo.GetPatientGroupsByOrganizationID(orgID, page, perPage)
+// GetPatientGroupsByOrganizationID возвращает группы пациентов организации с поиском по коду
+func (u *PatientGroupUsecase) GetPatientGroupsByOrganizationID(orgID uint, search string, page, perPage int) (*models.FilterResponse[[]models.PatientGroupShortResponse], *errors.AppError) {
+
+	patientGroups, total, err := u.repo.GetPatientGroupsByOrganizationID(orgID, search, page, perPage)
 	if err != nil {
 		return nil, errors.NewAppError(
 			errors.InternalServerErrorCode,
-			"Failed to get patient groups",
+			"Failed to get patient groups for organization",
 			err,
 			false,
 		)
