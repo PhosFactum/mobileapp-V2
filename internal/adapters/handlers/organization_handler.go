@@ -8,22 +8,20 @@ import (
 )
 
 // GetAllOrganizations godoc
-// @Summary Получить все организации
-// @Description Возвращает список организаций с пагинацией
+// @Summary Получить организации врача
+// @Description Возвращает список организаций, связанных с текущим врачом, с возможностью поиска по названию и пагинацией
 // @Tags Organizations
 // @Accept json
 // @Produce json
+// @Param search query string false "Поиск по названию организации"
 // @Param page query int false "Номер страницы" default(1)
 // @Param perPage query int false "Количество записей на страницу" default(5)
-// @Success 200 {object} models.OrganizationShortResponse "Список организаций"
-// @Failure 400 {object} IncorrectFormatError "Неверный формат запроса"
-// @Failure 401 {object} IncorrectDataError "Некорректный ID пользователя"
-// @Failure 422 {object} ValidationError "Ошибка валидации"
-// @Failure 500 {object} InternalServerError "Внутренняя ошибка сервера"
+// @Success 200 {object} models.FilterResponse[[]models.OrganizationShortResponse] "Список организаций"
+// @Failure 400 {object} errors.AppError "Неверный формат запроса"
+// @Failure 401 {object} errors.AppError "Не авторизован"
+// @Failure 500 {object} errors.AppError "Внутренняя ошибка сервера"
 // @Router /organizations [get]
-// GetAllOrganizations — получение списка организаций для врача
-// GetAllOrganizations — получение списка организаций для врача
-func (h *Handler) GetAllOrganizations(c *gin.Context) {
+func (h *Handler) GetAllDoctorOrganizations(c *gin.Context) {
 	// 1. Получаем doctor_id из контекста
 	doctorIDAny, exists := c.Get("user_id")
 	if !exists {
@@ -31,14 +29,13 @@ func (h *Handler) GetAllOrganizations(c *gin.Context) {
 		return
 	}
 
-	// 2.1. Парсим doctor_id
 	doctorID, err := h.service.ParseUint(doctorIDAny)
 	if err != nil {
 		h.ErrorResponse(c, err, http.StatusInternalServerError, "Invalid doctor ID", false)
 		return
 	}
 
-	// 3. Парсим page
+	// 2. Парсим page
 	pageStr := c.DefaultQuery("page", "1")
 	page, err := h.service.ParseUintString(pageStr)
 	if err != nil {
@@ -50,25 +47,27 @@ func (h *Handler) GetAllOrganizations(c *gin.Context) {
 		return
 	}
 
-	// 4. Парсим perPage
+	// 3. Парсим perPage
 	perPageStr := c.DefaultQuery("perPage", "5")
 	perPage, err := h.service.ParseUintString(perPageStr)
 	if err != nil {
 		h.ErrorResponse(c, err, http.StatusBadRequest, "parameter 'perPage' must be an integer", false)
 		return
 	}
-	if perPage == 0 {
-		h.ErrorResponse(c, errors.New("perPage must be greater than 0"), http.StatusBadRequest, "parameter 'perPage' must be greater than 0", true)
-		return
+	if perPage == 0 || perPage > 100 {
+		perPage = 5 // или верни ошибку, как в других местах
 	}
 
+	// 4. Получаем search (опционально)
+	search := c.Query("search")
+
 	// 5. Вызываем usecase
-	organizations, appErr := h.usecase.GetAllOrganizations(doctorID, int(page), int(perPage))
+	organizations, appErr := h.usecase.GetAllDoctorOrganizations(doctorID, search, int(page), int(perPage))
 	if appErr != nil {
 		h.ErrorResponse(c, appErr.Err, appErr.Code, appErr.Message, appErr.IsUserFacing)
 		return
 	}
 
 	// 6. Возвращаем результат
-	h.ResultResponse(c, "Success get organizations", Object, organizations)
+	h.ResultResponse(c, "Successfully fetched organizations", Object, organizations)
 }

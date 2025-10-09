@@ -13,4 +13,5 @@ type PatientGroup struct {
 	Organization   *Organization `gorm:"foreignKey:OrganizationID" json:"Organization"`
 
 	Patients []Patient `gorm:"foreignKey:PatientGroupID" json:"patients,omitempty"`
+	Doctors  []Doctor  `gorm:"many2many:doctor_patient_groups" json:"doctors,omitempty"`
 }
