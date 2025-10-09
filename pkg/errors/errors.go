@@ -34,7 +34,7 @@ const (
 	UnauthorizedError   = "unauthorized"
 
 	UnauthorizedErrorCode   = 401
-	InvalidDataCode         = 402
+	InvalidDataCode         = 400
 	ForbiddenErrorCode      = 403
 	InternalServerErrorCode = 500
 	NotFoundErrorCode       = 404
@@ -55,6 +55,16 @@ func NewDBError(message string, dbError error) *AppError {
 		Message:      message,
 		Err:          dbError,
 		IsUserFacing: false,
+	}
+}
+
+// NewValidationError создаёт ошибку валидации (400 Bad Request)
+func NewValidationError(op string, message string) *AppError {
+	return &AppError{
+		Code:         InvalidDataCode, // 400
+		Message:      fmt.Sprintf("%s: %s", op, message),
+		Err:          errors.New("validation error"),
+		IsUserFacing: true,
 	}
 }
 

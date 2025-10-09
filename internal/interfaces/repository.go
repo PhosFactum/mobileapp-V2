@@ -2,6 +2,7 @@ package interfaces
 
 import (
 	"context"
+	"encoding/json"
 
 	"github.com/AlexanderMorozov1919/mobileapp/internal/domain/entities"
 	"github.com/AlexanderMorozov1919/mobileapp/pkg/errors"
@@ -51,6 +52,8 @@ type ReceptionRepository interface {
 	GetReceptionTemplatesByHarmPointID(ctx context.Context, harmPointID uint) ([]entities.ReceptionTemplate, error)
 	CreateReceptions(ctx context.Context, receptions []entities.Reception) error
 	GetReceptionTemplatesByCodes(ctx context.Context, codes []string) ([]entities.ReceptionTemplate, error)
+	GetTemplateSchemaByID(ctx context.Context, templateID uint) (json.RawMessage, error)
+	CreateReception(ctx context.Context, reception *entities.Reception) error
 }
 
 type AnalysisRepository interface {

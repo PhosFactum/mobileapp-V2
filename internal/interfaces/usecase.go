@@ -32,12 +32,7 @@ type OrganizationUseCase interface {
 }
 
 type ReceptionUsecase interface {
-	// 	GetHospitalReceptionsByPatientID(patientId uint, page, count int, filter, order string) (models.FilterResponse[[]models.ReceptionHospitalResponse], *errors.AppError)
-	// 	UpdateReceptionHospital(id uint, input *models.UpdateReceptionHospitalRequest) (models.ReceptionHospitalResponse, *errors.AppError)
-	// 	GetHospitalReceptionsByDoctorID(doc_id uint, page, count int, filter, order string) (models.FilterResponse[[]models.ReceptionHospitalResponse], *errors.AppError)
-	// 	GetHospitalPatientsByDoctorID(doc_id uint, page, count int, filter, order string) (models.FilterResponse[[]entities.Patient], *errors.AppError)
-	// 	GetReceptionHospitalByID(hospID uint) (models.ReceptionFullResponse, error)
-	// 	UpdateReceptionHospitalStatus(id uint, newStatus string) (entities.Reception, error)
+	CreateReception(ctx context.Context, req *models.CreateReceptionRequest) (*entities.Reception, *errors.AppError)
 }
 
 type ContactInfoUsecase interface {

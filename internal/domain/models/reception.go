@@ -16,3 +16,11 @@ type ReceptionTemplateResponse struct {
 	Code   string          `json:"code"`
 	Schema json.RawMessage `json:"fields"`
 }
+
+type CreateReceptionRequest struct {
+	IsCompleted      bool            `json:"is_completed" binding:"required"`
+	TemplateID       uint            `json:"template_id" binding:"required"`
+	Data             json.RawMessage `json:"data" binding:"required"`
+	PatientID        uint            `json:"patient_id" binding:"required"`
+	SpecializationID uint            `json:"specialization_id" binding:"required"`
+}

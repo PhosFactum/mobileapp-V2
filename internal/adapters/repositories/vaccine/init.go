@@ -7,7 +7,7 @@ import (
 )
 
 type VaccineRepositoryImpl struct {
-	*base.BaseRepository // ← ВСТРАИВАЕМ
+	*base.BaseRepository
 }
 
 func NewVaccineRepository(db *gorm.DB) interfaces.VaccineRepository {
