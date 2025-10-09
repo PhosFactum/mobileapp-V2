@@ -487,7 +487,7 @@ func (u *PatientUsecase) mapReceptions(receptions []entities.Reception) []models
 			Template: models.ReceptionTemplateResponse{
 				ID:     r.Template.ID,
 				Code:   r.Template.Code,
-				Fields: r.Template.Fields,
+				Schema: r.Template.Schema,
 			},
 			Data: r.Data,
 		}

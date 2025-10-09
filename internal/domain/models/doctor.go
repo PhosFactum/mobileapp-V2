@@ -1,16 +1,7 @@
 package models
 
-// DoctorResponse - полная информация о враче
-// @Description Содержит все данные о враче включая идентификационные и контактные данные
-// type DoctorResponse struct {
-// 	ID               uint   `json:"id" example:"1"`                           // Уникальный идентификатор врача
-// 	FullName         string `json:"full_name" example:"Иванов Иван Иванович"` // Полное имя врача
-// 	Login            string `json:"login" example:"+79123456789"`             // Логин для входа (обычно телефон)
-// 	Password         string `json:"password" example:"qwerty123"`             // Хэш пароля (не должен возвращаться в API)
-// 	SpecializationID uint   `json:"specialization_id" example:"1"`            // Медицинская специализация
-// }
-
 type DoctorResponse struct {
+	ID              uint                     `json:"ID" example:"1"`                           // id
 	FullName        string                   `json:"full_name" example:"Иванов Иван Иванович"` // Полное имя врача
 	Specializations []SpecializationResponse `json:"specializations,omitempty"`
 }

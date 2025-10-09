@@ -24,7 +24,6 @@ type ManualUseCase interface {
 }
 
 type PatientGroupUseCase interface {
-	GetPatientGroupsByDoctorID(doctorID uint, search string, page, perPage int) (*models.FilterResponse[[]models.PatientGroupShortResponse], *errors.AppError)
 	GetPatientGroupsByOrganizationID(orgID uint, search string, page, perPage int) (*models.FilterResponse[[]models.PatientGroupShortResponse], *errors.AppError)
 }
 

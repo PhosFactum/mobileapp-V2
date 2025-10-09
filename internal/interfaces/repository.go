@@ -21,7 +21,6 @@ type Repository interface {
 }
 
 type PatientGroupRepository interface {
-	GetPatientGroupsByDoctorID(doctorID uint, search string, page, perPage int) ([]entities.PatientGroup, int64, error)
 	GetPatientGroupsByOrganizationID(orgID uint, search string, page, perPage int) ([]entities.PatientGroup, int64, error)
 }
 
