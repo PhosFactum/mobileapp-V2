@@ -70,6 +70,7 @@ func (u *DoctorUsecase) GetDoctorByID(id uint) (*models.DoctorResponse, *errors.
 
 	// 3. Создаём и возвращаем модель ответа
 	response := &models.DoctorResponse{
+		ID:              doc.ID,
 		FullName:        doc.FullName,
 		Specializations: specializations,
 	}

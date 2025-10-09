@@ -14,5 +14,5 @@ type ReceptionResponse struct {
 type ReceptionTemplateResponse struct {
 	ID     uint            `json:"id"`
 	Code   string          `json:"code"`
-	Fields json.RawMessage `json:"fields"`
+	Schema json.RawMessage `json:"fields"`
 }

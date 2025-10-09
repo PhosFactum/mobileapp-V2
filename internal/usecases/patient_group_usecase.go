@@ -19,38 +19,6 @@ func NewPatientGroupUsecase(repo interfaces.PatientGroupRepository) interfaces.P
 		repo: repo}
 }
 
-func (u *PatientGroupUsecase) GetPatientGroupsByDoctorID(
-	doctorID uint,
-	search string,
-	page, perPage int,
-) (*models.FilterResponse[[]models.PatientGroupShortResponse], *errors.AppError) {
-
-	patientGroups, total, err := u.repo.GetPatientGroupsByDoctorID(doctorID, search, page, perPage)
-	if err != nil {
-		return nil, errors.NewAppError(
-			errors.InternalServerErrorCode,
-			"Failed to get patient groups for doctor",
-			err,
-			false,
-		)
-	}
-
-	response := make([]models.PatientGroupShortResponse, len(patientGroups))
-	for i, pg := range patientGroups {
-		response[i] = u.mapPatientGroupShort(pg)
-	}
-
-	totalPages := int(math.Ceil(float64(total) / float64(perPage)))
-
-	return &models.FilterResponse[[]models.PatientGroupShortResponse]{
-		Hits:        response,
-		CurrentPage: page,
-		TotalPages:  totalPages,
-		TotalHits:   int(total),
-		HitsPerPage: perPage,
-	}, nil
-}
-
 // GetPatientGroupsByOrganizationID возвращает группы пациентов организации с поиском по коду
 func (u *PatientGroupUsecase) GetPatientGroupsByOrganizationID(orgID uint, search string, page, perPage int) (*models.FilterResponse[[]models.PatientGroupShortResponse], *errors.AppError) {
 
