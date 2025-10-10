@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/AlexanderMorozov1919/mobileapp/internal/domain/entities"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/domain/models"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/interfaces"
 	"github.com/AlexanderMorozov1919/mobileapp/pkg/errors"
@@ -23,35 +22,25 @@ func NewReceptionUsecase(repo interfaces.ReceptionRepository, s interfaces.Servi
 		FilterBuilder: s}
 }
 
-func (u *ReceptionUsecase) CreateReception(ctx context.Context, req *models.CreateReceptionRequest) (*entities.Reception, *errors.AppError) {
+func (u *ReceptionUsecase) UpdateReceptionData(ctx context.Context, req *models.UpdateReceptionDataRequest) *errors.AppError {
+	op := "usecase.Reception.UpdateReceptionData"
 
-	op := "usecase.Reception.CreateReception"
-
-	// 1. Получить актуальную схему с сервера (не доверяем клиенту!)
-	schema, err := u.repo.GetTemplateSchemaByID(ctx, req.TemplateID)
+	template, err := u.repo.GetTemplateByReceptionID(ctx, req.ID)
 	if err != nil {
-		return nil, errors.NewDBError(op, err) // AppError
+		return errors.NewDBError(op, err)
 	}
 
-	// 2. Валидировать данные
-	if err := ValidateJSONSchema(req.Data, schema); err != nil {
-		return nil, errors.NewValidationError(op, err.Error())
+	// Шаг 2: Валидировать данные против этой схемы
+	if err := ValidateJSONSchema(req.Data, template.Schema); err != nil {
+		return errors.NewValidationError(op, "invalid data against template schema: "+err.Error())
 	}
 
-	// 3. Создать приём
-	reception := &entities.Reception{
-		TemplateID:       req.TemplateID,
-		Data:             req.Data,
-		PatientID:        req.PatientID,
-		SpecializationID: req.SpecializationID,
-		// CreatedAt, UpdatedAt — GORM заполнит автоматически
+	// Шаг 3: Обновить данные
+	if err := u.repo.UpdateReceptionData(ctx, req.ID, req.Data); err != nil {
+		return errors.NewDBError(op, err)
 	}
 
-	if err := u.repo.CreateReception(ctx, reception); err != nil {
-		return nil, errors.NewDBError(op, err)
-	}
-
-	return reception, nil
+	return nil
 }
 
 // вынести

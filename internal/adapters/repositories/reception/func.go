@@ -43,30 +43,37 @@ func (r *ReceptionRepositoryImpl) CreateReceptions(ctx context.Context, receptio
 	return nil
 }
 
-// GetTemplateSchemaByID возвращает только schema по template_id
-func (r *ReceptionRepositoryImpl) GetTemplateSchemaByID(ctx context.Context, templateID uint) (json.RawMessage, error) {
-	op := "repo.ReceptionTemplate.GetTemplateSchemaByID"
+func (r *ReceptionRepositoryImpl) GetTemplateByReceptionID(ctx context.Context, receptionID uint) (*entities.ReceptionTemplate, error) {
+	op := "repo.Reception.GetTemplateByReceptionID"
 
-	var schema json.RawMessage
-	err := r.GetDB(ctx).WithContext(ctx).
-		Model(&entities.ReceptionTemplate{}).
-		Select("schema").
-		Where("id = ?", templateID).
-		Scan(&schema).Error
+	var template entities.ReceptionTemplate
+
+	err := r.GetDB(ctx).
+		Table("receptions r").
+		Select("rt.*").
+		Joins("JOIN reception_templates rt ON r.template_id = rt.id").
+		Where("r.id = ?", receptionID).
+		Scan(&template).Error
 
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return nil, errors.NewNotFoundError("Reception Template Not Found")
+			return nil, errors.NewNotFoundError(op)
 		}
 		return nil, errors.NewDBError(op, err)
 	}
-	return schema, nil
+
+	return &template, nil
 }
 
-// CreateReception создаёт приём
-func (r *ReceptionRepositoryImpl) CreateReception(ctx context.Context, reception *entities.Reception) error {
-	op := "repo.Reception.CreateReception"
-	if err := r.GetDB(ctx).WithContext(ctx).Create(reception).Error; err != nil {
+func (r *ReceptionRepositoryImpl) UpdateReceptionData(ctx context.Context, receptionID uint, data json.RawMessage) error {
+	op := "repo.Reception.UpdateReceptionData"
+
+	err := r.GetDB(ctx).
+		Model(&entities.Reception{}).
+		Where("id = ?", receptionID).
+		Update("data", data).Error
+
+	if err != nil {
 		return errors.NewDBError(op, err)
 	}
 	return nil
