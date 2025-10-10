@@ -73,7 +73,6 @@ func autoMigrate(db *gorm.DB) error {
 		"patient_statistics",
 
 		// Many-to-many
-		"doctor_patient_groups",
 		"harm_point_analyses",
 		"harm_point_reception_templates",
 		"patients_specializations",
@@ -454,62 +453,52 @@ func seedReceptionTemplatesAndLinks(db *gorm.DB) error {
 		mandatorySet[code] = struct{}{}
 	}
 
-	// Новый генератор: принимает JSON Schema как map[string]interface{}
+	// Генератор шаблона с SchemaVersion
 	createTemplate := func(specID uint, code string, schema map[string]interface{}) error {
 		schemaJSON, _ := json.Marshal(schema)
+		version := time.Now().UTC().Format(time.RFC3339)
+
 		tmpl := entities.ReceptionTemplate{
 			Code:             code,
 			SpecializationID: specID,
-			Schema:           json.RawMessage(schemaJSON), // ← Schema, не Fields
+			Schema:           json.RawMessage(schemaJSON),
+			SchemaVersion:    version,
 		}
 		return db.FirstOrCreate(&tmpl, entities.ReceptionTemplate{Code: code}).Error
 	}
 
-	// Вспомогательная функция: создаёт схему поля
+	// Вспомогательные функции
 	makeProperty := func(field map[string]interface{}) map[string]interface{} {
 		prop := make(map[string]interface{})
 		prop["type"] = field["type"]
-
-		// Обязательные метаданные
 		if desc, ok := field["description"]; ok {
 			prop["description"] = desc
 		}
-
-		// Ограничения для string
 		if minLen, ok := field["min_length"].(int); ok {
 			prop["minLength"] = minLen
 		}
 		if maxLen, ok := field["max_length"].(int); ok {
 			prop["maxLength"] = maxLen
 		}
-
-		// Ограничения для number/integer
 		if min, ok := field["min"]; ok {
 			prop["minimum"] = min
 		}
 		if max, ok := field["max"]; ok {
 			prop["maximum"] = max
 		}
-
-		// Для boolean — ничего дополнительно не нужно
-
 		return prop
 	}
 
-	// Вспомогательная функция: конвертирует старый формат → JSON Schema
 	convertToSchema := func(fields []map[string]interface{}) map[string]interface{} {
 		properties := make(map[string]interface{})
 		required := []string{}
-
 		for _, f := range fields {
 			name := f["name"].(string)
 			properties[name] = makeProperty(f)
-
 			if requiredFlag, ok := f["required"].(bool); ok && requiredFlag {
 				required = append(required, name)
 			}
 		}
-
 		return map[string]interface{}{
 			"$schema":              "http://json-schema.org/draft-07/schema#",
 			"type":                 "object",
@@ -519,7 +508,7 @@ func seedReceptionTemplatesAndLinks(db *gorm.DB) error {
 		}
 	}
 
-	// === 1. Обязательные шаблоны ===
+	// === 1. Обязательные шаблоны по специализациям ===
 	for _, spec := range specializations {
 		switch spec.Title {
 		case "Терапевт":
@@ -534,7 +523,6 @@ func seedReceptionTemplatesAndLinks(db *gorm.DB) error {
 				})
 				createTemplate(spec.ID, "THERAPY_ANAMNESIS_V1", schema)
 			}
-
 			if _, ok := mandatorySet["THERAPY_FOLLOWUP_V1"]; ok {
 				schema := convertToSchema([]map[string]interface{}{
 					{"name": "previous_diagnosis", "type": "string", "required": true},
@@ -557,34 +545,116 @@ func seedReceptionTemplatesAndLinks(db *gorm.DB) error {
 				createTemplate(spec.ID, "NEURO_EXAM_V1", schema)
 			}
 
-			// ... остальные специализации аналогично
+		case "Кардиолог":
+			if _, ok := mandatorySet["CARDIO_CONSULT_V1"]; ok {
+				schema := convertToSchema([]map[string]interface{}{
+					{"name": "chest_pain", "type": "string", "required": true},
+					{"name": "ecg_findings", "type": "string", "required": true},
+					{"name": "echo_result", "type": "string", "required": false},
+					{"name": "cholesterol_ldl", "type": "number", "required": true, "min": 0, "max": 10},
+					{"name": "cardiac_diagnosis", "type": "string", "required": true},
+				})
+				createTemplate(spec.ID, "CARDIO_CONSULT_V1", schema)
+			}
+
+		case "Офтальмолог":
+			if _, ok := mandatorySet["OPHTHALMO_EXAM_V1"]; ok {
+				schema := convertToSchema([]map[string]interface{}{
+					{"name": "visual_acuity_od", "type": "number", "required": true, "min": 0, "max": 1.0},
+					{"name": "visual_acuity_os", "type": "number", "required": true, "min": 0, "max": 1.0},
+					{"name": "intraocular_pressure_od", "type": "integer", "required": true, "min": 10, "max": 30},
+					{"name": "intraocular_pressure_os", "type": "integer", "required": true, "min": 10, "max": 30},
+					{"name": "fundus_findings", "type": "string", "required": false},
+					{"name": "ophthalmo_diagnosis", "type": "string", "required": true},
+				})
+				createTemplate(spec.ID, "OPHTHALMO_EXAM_V1", schema)
+			}
+
+		case "Педиатр":
+			if _, ok := mandatorySet["PEDIATRIC_ANAMNESIS_V1"]; ok {
+				schema := convertToSchema([]map[string]interface{}{
+					{"name": "age_months", "type": "integer", "required": true, "min": 0, "max": 216}, // до 18 лет
+					{"name": "weight_kg", "type": "number", "required": true, "min": 2, "max": 100},
+					{"name": "height_cm", "type": "integer", "required": true, "min": 45, "max": 200},
+					{"name": "vaccination_status", "type": "string", "required": true},
+					{"name": "developmental_milestones", "type": "string", "required": true},
+					{"name": "pediatric_diagnosis", "type": "string", "required": true},
+				})
+				createTemplate(spec.ID, "PEDIATRIC_ANAMNESIS_V1", schema)
+			}
+
+		case "Психиатр":
+			if _, ok := mandatorySet["PSYCH_EVAL_V1"]; ok {
+				schema := convertToSchema([]map[string]interface{}{
+					{"name": "mood", "type": "string", "required": true},
+					{"name": "affect", "type": "string", "required": true},
+					{"name": "thought_content", "type": "string", "required": true},
+					{"name": "suicidal_ideation", "type": "boolean", "required": true},
+					{"name": "psych_diagnosis", "type": "string", "required": true},
+				})
+				createTemplate(spec.ID, "PSYCH_EVAL_V1", schema)
+			}
+
+		case "Хирург":
+			if _, ok := mandatorySet["SURG_PREOP_V1"]; ok {
+				schema := convertToSchema([]map[string]interface{}{
+					{"name": "surgical_indication", "type": "string", "required": true},
+					{"name": "comorbidities", "type": "string", "required": true},
+					{"name": "lab_results", "type": "string", "required": true},
+					{"name": "surgical_plan", "type": "string", "required": true},
+					{"name": "surgeon_notes", "type": "string", "required": false},
+				})
+				createTemplate(spec.ID, "SURG_PREOP_V1", schema)
+			}
 		}
 	}
 
-	// === 2. Дополнительные шаблоны ===
+	// === 2. Дополнительные (необязательные) шаблоны ===
 	extraTemplates := []struct {
 		SpecTitle string
 		Code      string
 		Fields    []map[string]interface{}
 	}{
+		// Терапевт
 		{"Терапевт", "THERAPY_CARDIO_V1", []map[string]interface{}{
 			{"name": "ecg_result", "type": "string", "required": true},
-			{"name": "cholesterol", "type": "number", "required": true},
+			{"name": "cholesterol", "type": "number", "required": true, "min": 3.0, "max": 10.0},
 			{"name": "cardio_diagnosis", "type": "string", "required": true},
 		}},
-		// ... остальные
+		{"Терапевт", "THERAPY_ENDO_V1", []map[string]interface{}{
+			{"name": "glucose_fasting", "type": "number", "required": true, "min": 3.0, "max": 30.0},
+			{"name": "hba1c", "type": "number", "required": true, "min": 4.0, "max": 15.0},
+			{"name": "endo_diagnosis", "type": "string", "required": true},
+		}},
+
+		// Кардиолог
+		{"Кардиолог", "CARDIO_HF_FOLLOWUP_V1", []map[string]interface{}{
+			{"name": "nyha_class", "type": "string", "required": true},
+			{"name": "edema", "type": "boolean", "required": true},
+			{"name": "weight_change_kg", "type": "number", "required": true},
+			{"name": "medication_adherence", "type": "string", "required": true},
+		}},
+
+		// Психиатр
+		{"Психиатр", "PSYCH_THERAPY_PROGRESS_V1", []map[string]interface{}{
+			{"name": "session_number", "type": "integer", "required": true, "min": 1},
+			{"name": "symptom_severity", "type": "integer", "required": true, "min": 1, "max": 10},
+			{"name": "therapeutic_alliance", "type": "string", "required": true},
+			{"name": "next_steps", "type": "string", "required": true},
+		}},
 	}
 
 	for _, et := range extraTemplates {
 		specID, exists := getSpecIDByTitle(specializations, et.SpecTitle)
-		if !exists || contains(mandatorySet, et.Code) {
-			continue
+		if !exists {
+			continue // пропускаем, если специализация не найдена
 		}
+		// Дополнительные шаблоны создаются ВСЕГДА (не только если в mandatorySet)
 		schema := convertToSchema(et.Fields)
 		createTemplate(specID, et.Code, schema)
 	}
 
-	fmt.Println("✅ Seeded reception templates with JSON Schema")
+	fmt.Println("✅ Seeded all reception templates (mandatory + extra) with SchemaVersion")
 	return nil
 }
 
@@ -596,11 +666,6 @@ func getSpecIDByTitle(specs []entities.Specialization, title string) (uint, bool
 		}
 	}
 	return 0, false
-}
-
-func contains(set map[string]struct{}, key string) bool {
-	_, ok := set[key]
-	return ok
 }
 
 func seedDoctors(db *gorm.DB) error {
@@ -630,18 +695,6 @@ func seedDoctors(db *gorm.DB) error {
 			db.Model(&doctors[i]).Association("Organizations").Append(&orgs[i%len(orgs)])
 		}
 
-		// 🔗 Связываем с группами пациентов (например, первые 2 группы)
-		if len(groups) > 0 {
-			// Выбираем подмножество групп для врача (например, 1–2 группы)
-			start := i % len(groups)
-			end := start + 2
-			if end > len(groups) {
-				end = len(groups)
-			}
-			if err := db.Model(&doctors[i]).Association("DownloadedGroups").Append(groups[start:end]); err != nil {
-				return fmt.Errorf("failed to link downloaded groups for doctor %d: %w", doctors[i].ID, err)
-			}
-		}
 	}
 	fmt.Println("✅ Seeded doctors with specializations, organizations, and downloaded groups")
 	return nil

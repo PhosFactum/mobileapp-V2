@@ -17,10 +17,8 @@ type ReceptionTemplateResponse struct {
 	Schema json.RawMessage `json:"fields"`
 }
 
-type CreateReceptionRequest struct {
-	IsCompleted      bool            `json:"is_completed" binding:"required"`
-	TemplateID       uint            `json:"template_id" binding:"required"`
-	Data             json.RawMessage `json:"data" binding:"required"`
-	PatientID        uint            `json:"patient_id" binding:"required"`
-	SpecializationID uint            `json:"specialization_id" binding:"required"`
+type UpdateReceptionDataRequest struct {
+	ID                    uint            `json:"id" binding:"required,min=1"`
+	Data                  json.RawMessage `json:"data" binding:"required"`
+	TemplateSchemaVersion string          `json:"template_schema_version,omitempty"`
 }

@@ -32,7 +32,7 @@ type OrganizationUseCase interface {
 }
 
 type ReceptionUsecase interface {
-	CreateReception(ctx context.Context, req *models.CreateReceptionRequest) (*entities.Reception, *errors.AppError)
+	UpdateReceptionData(ctx context.Context, req *models.UpdateReceptionDataRequest) *errors.AppError
 }
 
 type ContactInfoUsecase interface {

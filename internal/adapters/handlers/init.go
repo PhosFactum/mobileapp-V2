@@ -101,7 +101,7 @@ func ProvideRouter(h *Handler, cfg *config.Config, swagCfg *swagger.Config) http
 
 	// Справочники
 	receptionGroup := baseRouter.Group("/receptions")
-	receptionGroup.POST("/create", h.CreateReception)
+	receptionGroup.POST("/update", h.UpdateReceptionData)
 
 	// Справочники
 	vaccineGroup := baseRouter.Group("/vaccines")

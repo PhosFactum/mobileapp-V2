@@ -52,8 +52,8 @@ type ReceptionRepository interface {
 	GetReceptionTemplatesByHarmPointID(ctx context.Context, harmPointID uint) ([]entities.ReceptionTemplate, error)
 	CreateReceptions(ctx context.Context, receptions []entities.Reception) error
 	GetReceptionTemplatesByCodes(ctx context.Context, codes []string) ([]entities.ReceptionTemplate, error)
-	GetTemplateSchemaByID(ctx context.Context, templateID uint) (json.RawMessage, error)
-	CreateReception(ctx context.Context, reception *entities.Reception) error
+	GetTemplateByReceptionID(ctx context.Context, receptionID uint) (*entities.ReceptionTemplate, error)
+	UpdateReceptionData(ctx context.Context, receptionID uint, data json.RawMessage) error
 }
 
 type AnalysisRepository interface {

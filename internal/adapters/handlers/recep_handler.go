@@ -20,9 +20,9 @@ import (
 // @Failure 404 {object} errors.AppError "Шаблон или пациент не найден"
 // @Failure 500 {object} errors.AppError "Внутренняя ошибка сервера"
 // @Router /receptions [post]
-func (h *Handler) CreateReception(c *gin.Context) {
+func (h *Handler) UpdateReceptionData(c *gin.Context) {
 	// 1. Биндим JSON
-	var request models.CreateReceptionRequest
+	var request models.UpdateReceptionDataRequest
 	if err := c.ShouldBindJSON(&request); err != nil {
 		h.ErrorResponse(c, err, http.StatusBadRequest, "invalid request body", true)
 		return
@@ -30,12 +30,12 @@ func (h *Handler) CreateReception(c *gin.Context) {
 
 	// 2. Вызываем юзкейс с контекстом из Gin
 	ctx := c.Request.Context()
-	reception, appErr := h.usecase.CreateReception(ctx, &request)
+	appErr := h.usecase.UpdateReceptionData(ctx, &request)
 	if appErr != nil {
 		h.ErrorResponse(c, appErr.Err, appErr.Code, appErr.Message, appErr.IsUserFacing)
 		return
 	}
 
 	// 3. Возвращаем результат
-	h.ResultResponse(c, "Reception created successfully", Object, reception)
+	h.ResultResponse(c, "Reception created successfully", Object, nil)
 }
