@@ -21,13 +21,14 @@ type UseCases struct {
 	interfaces.ConsentUsecase
 	interfaces.ManualUseCase
 	interfaces.VaccineUsecase
+	interfaces.AnalysisOrderUsecase
 }
 
 func NewUsecases(r interfaces.Repository, s interfaces.Service, conf *config.Config) interfaces.Usecases {
 
 	return &UseCases{
 		NewDoctorUsecase(r),
-		NewPatientUsecase(r, r, r, r, s),
+		NewPatientUsecase(r, r, r, r, r, s, s),
 		NewAuthUsecase(r, conf.JWTSecret),
 		NewOrganizationUsecase(r),
 		NewPatientGroupUsecase(r),
@@ -35,6 +36,7 @@ func NewUsecases(r interfaces.Repository, s interfaces.Service, conf *config.Con
 		NewConsentUsecase(r),
 		NewManualUseCase(r),
 		NewVaccineUsecase(r),
+		NewAnalysisOrderUsecase(r, r, s),
 	}
 
 }

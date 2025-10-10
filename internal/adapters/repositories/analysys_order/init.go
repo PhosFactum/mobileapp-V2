@@ -6,12 +6,12 @@ import (
 	"gorm.io/gorm"
 )
 
-type AnalysisRepositoryImpl struct {
+type AnalysisOrderRepositoryImpl struct {
 	*base.BaseRepository
 }
 
-func NewAnalysisRepository(db *gorm.DB) interfaces.AnalysisRepository {
-	return &AnalysisRepositoryImpl{
+func NewAnalysisOrderRepository(db *gorm.DB) interfaces.AnalysisOrderRepository {
+	return &AnalysisOrderRepositoryImpl{
 		BaseRepository: base.NewBaseRepository(db),
 	}
 }
