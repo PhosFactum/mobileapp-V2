@@ -386,7 +386,7 @@ func (u *PatientUsecase) mapVaccineRefusalToResponse(ctx context.Context, v enti
 	return models.VaccineAllResponse{
 		ID:             v.ID,
 		Date:           v.Date,
-		Type:           "vaccination",
+		Type:           "refusal",
 		Title:          title,
 		TiterAmountStr: nil,
 	}, nil
@@ -401,7 +401,7 @@ func (u *PatientUsecase) mapVaccineWithdrawalToResponse(ctx context.Context, v e
 	return models.VaccineAllResponse{
 		ID:             v.ID,
 		Date:           v.Date,
-		Type:           "vaccination",
+		Type:           "withdrawal",
 		Title:          title,
 		TiterAmountStr: nil,
 	}, nil
@@ -413,12 +413,13 @@ func (u *PatientUsecase) mapTitrToResponse(ctx context.Context, v entities.Titr)
 	if err != nil {
 		return models.VaccineAllResponse{}, err
 	}
+	amount := v.Amount
 	return models.VaccineAllResponse{
 		ID:             v.ID,
 		Date:           v.Date,
-		Type:           "vaccination",
+		Type:           "titer",
 		Title:          title,
-		TiterAmountStr: nil,
+		TiterAmountStr: &amount,
 	}, nil
 }
 
