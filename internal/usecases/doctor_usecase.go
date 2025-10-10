@@ -17,36 +17,6 @@ func NewDoctorUsecase(repo interfaces.DoctorRepository) interfaces.DoctorUsecase
 	return &DoctorUsecase{repo: repo}
 }
 
-// func (u *DoctorUsecase) CreateDoctor(doctor *models.CreateDoctorRequest) (entities.Doctor, *errors.AppError) {
-
-// 	log.Println("before hash Pass  for Create Doctor")
-// 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(doctor.Password), bcrypt.DefaultCost)
-// 	if err != nil {
-// 		return entities.Doctor{}, errors.NewAppError(400, "error create doctor", err, true)
-// 	}
-// 	log.Println("hash Pass  for Create Doctor")
-// 	log.Println("")
-// 	createDoctor := entities.Doctor{
-// 		FullName:         doctor.FullName,
-// 		Phone:            doctor.Phone,
-// 		PasswordHash:     string(passwordHash),
-// 		SpecializationID: doctor.SpecializationID,
-// 	}
-
-// 	createdDoctorID, errAp := u.repo.CreateDoctor(createDoctor)
-// 	if errAp != nil {
-// 		return entities.Doctor{}, errors.NewAppError(errors.InternalServerErrorCode, "failed to create doctor", err, true)
-// 	}
-// 	log.Println("Create Doctor in usace")
-
-// 	createdDoctor, errAp := u.repo.GetDoctorByID(createdDoctorID)
-// 	if errAp != nil {
-// 		return entities.Doctor{}, errors.NewAppError(errors.InternalServerErrorCode, "failed to get doctor", err, true)
-// 	}
-// 	log.Println("Create Doctor in usace")
-// 	return createdDoctor, nil
-// }
-
 func (u *DoctorUsecase) GetDoctorByID(id uint) (*models.DoctorResponse, *errors.AppError) {
 	// 1. Получаем доктора из репозитория (с предзагрузкой специализаций)
 	doc, err := u.repo.GetDoctorByID(id)

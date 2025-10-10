@@ -16,4 +16,5 @@ type Doctor struct {
 
 	Specializations []Specialization `gorm:"many2many:doctor_specializations" json:"-"`
 	Organizations   []Organization   `gorm:"many2many:doctor_organizations" json:"-"`
+	// Cписок группМедосмотра
 }

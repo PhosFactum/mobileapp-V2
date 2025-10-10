@@ -17,6 +17,10 @@ type Usecases interface {
 	PatientGroupUseCase
 	ManualUseCase
 	VaccineUsecase
+	AnalysisOrderUsecase
+}
+type AnalysisOrderUsecase interface {
+	UpdateAnalysisOrder(ctx context.Context, req *models.UpdateAnalysisOrderRequest) *errors.AppError
 }
 
 type ManualUseCase interface {

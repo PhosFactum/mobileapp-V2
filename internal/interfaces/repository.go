@@ -19,6 +19,7 @@ type Repository interface {
 	VaccineRepository
 	ManualRepository
 	AnalysisRepository
+	AnalysisOrderRepository
 }
 
 type PatientGroupRepository interface {
@@ -57,11 +58,23 @@ type ReceptionRepository interface {
 }
 
 type AnalysisRepository interface {
+	GetAnalysesByCodes(ctx context.Context, codes []string) ([]entities.Analysis, error)
+	GetAnalysesByHarmPointID(ctx context.Context, harmPointID uint) ([]entities.Analysis, error)
+
+	GetAnalysisByID(ctx context.Context, id uint) (*entities.Analysis, error)
+	GetAllAnalysisIDs(ctx context.Context) ([]uint, error)
+}
+
+type AnalysisOrderRepository interface {
 	UpdateAnalysisOrder(ctx context.Context, order *entities.AnalysisOrder) error
 	CreateAnalysisOrder(ctx context.Context, order *entities.AnalysisOrder) error
-	GetAnalysesByCodes(ctx context.Context, codes []string) ([]entities.Analysis, error)
 	CreateAnalysisItems(ctx context.Context, items []entities.AnalysisOrderItem) error
-	GetAnalysesByHarmPointID(ctx context.Context, harmPointID uint) ([]entities.Analysis, error)
+
+	GetByID(ctx context.Context, id uint) (*entities.AnalysisOrder, error)
+	GetOrderItemsByOrderID(ctx context.Context, orderID uint) ([]entities.AnalysisOrderItem, error)
+	CreateOrderItems(ctx context.Context, items []entities.AnalysisOrderItem) error
+	UpdateOrderItem(ctx context.Context, item entities.AnalysisOrderItem) error
+	DeleteOrderItems(ctx context.Context, itemIDs []uint) error
 }
 
 // updated to match the new structured

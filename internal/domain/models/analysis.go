@@ -1,5 +1,7 @@
 package models
 
+import "time"
+
 type AnalysisOrderResponse struct {
 	ID          uint                        `json:"id"`
 	OrderNumber string                      `json:"order_number"`
@@ -19,4 +21,18 @@ type AnalysisResponse struct {
 	Code  string `json:"code"`
 	Title string `json:"title"`
 	Price uint   `json:"price"`
+}
+
+type UpdateAnalysisOrderItemDTO struct {
+	ID          uint       `json:"id"`     // всегда присутствует
+	IsNew       bool       `json:"is_new"` // true = новый item
+	AnalysisID  uint       `json:"analysis_id" binding:"required"`
+	IsCompleted bool       `json:"is_completed"`
+	CompletedAt *time.Time `json:"completed_at,omitempty"`
+}
+
+type UpdateAnalysisOrderRequest struct {
+	ID         uint                         `json:"id" binding:"required,min=1"`
+	PatientID  uint                         `json:"patient_id" binding:"required,min=1"`
+	OrderItems []UpdateAnalysisOrderItemDTO `json:"order_items" binding:"required,dive"`
 }

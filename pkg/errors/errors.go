@@ -86,8 +86,11 @@ func Is(err any, err2 error) bool {
 
 var ErrNotFound = errors.New("not found")
 
-func NewNotFoundError(message string) error {
-	return fmt.Errorf("%w: %s", ErrNotFound, message)
+// Конструкторы
+func NewNotFoundError(message string) *AppError {
+	return &AppError{
+		Message: message,
+	}
 }
 
 // NewUnauthorizedError создает ошибку авторизации

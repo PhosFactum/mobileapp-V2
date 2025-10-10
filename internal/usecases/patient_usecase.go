@@ -12,20 +12,24 @@ import (
 )
 
 type PatientUsecase struct {
-	repo          interfaces.PatientRepository
-	manualRepo    interfaces.ManualRepository
-	txManager     interfaces.TxManager
-	receptionRepo interfaces.ReceptionRepository
-	analysisRepo  interfaces.AnalysisRepository
+	repo              interfaces.PatientRepository
+	manualRepo        interfaces.ManualRepository
+	txManager         interfaces.TxManager
+	receptionRepo     interfaces.ReceptionRepository
+	analysisRepo      interfaces.AnalysisRepository
+	analysisOrderRepo interfaces.AnalysisOrderRepository
+	parser            interfaces.ParamsParserService
 }
 
-func NewPatientUsecase(repo interfaces.PatientRepository, manualRepo interfaces.ManualRepository, receptionRepo interfaces.ReceptionRepository, analysisRepo interfaces.AnalysisRepository, txManager interfaces.TxManager) interfaces.PatientUsecase {
+func NewPatientUsecase(repo interfaces.PatientRepository, manualRepo interfaces.ManualRepository, receptionRepo interfaces.ReceptionRepository, analysisRepo interfaces.AnalysisRepository, analysisOrderRepo interfaces.AnalysisOrderRepository, txManager interfaces.TxManager, parser interfaces.ParamsParserService) interfaces.PatientUsecase {
 	return &PatientUsecase{
-		repo:          repo,
-		manualRepo:    manualRepo,
-		receptionRepo: receptionRepo,
-		analysisRepo:  analysisRepo,
-		txManager:     txManager,
+		repo:              repo,
+		manualRepo:        manualRepo,
+		receptionRepo:     receptionRepo,
+		analysisRepo:      analysisRepo,
+		analysisOrderRepo: analysisOrderRepo,
+		txManager:         txManager,
+		parser:            parser,
 	}
 }
 
@@ -79,13 +83,13 @@ func (u *PatientUsecase) CreatePatient(ctx context.Context, req *models.CreatePa
 		CreatedAt:   time.Now(),
 		UpdatedAt:   time.Now(),
 	}
-	if err = u.analysisRepo.CreateAnalysisOrder(ctx, analysisOrder); err != nil {
+	if err = u.analysisOrderRepo.CreateAnalysisOrder(ctx, analysisOrder); err != nil {
 		return nil, errors.NewDBError(op, err)
 	}
 
 	// Обновляем номер на основе ID
 	analysisOrder.OrderNumber = fmt.Sprintf("ORD-%06d", analysisOrder.ID)
-	if err = u.analysisRepo.UpdateAnalysisOrder(ctx, analysisOrder); err != nil {
+	if err = u.analysisOrderRepo.UpdateAnalysisOrder(ctx, analysisOrder); err != nil {
 		return nil, errors.NewDBError(op, err)
 	}
 
@@ -171,14 +175,14 @@ func (u *PatientUsecase) CreatePatient(ctx context.Context, req *models.CreatePa
 		})
 	}
 	if len(analysisItems) > 0 {
-		if err = u.analysisRepo.CreateAnalysisItems(ctx, analysisItems); err != nil {
+		if err = u.analysisOrderRepo.CreateAnalysisItems(ctx, analysisItems); err != nil {
 			return nil, errors.NewDBError(op, err)
 		}
 	}
 
 	// ✅ 8. Привязываем заказ к пациенту
 	analysisOrder.PatientID = patient.ID
-	if err = u.analysisRepo.UpdateAnalysisOrder(ctx, analysisOrder); err != nil {
+	if err = u.analysisOrderRepo.UpdateAnalysisOrder(ctx, analysisOrder); err != nil {
 		return nil, errors.NewDBError(op, err)
 	}
 
@@ -386,7 +390,7 @@ func (u *PatientUsecase) mapVaccineRefusalToResponse(ctx context.Context, v enti
 	return models.VaccineAllResponse{
 		ID:             v.ID,
 		Date:           v.Date,
-		Type:           "vaccination",
+		Type:           "refusal",
 		Title:          title,
 		TiterAmountStr: nil,
 	}, nil
@@ -401,7 +405,7 @@ func (u *PatientUsecase) mapVaccineWithdrawalToResponse(ctx context.Context, v e
 	return models.VaccineAllResponse{
 		ID:             v.ID,
 		Date:           v.Date,
-		Type:           "vaccination",
+		Type:           "withdrawal",
 		Title:          title,
 		TiterAmountStr: nil,
 	}, nil
@@ -413,12 +417,13 @@ func (u *PatientUsecase) mapTitrToResponse(ctx context.Context, v entities.Titr)
 	if err != nil {
 		return models.VaccineAllResponse{}, err
 	}
+	amount := v.Amount
 	return models.VaccineAllResponse{
 		ID:             v.ID,
 		Date:           v.Date,
-		Type:           "vaccination",
+		Type:           "titer",
 		Title:          title,
-		TiterAmountStr: nil,
+		TiterAmountStr: &amount,
 	}, nil
 }
 
@@ -554,6 +559,7 @@ func (u *PatientUsecase) mapFlg(flg *entities.Flg) *models.FlgResponse {
 		Organization: flg.Organization,
 		Number:       flg.Number,
 		Result:       flg.Result,
+		Date:         u.parser.FormatDateToString(flg.Date),
 	}
 }
 

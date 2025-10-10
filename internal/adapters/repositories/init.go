@@ -9,6 +9,7 @@ import (
 	"time"
 
 	analysis "github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/analysys"
+	analysisOrder "github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/analysys_order"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/auth"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/consent_signatures"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/doctor"
@@ -35,6 +36,7 @@ type Repository struct {
 	interfaces.ManualRepository
 	interfaces.AnalysisRepository
 	interfaces.VaccineRepository
+	interfaces.AnalysisOrderRepository
 }
 
 func NewRepository(db *gorm.DB) (interfaces.Repository, error) {
@@ -55,6 +57,7 @@ func NewRepository(db *gorm.DB) (interfaces.Repository, error) {
 		manual.NewManualRepository(db),
 		analysis.NewAnalysisRepository(db),
 		vaccine.NewVaccineRepository(db),
+		analysisOrder.NewAnalysisOrderRepository(db),
 	}, nil
 
 }
