@@ -1,18 +1,17 @@
 package reception
 
 import (
+	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/base"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/interfaces"
 	"gorm.io/gorm"
 )
 
-type contextKey string
-
-const txContextKey contextKey = "db_transaction"
-
 type ReceptionRepositoryImpl struct {
-	db *gorm.DB
+	*base.BaseRepository
 }
 
 func NewReceptionRepository(db *gorm.DB) interfaces.ReceptionRepository {
-	return &ReceptionRepositoryImpl{db: db}
+	return &ReceptionRepositoryImpl{
+		BaseRepository: base.NewBaseRepository(db),
+	}
 }

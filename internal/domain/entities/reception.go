@@ -11,7 +11,7 @@ type Reception struct {
 	CreatedAt time.Time `json:"created_at"`
 	UpdatedAt time.Time `json:"updated_at"`
 
-	IsCompleted bool `gorm:"default:false" json:"is_completed"`
+	IsCompleted bool `gorm:"default:false" json:"is_completed"` // Под вопросом скорее всего не стоит создавать приемы на уровне пациента и считать выполненные за созданные
 
 	PatientID uint     `gorm:"not null;index" json:"patient_id" example:"1"`
 	Patient   *Patient `gorm:"foreignKey:PatientID" json:"-"`

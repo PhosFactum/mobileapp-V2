@@ -100,6 +100,10 @@ func ProvideRouter(h *Handler, cfg *config.Config, swagCfg *swagger.Config) http
 	manualGroup.GET("/getAll", h.GetAllManuals)
 
 	// Справочники
+	receptionGroup := baseRouter.Group("/receptions")
+	receptionGroup.POST("/create", h.CreateReception)
+
+	// Справочники
 	vaccineGroup := baseRouter.Group("/vaccines")
 	vaccineGroup.GET("/getAll", h.GetAllManuals)
 	vaccineGroup.POST("/vaccines", h.CreateVaccine)
