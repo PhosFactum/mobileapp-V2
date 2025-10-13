@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/AlexanderMorozov1919/mobileapp/internal/domain/models"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/interfaces"
 )
 
@@ -108,4 +109,172 @@ func (s *ParamsParser) ParseUint(value interface{}) (uint, error) {
 	}
 
 	return 0, fmt.Errorf("cannot convert %v (type %T) to uint", value, value)
+}
+
+// ConvertJSONSchemaToFields преобразует JSON Schema в список FieldDescriptor
+func (s *ParamsParser) ConvertJSONSchemaToFields(schemaJSON json.RawMessage) ([]models.FieldDescriptor, error) {
+	if len(schemaJSON) == 0 {
+		return []models.FieldDescriptor{}, nil
+	}
+
+	var schema map[string]interface{}
+	if err := json.Unmarshal(schemaJSON, &schema); err != nil {
+		return nil, fmt.Errorf("invalid schema JSON: %w", err)
+	}
+
+	properties, ok := schema["properties"].(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("missing or invalid 'properties' in schema")
+	}
+
+	requiredMap := make(map[string]bool)
+	if reqs, ok := schema["required"].([]interface{}); ok {
+		for _, r := range reqs {
+			if name, ok := r.(string); ok {
+				requiredMap[name] = true
+			}
+		}
+	}
+
+	var fields []models.FieldDescriptor
+	for name, prop := range properties {
+		// prop имеет тип interface{} — передаём как есть
+		field, err := convertProperty(name, prop, requiredMap[name])
+		if err != nil {
+			return nil, fmt.Errorf("failed to convert field %q: %w", name, err)
+		}
+		fields = append(fields, field)
+	}
+
+	return fields, nil
+}
+
+func convertProperty(name string, p interface{}, required bool) (models.FieldDescriptor, error) {
+	// Приводим тип ВНУТРИ функции
+	prop, ok := p.(map[string]interface{})
+	if !ok {
+		return models.FieldDescriptor{}, fmt.Errorf("property %q is not a JSON object", name)
+	}
+
+	field := models.FieldDescriptor{
+		Name:     name,
+		Title:    name,
+		Required: required,
+	}
+
+	// Type
+	if t, ok := prop["type"].(string); ok {
+		field.Type = t
+	}
+
+	// Description → Title
+	if desc, ok := prop["description"].(string); ok {
+		field.Title = desc
+		field.Description = &desc
+	}
+
+	// Format
+	if f, ok := prop["format"].(string); ok {
+		field.Format = &f
+	}
+
+	// String ограничения
+	if minLen, ok := prop["minLength"].(float64); ok {
+		val := int(minLen)
+		field.MinLength = &val
+	}
+	if maxLen, ok := prop["maxLength"].(float64); ok {
+		val := int(maxLen)
+		field.MaxLength = &val
+	}
+	if pattern, ok := prop["pattern"].(string); ok {
+		field.Pattern = &pattern
+	}
+
+	// Number ограничения
+	if min, ok := prop["minimum"].(float64); ok {
+		field.Minimum = &min
+	}
+	if max, ok := prop["maximum"].(float64); ok {
+		field.Maximum = &max
+	}
+	if exMin, ok := prop["exclusiveMinimum"].(float64); ok {
+		field.ExclusiveMinimum = &exMin
+	}
+	if exMax, ok := prop["exclusiveMaximum"].(float64); ok {
+		field.ExclusiveMaximum = &exMax
+	}
+	if mult, ok := prop["multipleOf"].(float64); ok {
+		field.MultipleOf = &mult
+	}
+
+	// Array
+	if minItems, ok := prop["minItems"].(float64); ok {
+		val := int(minItems)
+		field.MinItems = &val
+	}
+	if maxItems, ok := prop["maxItems"].(float64); ok {
+		val := int(maxItems)
+		field.MaxItems = &val
+	}
+
+	// Enum
+	if enums, ok := prop["enum"].([]interface{}); ok {
+		for _, e := range enums {
+			if s, ok := e.(string); ok {
+				field.Enum = append(field.Enum, s)
+			}
+		}
+	}
+
+	// Tag
+	field.Tag = inferTag(field.Type, prop, field.Enum != nil, field.Pattern != nil)
+
+	return field, nil
+}
+
+func inferTag(fieldType string, prop map[string]interface{}, hasEnum bool, hasPattern bool) string {
+	switch fieldType {
+	case "string":
+		if hasEnum {
+			return "select"
+		}
+		if hasPattern {
+			return "input" // или "masked-input", если нужна маска
+		}
+		// Проверяем format для специальных input-ов
+		if format, ok := prop["format"].(string); ok {
+			switch format {
+			case "email":
+				return "email"
+			case "date":
+				return "date"
+			case "textarea": // кастомный format для многострочного ввода
+				return "textarea"
+			default:
+				return "input"
+			}
+		}
+		return "input"
+
+	case "number", "integer":
+		return "number"
+
+	case "boolean":
+		return "checkbox"
+
+	case "array":
+		// Если массив строк с enum — мультиселект
+		if items, ok := prop["items"].(map[string]interface{}); ok {
+			if itemType, ok := items["type"].(string); ok && itemType == "string" {
+				if _, hasEnum := items["enum"]; hasEnum {
+					return "multiselect"
+				}
+			}
+		}
+		return "list" // общий тег для массивов
+
+	default:
+		return "input"
+	}
 }

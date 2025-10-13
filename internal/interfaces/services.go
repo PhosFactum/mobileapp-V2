@@ -2,8 +2,10 @@ package interfaces
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
+	"github.com/AlexanderMorozov1919/mobileapp/internal/domain/models"
 	"gorm.io/gorm"
 )
 
@@ -24,6 +26,7 @@ type ParamsParserService interface {
 
 	FormatDateToString(t time.Time) string
 	FormatTimeToString(t time.Time) string
+	ConvertJSONSchemaToFields(schemaJSON json.RawMessage) ([]models.FieldDescriptor, error)
 }
 
 type FilterBuilderService interface {
