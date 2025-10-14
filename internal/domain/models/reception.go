@@ -17,6 +17,12 @@ type ReceptionTemplateResponse struct {
 	Fields []FieldDescriptor `json:"fields"`
 }
 
+type UpdateReceptionDataRequest struct {
+	ID                    uint            `json:"id" binding:"required,min=1"`
+	Data                  json.RawMessage `json:"data" binding:"required"`
+	TemplateSchemaVersion string          `json:"template_schema_version,omitempty"`
+}
+
 type FieldDescriptor struct {
 	Name     string `json:"name"`
 	Title    string `json:"title"`

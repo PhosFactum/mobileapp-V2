@@ -274,157 +274,85 @@ func (u *PatientUsecase) GetPatientsByGroup(ctx context.Context, groupID uint) (
 }
 
 func (u *PatientUsecase) buildPatientResponse(ctx context.Context, p entities.Patient) (models.PatientResponse, *errors.AppError) {
-	examType, err := u.mapExaminationType(ctx, p.ExaminationTypeID)
-	if err != nil {
-		return models.PatientResponse{}, err
-	}
-	examView, err := u.mapExaminationView(ctx, p.ExaminationViewID)
-	if err != nil {
-		return models.PatientResponse{}, err
-	}
-	vaccines, err := u.mapVaccines(p.Vaccines, p.VaccineRefusals, p.VaccineWithdrawals, p.Titers, ctx)
+	receptions, err := u.MapReceptions(p.Receptions)
 	if err != nil {
 		return models.PatientResponse{}, err
 	}
 
-	personalInfo, err := u.mapPersonalInfo(ctx, p.PersonalInfo)
-	if err != nil {
-		return models.PatientResponse{}, err
-	}
 	return models.PatientResponse{
-		ID:             p.ID,
-		FullName:       p.FullName,
-		BirthDate:      p.BirthDate,
-		Age:            u.calculateAge(p.BirthDate),
-		IsMale:         p.IsMale,
-		Position:       p.Position,
-		Division:       p.Division,
-		PatientGroupID: p.PatientGroupID,
+		ID:                p.ID,
+		FullName:          p.FullName,
+		BirthDate:         p.BirthDate,
+		Age:               u.calculateAge(p.BirthDate),
+		IsMale:            p.IsMale,
+		Position:          p.Position,
+		Division:          p.Division,
+		PatientGroupID:    p.PatientGroupID,
+		ExaminationTypeID: p.ExaminationTypeID,
+		ExaminationViewID: p.ExaminationViewID,
 
-		// ✅ Просто копируем строки
-		ExaminationType: examType,
-		ExaminationView: examView,
-
-		Vaccines:        vaccines,
-		Receptions:      u.mapReceptions(p.Receptions),
+		Vaccines:        u.mapVaccines(p.Vaccines, p.VaccineRefusals, p.VaccineWithdrawals, p.Titers),
+		Receptions:      receptions,
 		AnalysisOrder:   u.mapAnalysisOrder(p.AnalysisOrder),
-		HarmPoint:       u.mapHarmPoint(p.HarmPoint),
-		PersonalInfo:    personalInfo,
-		ContactInfo:     u.mapContactInfo(p.ContactInfo),
+		HarmPoint:       u.mapHarmPoint(*p.HarmPoint),
+		PersonalInfo:    u.mapPersonalInfo(*p.PersonalInfo),
+		ContactInfo:     u.mapContactInfo(*p.ContactInfo),
 		Flg:             u.mapFlg(p.Flg),
-		Statistics:      u.mapStatistics(p.Statistics),
+		Statistics:      u.mapStatistics(*p.Statistics),
 		Specializations: u.mapSpecializations(p.Specializations),
 	}, nil
 }
 
-func (u *PatientUsecase) mapHarmPoint(point *entities.HarmPoint) models.HarmPointResponse {
+func (u *PatientUsecase) mapHarmPoint(point entities.HarmPoint) models.HarmPointResponse {
 	return models.HarmPointResponse{
 		ID:    point.ID,
 		Value: point.Value,
 	}
 }
 
-func (u *PatientUsecase) mapExaminationType(ctx context.Context, id uint) (string, *errors.AppError) {
-	val, err := u.manualRepo.GetManualValueByTypeAndID(ctx, id, entities.RefTypePatientExaminationType)
-	if err != nil {
-		return "", errors.NewAppError(
-			errors.InternalServerErrorCode,
-			"Failed to get ExaminationType",
-			err,
-			false,
-		)
-	}
-
-	return val, nil
-}
-
-func (u *PatientUsecase) mapExaminationView(ctx context.Context, id uint) (string, *errors.AppError) {
-	val, err := u.manualRepo.GetManualValueByTypeAndID(ctx, id, entities.RefTypePatientExaminationView)
-	if err != nil {
-		return "", errors.NewAppError(
-			errors.InternalServerErrorCode,
-			"Failed to get ExaminationType",
-			err,
-			false,
-		)
-	}
-
-	return val, nil
-}
-
-func (u *PatientUsecase) mapVaccineTitle(ctx context.Context, id uint) (string, *errors.AppError) {
-	val, err := u.manualRepo.GetManualValueByTypeAndID(ctx, id, entities.RefTypeVaccineTitle)
-	if err != nil {
-		return "", errors.NewAppError(
-			errors.InternalServerErrorCode,
-			"Failed to get VaccineTitle",
-			err,
-			false,
-		)
-	}
-
-	return val, nil
-}
-
 // mapVaccineToResponse маппит вакцинацию
-func (u *PatientUsecase) mapVaccineToResponse(ctx context.Context, v entities.Vaccine) (models.VaccineAllResponse, *errors.AppError) {
-	title, err := u.mapVaccineTitle(ctx, v.TitleID)
-	if err != nil {
-		return models.VaccineAllResponse{}, err
-	}
+func (u *PatientUsecase) mapVaccineToResponse(v entities.Vaccine) models.VaccineAllResponse {
 	return models.VaccineAllResponse{
 		ID:             v.ID,
 		Date:           v.Date,
 		Type:           "vaccination",
-		Title:          title,
+		TitleID:        v.TitleID,
 		TiterAmountStr: nil,
-	}, nil
+	}
 }
 
 // mapVaccineRefusalToResponse маппит отказ
-func (u *PatientUsecase) mapVaccineRefusalToResponse(ctx context.Context, v entities.VaccineRefusal) (models.VaccineAllResponse, *errors.AppError) {
-	title, err := u.mapVaccineTitle(ctx, v.TitleID)
-	if err != nil {
-		return models.VaccineAllResponse{}, err
-	}
+func (u *PatientUsecase) mapVaccineRefusalToResponse(v entities.VaccineRefusal) models.VaccineAllResponse {
 	return models.VaccineAllResponse{
 		ID:             v.ID,
 		Date:           v.Date,
 		Type:           "refusal",
-		Title:          title,
+		TitleID:        v.TitleID,
 		TiterAmountStr: nil,
-	}, nil
+	}
 }
 
 // mapVaccineWithdrawalToResponse маппит отвод
-func (u *PatientUsecase) mapVaccineWithdrawalToResponse(ctx context.Context, v entities.VaccineWithdrawal) (models.VaccineAllResponse, *errors.AppError) {
-	title, err := u.mapVaccineTitle(ctx, v.TitleID)
-	if err != nil {
-		return models.VaccineAllResponse{}, err
-	}
+func (u *PatientUsecase) mapVaccineWithdrawalToResponse(v entities.VaccineWithdrawal) models.VaccineAllResponse {
 	return models.VaccineAllResponse{
 		ID:             v.ID,
 		Date:           v.Date,
 		Type:           "withdrawal",
-		Title:          title,
+		TitleID:        v.TitleID,
 		TiterAmountStr: nil,
-	}, nil
+	}
 }
 
 // mapTitrToResponse маппит титрование
-func (u *PatientUsecase) mapTitrToResponse(ctx context.Context, v entities.Titr) (models.VaccineAllResponse, *errors.AppError) {
-	title, err := u.mapVaccineTitle(ctx, v.TitleID)
-	if err != nil {
-		return models.VaccineAllResponse{}, err
-	}
+func (u *PatientUsecase) mapTitrToResponse(v entities.Titr) models.VaccineAllResponse {
 	amount := v.Amount
 	return models.VaccineAllResponse{
 		ID:             v.ID,
 		Date:           v.Date,
 		Type:           "titer",
-		Title:          title,
+		TitleID:        v.TitleID,
 		TiterAmountStr: &amount,
-	}, nil
+	}
 }
 
 func (u *PatientUsecase) mapVaccines(
@@ -432,116 +360,53 @@ func (u *PatientUsecase) mapVaccines(
 	refusals []entities.VaccineRefusal,
 	withdrawals []entities.VaccineWithdrawal,
 	titers []entities.Titr,
-	ctx context.Context,
-) ([]models.VaccineAllResponse, *errors.AppError) {
+) []models.VaccineAllResponse {
 
 	var result []models.VaccineAllResponse
 
 	// Маппинг вакцинаций
 	for _, v := range vaccines {
-		resp, err := u.mapVaccineToResponse(ctx, v)
-		if err != nil {
-			return nil, err
-		}
+		resp := u.mapVaccineToResponse(v)
+
 		result = append(result, resp)
 	}
 
 	// Маппинг отказов
 	for _, r := range refusals {
-		resp, err := u.mapVaccineRefusalToResponse(ctx, r)
-		if err != nil {
-			return nil, err
-		}
+		resp := u.mapVaccineRefusalToResponse(r)
+
 		result = append(result, resp)
 	}
 
 	// Маппинг отводов
 	for _, w := range withdrawals {
-		resp, err := u.mapVaccineWithdrawalToResponse(ctx, w)
-		if err != nil {
-			return nil, err
-		}
+		resp := u.mapVaccineWithdrawalToResponse(w)
+
 		result = append(result, resp)
 	}
 
 	// Маппинг титров
 	for _, t := range titers {
-		resp, err := u.mapTitrToResponse(ctx, t)
-		if err != nil {
-			return nil, err
-		}
+		resp := u.mapTitrToResponse(t)
+
 		result = append(result, resp)
 	}
 
-	return result, nil
-}
-
-// usecase/patient.go
-func (u *PatientUsecase) mapReceptions(receptions []entities.Reception) []models.ReceptionResponse {
-	if receptions == nil {
-		return nil
-	}
-
-	result := make([]models.ReceptionResponse, len(receptions))
-	for i, r := range receptions {
-		result[i] = models.ReceptionResponse{
-			ID:               r.ID,
-			IsCompleted:      r.IsCompleted,
-			SpecializationID: r.SpecializationID,
-			Specialization:   u.mapSpecialization(r.Specialization),
-			Template: models.ReceptionTemplateResponse{
-				ID:     r.Template.ID,
-				Code:   r.Template.Code,
-				Schema: r.Template.Schema,
-			},
-			Data: r.Data,
-		}
-	}
 	return result
 }
 
-func (u *PatientUsecase) mapDocumentType(ctx context.Context, id uint) (string, *errors.AppError) {
-	val, err := u.manualRepo.GetManualValueByTypeAndID(ctx, id, entities.RefTypePersonalDocumentType)
-	if err != nil {
-		return "", errors.NewAppError(
-			errors.InternalServerErrorCode,
-			"Failed to get ExaminationType",
-			err,
-			false,
-		)
-	}
-
-	return val, nil
-}
-
-func (u *PatientUsecase) mapPersonalInfo(ctx context.Context, pi *entities.PersonalInfo) (models.PersonalInfoResponse, *errors.AppError) {
-	emty := models.PersonalInfoResponse{}
-	if pi == nil {
-		return emty, errors.NewAppError(
-			errors.InternalServerErrorCode,
-			"NotFound PersonalInfo",
-			errors.ErrEmptyData,
-			true,
-		)
-	}
-	docType, err := u.mapDocumentType(ctx, pi.DocumentTypeID)
-	if err != nil {
-		return emty, err
-	}
+func (u *PatientUsecase) mapPersonalInfo(pi entities.PersonalInfo) models.PersonalInfoResponse {
 	return models.PersonalInfoResponse{
-		ID:           pi.ID,
-		DocNumber:    pi.DocNumber,
-		DocSeries:    pi.DocSeries,
-		SNILS:        pi.SNILS,
-		OMS:          pi.OMS,
-		DocumentType: docType,
-	}, nil
+		ID:             pi.ID,
+		DocNumber:      pi.DocNumber,
+		DocSeries:      pi.DocSeries,
+		SNILS:          pi.SNILS,
+		OMS:            pi.OMS,
+		DocumentTypeID: pi.DocumentTypeID,
+	}
 }
 
-func (u *PatientUsecase) mapContactInfo(ci *entities.ContactInfo) models.ContactInfoResponse {
-	if ci == nil {
-		return models.ContactInfoResponse{}
-	}
+func (u *PatientUsecase) mapContactInfo(ci entities.ContactInfo) models.ContactInfoResponse {
 	return models.ContactInfoResponse{
 		ID:      ci.ID,
 		Phone:   ci.Phone,
@@ -608,10 +473,7 @@ func (u *PatientUsecase) mapAnalysisOrder(ao *entities.AnalysisOrder) models.Ana
 	}
 }
 
-func (u *PatientUsecase) mapStatistics(stat *entities.PatientStatistics) *models.PatientStatisticsResponse {
-	if stat == nil {
-		return nil
-	}
+func (u *PatientUsecase) mapStatistics(stat entities.PatientStatistics) *models.PatientStatisticsResponse {
 	return &models.PatientStatisticsResponse{
 		ID:                     stat.ID,
 		TotalReceptions:        stat.TotalReceptions,
@@ -635,7 +497,19 @@ func (u *PatientUsecase) mapSpecializations(specs []entities.Specialization) []m
 	return result
 }
 
-func (u *PatientUsecase) mapSpecialization(spec *entities.Specialization) models.SpecializationResponse {
+// В пакете mapper
+func MapSpecializations(specs []entities.Specialization) []models.SpecializationResponse {
+	if specs == nil {
+		return nil
+	}
+	result := make([]models.SpecializationResponse, len(specs))
+	for i, s := range specs {
+		result[i] = MapSpecialization(&s)
+	}
+	return result
+}
+
+func MapSpecialization(spec *entities.Specialization) models.SpecializationResponse {
 	if spec == nil {
 		return models.SpecializationResponse{}
 	}
@@ -643,6 +517,57 @@ func (u *PatientUsecase) mapSpecialization(spec *entities.Specialization) models
 		ID:    spec.ID,
 		Title: spec.Title,
 	}
+}
+
+// MapReceptions преобразует список сущностей Reception в модели ответа.
+func (u *PatientUsecase) MapReceptions(receptions []entities.Reception) ([]models.ReceptionResponse, *errors.AppError) {
+	if receptions == nil {
+		return nil, nil
+	}
+
+	result := make([]models.ReceptionResponse, len(receptions))
+	for i, r := range receptions {
+		receptionResp, err := u.MapReception(r)
+		if err != nil {
+			return nil, err
+		}
+		result[i] = receptionResp
+	}
+	return result, nil
+}
+
+// MapReception преобразует одну сущность Reception в модель ответа.
+func (u *PatientUsecase) MapReception(r entities.Reception) (models.ReceptionResponse, *errors.AppError) {
+	fields, err := u.convertTemplateSchema(r.Template.Schema, r.Template.ID)
+	if err != nil {
+		return models.ReceptionResponse{}, err
+	}
+
+	return models.ReceptionResponse{
+		ID:               r.ID,
+		IsCompleted:      r.IsCompleted,
+		SpecializationID: r.SpecializationID,
+		Specialization:   MapSpecialization(r.Specialization), // ← нужно реализовать
+		Template: models.ReceptionTemplateResponse{
+			ID:     r.Template.ID,
+			Code:   r.Template.Code,
+			Fields: fields,
+		},
+		Data: r.Data,
+	}, nil
+}
+
+// convertTemplateSchema — приватная вспомогательная функция
+func (u *PatientUsecase) convertTemplateSchema(schema []byte, templateID uint) ([]models.FieldDescriptor, *errors.AppError) {
+	fields, err := u.parser.ConvertJSONSchemaToFields(schema)
+	if err != nil {
+		return nil, errors.NewInternalError(
+			"mapper.convertTemplateSchema",
+			fmt.Sprintf("failed to convert schema for template ID %d", templateID),
+			err,
+		)
+	}
+	return fields, nil
 }
 
 func (u *PatientUsecase) calculateAge(birthDate time.Time) int {
