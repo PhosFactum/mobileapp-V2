@@ -2,35 +2,42 @@ package interfaces
 
 import (
 	"context"
-	"time"
+	"encoding/json"
 
 	"github.com/AlexanderMorozov1919/mobileapp/internal/domain/entities"
-	"gorm.io/gorm"
+	"github.com/AlexanderMorozov1919/mobileapp/pkg/errors"
 )
 
 type Repository interface {
 	AuthRepository
-	AllergyRepository
 	DoctorRepository
-	MedServiceRepository
 	PatientRepository
-	ContactInfoRepository
-	EmergencyCallRepository
-	PersonalInfoRepository
-	ReceptionHospitalRepository
-	ReceptionSmpRepository
-	TxRepository
+	ConsentSignatureRepository
+	OrganizationRepository
+	PatientGroupRepository
+	ReceptionRepository
+	VaccineRepository
+	ManualRepository
+	AnalysisRepository
+	AnalysisOrderRepository
 }
 
-type TxRepository interface {
-	BeginTx() (*gorm.DB, error)
-	CommitTx(tx *gorm.DB) error
-	RollbackTx(tx *gorm.DB) error
+type PatientGroupRepository interface {
+	GetPatientGroupsByOrganizationID(orgID uint, search string, page, perPage int) ([]entities.PatientGroup, int64, error)
+}
+
+type ManualRepository interface {
+	GetManualValueByTypeAndID(ctx context.Context, id uint, refType entities.ReferenceType) (string, error)
+	GetManualValuesByType(ctx context.Context, refType entities.ReferenceType) ([]string, error)
+	GetAllManuals(ctx context.Context) ([]entities.Manual, error)
+}
+
+type OrganizationRepository interface {
+	GetAllDoctorOrganizations(doctorID uint, search string, page, perPage int) ([]entities.Organization, int64, error)
 }
 
 // updated to match the new structure
 type DoctorRepository interface {
-	CreateDoctor(doctor entities.Doctor) (uint, error)
 	UpdateDoctor(id uint, updateMap map[string]interface{}) (uint, error)
 	DeleteDoctor(id uint) error
 	GetDoctorByID(id uint) (entities.Doctor, error)
@@ -42,91 +49,42 @@ type DoctorRepository interface {
 }
 
 // updated to match the new structure
-type PersonalInfoRepository interface {
-	CreatePersonalInfo(info entities.PersonalInfo) (uint, error)
-	UpdatePersonalInfo(id uint, updateMap map[string]interface{}) (uint, error)
-	DeletePersonalInfo(id uint) error
-
-	GetPersonalInfoByID(id uint) (entities.PersonalInfo, error)
-	GetPersonalInfoByPatientID(patientID uint) (entities.PersonalInfo, error)
-	UpdatePersonalInfoByPatientID(id uint, updateMap map[string]interface{}) (uint, error)
-	GetPersonalInfoByPatientIDWithTx(tx *gorm.DB, patientID uint) (*entities.PersonalInfo, error)
-	UpdatePersonalInfoByPatientIDWithTx(tx *gorm.DB, patientID uint, updateMap map[string]interface{}) (uint, error)
+type ReceptionRepository interface {
+	GetReceptionTemplatesByHarmPointID(ctx context.Context, harmPointID uint) ([]entities.ReceptionTemplate, error)
+	CreateReceptions(ctx context.Context, receptions []entities.Reception) error
+	GetReceptionTemplatesByCodes(ctx context.Context, codes []string) ([]entities.ReceptionTemplate, error)
+	GetTemplateByReceptionID(ctx context.Context, receptionID uint) (*entities.ReceptionTemplate, error)
+	UpdateReceptionData(ctx context.Context, receptionID uint, data json.RawMessage) error
 }
 
-// updated to match the new structure
-type EmergencyCallRepository interface {
-	CreateEmergencyCall(er entities.EmergencyCall) (uint, error)
-	UpdateEmergencyCall(id uint, updateMap map[string]interface{}) (uint, error)
-	DeleteEmergencyCall(id uint) error
+type AnalysisRepository interface {
+	GetAnalysesByCodes(ctx context.Context, codes []string) ([]entities.Analysis, error)
+	GetAnalysesByHarmPointID(ctx context.Context, harmPointID uint) ([]entities.Analysis, error)
 
-	GetEmergencyCallByID(id uint) (entities.EmergencyCall, error)
-	GetEmergencyCallsByDoctorID(doctorID uint) ([]entities.EmergencyCall, error)
-	GetEmergencyCallsByPatientID(patientID uint) ([]entities.EmergencyCall, error)
-	GetEmergencyCallsByDateRange(start, end time.Time) ([]entities.EmergencyCall, error)
-	GetEmergencyCallsPriorityCases() ([]entities.EmergencyCall, error)
-	GetEmergencyReceptionsByDoctorAndDate(
-		doctorID uint,
-		date time.Time,
-		page, perPage int,
-	) ([]entities.EmergencyCall, int64, error)
+	GetAnalysisByID(ctx context.Context, id uint) (*entities.Analysis, error)
+	GetAllAnalysisIDs(ctx context.Context) ([]uint, error)
 }
 
-// updated to match the new structure
-type MedServiceRepository interface {
-	CreateMedService(service entities.MedService) error
-	UpdateMedService(id uint, updateMap map[string]interface{}) (uint, error)
-	DeleteMedService(id uint) error
+type AnalysisOrderRepository interface {
+	UpdateAnalysisOrder(ctx context.Context, order *entities.AnalysisOrder) error
+	CreateAnalysisOrder(ctx context.Context, order *entities.AnalysisOrder) error
+	CreateAnalysisItems(ctx context.Context, items []entities.AnalysisOrderItem) error
 
-	GetMedServiceByID(id uint) (entities.MedService, error)
-	GetMedServiceByName(name string) (entities.MedService, error)
-	GetAllMedServices() ([]entities.MedService, int64, error)
-}
-
-// updated to match the new structure
-type ReceptionSmpRepository interface {
-	CreateReceptionSmp(reception entities.ReceptionSMP) (uint, error)
-	UpdateReceptionSmp(id uint, updateMap map[string]interface{}) (uint, error)
-	DeleteReceptionSmp(id uint) error
-	UpdateReceptionSmpMedServices(receptionID uint, services []entities.MedService) error
-	GetReceptionWithMedServicesByID(smp_id uint, call_id uint) (entities.ReceptionSMP, error)
-	GetReceptionSmpByID(id uint) (entities.ReceptionSMP, error)
-	GetReceptionSmpByDoctorID(doctorID uint) ([]entities.ReceptionSMP, error)
-	GetReceptionSmpByPatientID(patientID uint, page, count int, filter, order string, params []interface{}) ([]entities.ReceptionSMP, int64, error)
-	GetReceptionSmpByDateRange(start, end time.Time) ([]entities.ReceptionSMP, error)
-	GetWithPatientsByEmergencyCallID(emergencyCallID uint, page, perPage int) ([]entities.ReceptionSMP, int64, error)
-	SaveSignature(receptionID uint, signature []byte) error
-	GetSignature(receptionID uint) ([]byte, error)
-}
-
-// updated to match the new structure
-type ReceptionHospitalRepository interface {
-	CreateReceptionHospital(reception entities.ReceptionHospital) error
-	UpdateReceptionHospital(id uint, updateMap map[string]interface{}) (uint, error)
-	DeleteReceptionHospital(id uint) error
-
-	// Работают с пагинацией и фильтрацией по возращаемой структуре
-	GetAllPatientsFromHospital(page, count int, queryFilter string, parameters []interface{}) ([]entities.Patient, int64, error)
-	GetAllPatientsFromHospitalByDoctorID(doc_id uint, page, count int, queryFilter string, queryOrder string, parameters []interface{}) ([]entities.Patient, int64, error)
-	GetAllHospitalReceptionsByDoctorID(doc_id uint, page, count int, queryFilter string, queryOrder string, parameters []interface{}) ([]entities.ReceptionHospital, int64, error)
-	GetAllHospitalReceptionsByPatientID(patientID uint, page, count int, queryFilter string, queryOrder string, parameters []interface{}) ([]entities.ReceptionHospital, int64, error)
-	//GetAllPatients(page, count int, queryFilter string, queryOrder string, parameters []interface{}) ([]entities.Patient, int64, error)
-
-	GetReceptionHospitalByID(id uint) (entities.ReceptionHospital, error)
-	GetHospitalReceptionByID(hospID uint) (entities.ReceptionHospital, error)
+	GetByID(ctx context.Context, id uint) (*entities.AnalysisOrder, error)
+	GetOrderItemsByOrderID(ctx context.Context, orderID uint) ([]entities.AnalysisOrderItem, error)
+	UpsertOrderItems(ctx context.Context, items []entities.AnalysisOrderItem) error
 }
 
 // updated to match the new structured
 type PatientRepository interface {
-	CreatePatient(patient entities.Patient) (uint, error)
-	UpdatePatient(id uint, updateMap map[string]interface{}) (uint, error)
-	DeletePatient(id uint) error
-	GetPatientByID(id uint) (entities.Patient, error)
-	GetAllPatients(page, count int, queryFilter string, queryOrder string, filterParams []interface{}) ([]entities.Patient, int64, error)
-	GetPatientsByFullName(name string) ([]entities.Patient, error)
-	GetPatientAllergiesByID(id uint) ([]entities.Allergy, error)
-	GetPatientByIDWithTx(tx *gorm.DB, id uint) (*entities.Patient, error)
-	UpdatePatientWithTx(tx *gorm.DB, id uint, updateMap map[string]interface{}) (uint, error)
+	// Работа с пациентом
+	GetPatientsByGroup(ctx context.Context, groupID uint) ([]entities.Patient, *errors.AppError)
+	CreateContactInfo(ctx context.Context, contactInfo *entities.ContactInfo) error
+	CreatePersonalInfo(ctx context.Context, personalInfo *entities.PersonalInfo) error
+	CreatePatient(ctx context.Context, patient *entities.Patient) error
+	CacheSpecializations(ctx context.Context, patient *entities.Patient, specializations []entities.Specialization) error
+	CreatePatientStatistics(ctx context.Context, stats *entities.PatientStatistics) error
+	PreloadPatientWithSpecializations(ctx context.Context, patientID uint) (*entities.Patient, error)
 }
 
 // updated to match the new structure
@@ -134,31 +92,25 @@ type ContactInfoRepository interface {
 	CreateContactInfo(info entities.ContactInfo) (uint, error)
 	UpdateContactInfo(id uint, updateMap map[string]interface{}) (uint, error)
 	DeleteContactInfo(id uint) error
-
-	GetContactInfoByID(id uint) (entities.ContactInfo, error)
-	GetContactInfoByPatientID(patientID uint) (entities.ContactInfo, error)
-	UpdateContactInfoByPatientID(id uint, updateMap map[string]interface{}) (uint, error)
-	CreateContactInfoWithTx(tx *gorm.DB, info entities.ContactInfo) (uint, error)
-	GetContactInfoByIDWithTx(tx *gorm.DB, id uint) (*entities.ContactInfo, error)
-	UpdateContactInfoByIDWithTx(tx *gorm.DB, id uint, updateMap map[string]interface{}) (uint, error)
-}
-
-// updated to match the new structure
-type AllergyRepository interface {
-	CreateAllergy(allergy *entities.Allergy) (uint, error)
-	UpdateAllergy(id uint, updateMap map[string]interface{}) (uint, error)
-	DeleteAllergy(id uint) error
-	GetAllergyByID(id uint) (entities.Allergy, error)
-	GetAllergyByName(name string) (entities.Allergy, error)
-	GetAllAllergies() ([]entities.Allergy, error)
-
-	GetAllergiesByPatientID(patientID uint) ([]entities.Allergy, error)
-	RemovePatientAllergies(patientID uint, allergies []entities.Allergy) error
-	AddPatientAllergies(patientID uint, allergies []entities.Allergy) error
-	GetPatientAllergiesByIDWithTx(tx *gorm.DB, patientID uint) ([]entities.Allergy, error)
-	SyncPatientAllergiesWithTx(tx *gorm.DB, patientID uint, allergies []entities.Allergy) error
 }
 
 type AuthRepository interface {
 	GetByLogin(ctx context.Context, login string) (*entities.Doctor, error)
+}
+
+type ConsentSignatureRepository interface {
+	SaveSignature(patientID uint, signature []byte) error
+	GetSignature(patientID uint) ([]byte, error)
+	GetByPatientID(patientID uint) (*entities.ConsentSignature, error)
+}
+
+type VaccineRepository interface {
+	CreateVaccine(ctx context.Context, vaccine *entities.Vaccine) error
+	CreateVaccineRefusal(ctx context.Context, refusal *entities.VaccineRefusal) error
+	CreateVaccineWithdrawal(ctx context.Context, withdrawal *entities.VaccineWithdrawal) error
+	CreateTitr(ctx context.Context, titr *entities.Titr) error
+}
+
+// updated to match the new structure
+type PersonalInfoRepository interface {
 }

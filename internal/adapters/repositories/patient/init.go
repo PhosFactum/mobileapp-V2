@@ -1,14 +1,17 @@
 package patient
 
 import (
+	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/base"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/interfaces"
 	"gorm.io/gorm"
 )
 
 type PatientRepositoryImpl struct {
-	db *gorm.DB
+	*base.BaseRepository
 }
 
 func NewPatientRepository(db *gorm.DB) interfaces.PatientRepository {
-	return &PatientRepositoryImpl{db: db}
+	return &PatientRepositoryImpl{
+		BaseRepository: base.NewBaseRepository(db),
+	}
 }

@@ -1,46 +1,58 @@
 package models
 
-import (
-	"time"
+import "encoding/json"
 
-	"github.com/AlexanderMorozov1919/mobileapp/internal/domain/entities"
-)
-
-type ReceptionHospitalResponse struct {
-	ID              uint                 `json:"id"`
-	Doctor          DoctorInfoResponse   `json:"doctor"`
-	Patient         ShortPatientResponse `json:"patient"`
-	Diagnosis       string               `json:"diagnosis" example:"ОРВИ"`
-	Recommendations string               `json:"recommendations" example:"Постельный режим"`
-	Status          string               `json:"status" example:"scheduled"`
-	Source          string               `json:"source"  example:"scheduled"`
-	Date            time.Time            `json:"date" example:"2023-10-15T14:30:00Z"`
+type ReceptionResponse struct {
+	ID               uint                      `json:"id"`
+	IsCompleted      bool                      `json:"is_completed"`
+	SpecializationID uint                      `json:"specialization_id"`
+	Specialization   SpecializationResponse    `json:"specialization,omitempty"`
+	Template         ReceptionTemplateResponse `json:"template"`
+	Data             json.RawMessage           `json:"data"`
 }
 
-type UpdateReceptionHospitalRequest struct {
-	Diagnosis          string                   `json:"diagnosis" example:"Грипп" rus:"Диагноз"`
-	Recommendations    string                   `json:"recommendations" example:"Постельный режим" rus:"Рекомендации"`
-	Status             entities.ReceptionStatus `json:"status" example:"scheduled" rus:"Статус госпитализации"`
-	SpecializationData interface{}              `json:"specialization_data"`
+type ReceptionTemplateResponse struct {
+	ID     uint              `json:"id"`
+	Code   string            `json:"code"`
+	Fields []FieldDescriptor `json:"fields"`
 }
 
-// ReceptionFullResponse - полная информация о приеме
-type ReceptionFullResponse struct {
-	ID              uint                `json:"id"`
-	Date            string              `json:"date" example:"15.10.2023 14:30"`
-	Status          string              `json:"status" example:"Запланирован"`
-	LastName        string              `json:"last_name" example:"Смирнов"`
-	FirstName       string              `json:"first_name" example:"Алексей"`
-	MiddleName      string              `json:"middle_name" example:"Петрович"`
-	PatientID       uint                `json:"patient_id" example:"5"`
-	Diagnosis       string              `json:"diagnosis" example:"ОРВИ"`
-	Address         string              `json:"address" example:"Москва, ул. Ленина, д. 15"`
-	Doctor          DoctorShortResponse `json:"doctor"`
-	Recommendations string              `json:"recommendations" example:"Постельный режим"`
+type UpdateReceptionDataRequest struct {
+	ID                    uint            `json:"id" binding:"required,min=1"`
+	Data                  json.RawMessage `json:"data" binding:"required"`
+	TemplateSchemaVersion string          `json:"template_schema_version,omitempty"`
+}
 
-	// Декодированные данные специализации
-	SpecializationData interface{} `json:"specialization_data"`
+type FieldDescriptor struct {
+	Name     string `json:"name"`
+	Title    string `json:"title"`
+	Type     string `json:"type"` // "string", "number", "integer", "boolean", "array"
+	Required bool   `json:"required"`
+	Tag      string `json:"tag"` // "input", "select", "checkbox", "textarea"
 
-	// Сырые JSON данные (опционально)
-	RawSpecializationData []byte `json:"raw_specialization_data,omitempty"`
+	// Для string
+	MinLength *int    `json:"min_length,omitempty"`
+	MaxLength *int    `json:"max_length,omitempty"`
+	Pattern   *string `json:"pattern,omitempty"` // регулярное выражение
+
+	// Для number/integer
+	Minimum          *float64 `json:"minimum,omitempty"`
+	Maximum          *float64 `json:"maximum,omitempty"`
+	ExclusiveMinimum *float64 `json:"exclusive_minimum,omitempty"` // >, не >=
+	ExclusiveMaximum *float64 `json:"exclusive_maximum,omitempty"` // <, не <=
+	MultipleOf       *float64 `json:"multiple_of,omitempty"`       // кратность
+
+	// Для array
+	MinItems *int `json:"min_items,omitempty"`
+	MaxItems *int `json:"max_items,omitempty"`
+	// Items *FieldDescriptor // ← если нужны вложенные объекты (рекурсия)
+
+	// Справочники
+	Enum []string `json:"enum,omitempty"`
+
+	// Форматы (для UI и валидации)
+	Format *string `json:"format,omitempty"` // "email", "date", "phone"
+
+	// Описание (для тултипов)
+	Description *string `json:"description,omitempty"`
 }

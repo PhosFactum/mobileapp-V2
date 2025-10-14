@@ -6,26 +6,10 @@ import (
 	"gorm.io/gorm/clause"
 )
 
-func (r *DoctorRepository) CreateDoctor(doctor entities.Doctor) (uint, error) {
-	op := "repo.Doctor.CreateDoctor"
-
-	var spec entities.Specialization
-	if err := r.db.First(&spec, doctor.SpecializationID).Error; err != nil {
-		return 0, errors.NewDBError("No such specialization", err)
-	}
-
-	err := r.db.Create(&doctor).Error
-	if err != nil {
-		return 0, errors.NewDBError(op, err)
-	}
-
-	return doctor.ID, nil
-}
-
 func (r *DoctorRepository) GetDoctorByID(id uint) (entities.Doctor, error) {
 	var doctor entities.Doctor
 	if err := r.db.
-		Preload("Specialization").
+		Preload("Specializations").
 		First(&doctor, id).
 		Error; err != nil {
 		return entities.Doctor{}, errors.NewDBError("Error Get Doctor By Id", err)
@@ -39,7 +23,7 @@ func (r *DoctorRepository) UpdateDoctor(id uint, updateMap map[string]interface{
 
 	allowedFields := map[string]bool{
 		"full_name":         true,
-		"login":             true,
+		"phone":             true,
 		"password_hash":     true,
 		"specialization_id": true,
 	}

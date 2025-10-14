@@ -5,7 +5,7 @@ import (
 
 	"github.com/AlexanderMorozov1919/mobileapp/internal/config"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/interfaces"
-	middleware "github.com/AlexanderMorozov1919/mobileapp/internal/middleware/jwt"
+	jwtMiddleware "github.com/AlexanderMorozov1919/mobileapp/internal/middleware/jwt"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/middleware/logging"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/middleware/swagger"
 	"github.com/gin-gonic/gin"
@@ -62,63 +62,59 @@ func ProvideRouter(h *Handler, cfg *config.Config, swagCfg *swagger.Config) http
 
 	//Версия
 	baseRouter.GET("/version", h.GetVersionProject)
-	// Авторизация
-	authGroup := baseRouter.Group("/auth")
-	authGroup.POST("/", h.LoginDoctor)
 
 	protected := baseRouter.Group("/")
-	protected.Use(middleware.JWTAuth(cfg.JWTSecret))
+	protected.Use(jwtMiddleware.JWTAuth(cfg.JWTSecret))
 
-	// Доктора
-	doctorGroup := protected.Group("/doctors")
-	doctorGroup.GET("/:doc_id", h.GetDoctorByID)
-	doctorGroup.PUT("/:doc_id", h.UpdateDoctor)
+	// Поправить пациента на транзакцию
 
-	// Пациенты
+	// Руты рабочие для новго проекта
+
+	// Авторизация
+	authGroup := baseRouter.Group("/auth")
+	authGroup.POST("/login", h.LoginDoctor)
+	authGroup.POST("/logout", jwtMiddleware.JWTAuth(cfg.JWTSecret), h.LogoutDoctor)
+
+	// Организации (страховые)
+	organizationGroup := protected.Group("/organization")
+	organizationGroup.GET("/getAll", h.GetAllDoctorOrganizations) //arg search по орге
+
+	//Списки пациентов
+	patientGroupsGroup := protected.Group("/groups")
+	patientGroupsGroup.GET("/by-organization/:organization_id", h.GetPatientGroupsByOrganizationID) //arg search по группе
+	patientGroupsGroup.GET("/:group_id/patients", h.GetPatientsByGroup)
+
 	patientGroup := protected.Group("/patients")
-	patientGroup.GET("/:doc_id/", h.GetAllPatientsByDoctorID) // Список пациентов доктора
-	patientGroup.GET("/", h.GetAllPatients)
 	patientGroup.POST("/", h.CreatePatient)
 
-	// Медкарты
-	medCardGroup := protected.Group("/medcard")
-	medCardGroup.GET("/:pat_id", h.GetMedCardByPatientID)
-	medCardGroup.PUT("/:pat_id", h.UpdateMedCard)
+	// Справочники
+	manualGroup := baseRouter.Group("/manuals")
+	manualGroup.GET("/getAll", h.GetAllManuals)
 
-	// Приёмы больницы
-	hospitalGroup := protected.Group("/hospital")
-	hospitalGroup.GET("/receptions/patients/:pat_id", h.GetAllReceptionsByPatientID) // Все приемы пациента
-	hospitalGroup.GET("/receptions/:doc_id", h.GetReceptionsHospitalByDoctorID)      // Все приемы доктора
-	hospitalGroup.GET("/receptions/:doc_id/:hosp_id", h.GetReceptionHosptalById)
-	hospitalGroup.PUT("/receptions/:recep_id", h.UpdateReceptionHospitalByReceptionID)
-	hospitalGroup.PATCH("/receptions/:recep_id", h.UpdateReceptionHospitalStatusByID)
+	// Приемы
+	receptionGroup := baseRouter.Group("/receptions")
+	receptionGroup.POST("/update", h.UpdateReceptionData)
 
-	// Медуслуги
-	medServicesGroup := protected.Group("/medservices")
-	medServicesGroup.GET("/", h.GetAllMedServices)
+	// Анализы
+	analysisGroup := baseRouter.Group("/analisys")
+	analysisGroup.POST("/update", h.UpdateAnalysisOrder)
 
-	// Скорая медицинская помощь
-	emergencyGroup := protected.Group("/emergency")
-	emergencyGroup.POST("/smp", h.CreateSMP)
-	emergencyGroup.POST("/receptions", h.CreateSMPReception)
-	emergencyGroup.PUT("/receptions/:recep_id", h.UpdateReceptionSMPByReceptionID)
-	emergencyGroup.GET("/smps/:call_id/:smp_id", h.GetReceptionWithMedServices)
+	// Справочники
+	vaccineGroup := baseRouter.Group("/vaccines")
+	vaccineGroup.GET("/getAll", h.GetAllManuals)
+	vaccineGroup.POST("/vaccines", h.CreateVaccine)
+	vaccineGroup.POST("/vaccine-refusals", h.CreateVaccineRefusal)
+	vaccineGroup.POST("/vaccine-withdrawals", h.CreateVaccineWithdrawal)
+	vaccineGroup.POST("/titrs", h.CreateTitr)
+	// Доктора
+	doctorGroup := protected.Group("/doctors")
+	doctorGroup.GET("/current", h.GetDoctorByID)
 
-	//Подписи пациентов
-	emergencyGroup.GET("/signature/:recep_id", h.GetSignature)
-	emergencyGroup.POST("/signature/:recep_id", h.SaveSignature)
-
-	// Звонки (для удобства в тестинге Swagger разделили их)
-	// Маршрут оставляем тот же, просто для удобства
-	emergencyGroup.GET("/calls/:call_id", h.GetReceptionsSMPByCallID)
-	emergencyGroup.GET("/:doc_id", h.GetEmergencyCallsByDoctorAndDate)
-	emergencyGroup.PATCH("/:call_id", h.CloseEmergencyCall)
-
-	emergencyGroup.GET("/pdf/:rec_id", h.GetPdf)
-	// emergencyGroup.POST("/pdf/:rec_id", h.UploadPdf)
-
-	// TODO: Обновление статусов у Reception Hospital (PUT запрос)
-	// Поправить пациента на транзакцию
+	consentGroup := protected.Group("/consent")
+	consentGroup.GET("/personal-data", h.GetPersonalDataConsent)
+	consentGroup.GET("/medical-exam", h.GetMedicalExamConsent)
+	consentGroup.GET("/signature/:recep_id", h.GetSignature)
+	consentGroup.POST("/signature/:recep_id", h.SaveSignature)
 
 	return r
 }

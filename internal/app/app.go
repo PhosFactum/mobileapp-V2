@@ -5,9 +5,10 @@ import (
 	"net/http"
 
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/handlers"
-	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories"
+	repositories "github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/auth"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/config"
+	"github.com/AlexanderMorozov1919/mobileapp/internal/db"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/middleware/logging"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/middleware/swagger"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/services"
@@ -22,6 +23,7 @@ func New() *fx.App {
 			func(cfg *config.Config) string { return cfg.JWTSecret },
 		),
 		LoggingModule,
+		DBModule,
 		RepositoryModule,
 		ServiceModule,
 		UsecaseModule,
@@ -82,6 +84,9 @@ var HttpServerModule = fx.Module("http_server_module",
 		handlers.ProvideRouter,
 	),
 	fx.Invoke(InvokeHttpServer),
+)
+var DBModule = fx.Module("db_module",
+	fx.Provide(db.NewDB), // ← из нового пакета
 )
 
 var ServiceModule = fx.Module("service_module",
