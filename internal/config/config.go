@@ -22,6 +22,7 @@ type Config struct {
 	Services   Services
 	Server     ServerConfig
 	JWTSecret  string
+	S3         S3Config
 }
 
 func DefaultServerConfig() ServerConfig {
@@ -74,6 +75,12 @@ type Service struct {
 	Host string
 }
 
+type S3Config struct {
+	Region     string
+	BucketName string
+	Endpoint   string
+}
+
 func LoadConfig() (*Config, error) {
 	err := godotenv.Load()
 	if err != nil {
@@ -120,11 +127,20 @@ func LoadConfig() (*Config, error) {
 				"http://127.0.0.1:5173",
 			},
 		},
+		S3: S3Config{
+			Region:     getEnv("AWS_REGION", "eu-central-1"),
+			BucketName: getEnv("S3_BUCKET_NAME", ""),
+			Endpoint:   getEnv("S3_ENDPOINT", ""), // оставь пустым для AWS
+		},
 	}
 
 	cfg.JWTSecret = getEnv("JWT_SECRET", "")
 	if cfg.JWTSecret == "" {
 		return nil, fmt.Errorf("JWT_SECRET is required")
+	}
+
+	if cfg.S3.BucketName == "" {
+		return nil, fmt.Errorf("S3_BUCKET_NAME is required")
 	}
 
 	return cfg, nil

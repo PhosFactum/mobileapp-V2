@@ -13,6 +13,7 @@ type Service interface {
 	ParamsParserService
 	FilterBuilderService
 	TxManager
+	ImageService
 }
 
 // ParamsParserService Сервис преобразования типов
@@ -39,4 +40,9 @@ type TxManager interface {
 	Commit(ctx context.Context) error
 	Rollback(ctx context.Context) error
 	GetTransaction(ctx context.Context) *gorm.DB
+}
+
+type ImageService interface {
+	UploadObject(ctx context.Context, key, contentType string, data []byte) error
+	GetPresignedURL(ctx context.Context, key string) (string, error)
 }
