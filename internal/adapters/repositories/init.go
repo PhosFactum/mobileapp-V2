@@ -160,6 +160,17 @@ func autoMigrate(db *gorm.DB) error {
 		fmt.Println("✅ Created index: idx_patients_group_name")
 	}
 
+	// 🔑 Уникальный индекс для UPSERT по (order_id, analysis_id)
+	if !db.Migrator().HasIndex(&entities.AnalysisOrderItem{}, "uq_order_analysis") {
+		if err := db.Exec(`
+			ALTER TABLE analysis_order_items
+			ADD CONSTRAINT uq_order_analysis UNIQUE (order_id, analysis_id);
+		`).Error; err != nil {
+			return fmt.Errorf("failed to create unique constraint uq_order_analysis: %w", err)
+		}
+		fmt.Println("✅ Created unique constraint: uq_order_analysis")
+	}
+
 	if err := seedTestData(db); err != nil {
 		return fmt.Errorf("failed to seed test data: %w", err)
 	}

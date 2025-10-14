@@ -5,6 +5,8 @@ import (
 
 	"github.com/AlexanderMorozov1919/mobileapp/internal/domain/entities"
 	"github.com/AlexanderMorozov1919/mobileapp/pkg/errors"
+	"gorm.io/gorm"
+	"gorm.io/gorm/clause"
 )
 
 func (r *AnalysisOrderRepositoryImpl) CreateAnalysisItems(ctx context.Context, items []entities.AnalysisOrderItem) error {
@@ -33,40 +35,43 @@ func (r *AnalysisOrderRepositoryImpl) UpdateAnalysisOrder(ctx context.Context, o
 	return nil
 }
 
-// GetByID возвращает заказ по ID (без предзагрузки items)
 func (r *AnalysisOrderRepositoryImpl) GetByID(ctx context.Context, id uint) (*entities.AnalysisOrder, error) {
+	op := "repo.AnalysisOrder.GetByID"
 	var order entities.AnalysisOrder
-	err := r.GetDB(ctx).First(&order, id).Error
-	return &order, err
+	if err := r.GetDB(ctx).First(&order, id).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.NewNotFoundError(op)
+		}
+		return nil, errors.NewDBError(op, err)
+	}
+	return &order, nil
 }
 
-// GetOrderItemsByOrderID возвращает все item'ы заказа
 func (r *AnalysisOrderRepositoryImpl) GetOrderItemsByOrderID(ctx context.Context, orderID uint) ([]entities.AnalysisOrderItem, error) {
+	op := "repo.AnalysisOrder.GetOrderItemsByOrderID"
 	var items []entities.AnalysisOrderItem
-	err := r.GetDB(ctx).Where("order_id = ?", orderID).Find(&items).Error
-	return items, err
+	if err := r.GetDB(ctx).Where("order_id = ?", orderID).Find(&items).Error; err != nil {
+		return nil, errors.NewDBError(op, err)
+	}
+	return items, nil
 }
 
-// CreateOrderItems создаёт item'ы как есть (без модификации!)
-func (r *AnalysisOrderRepositoryImpl) CreateOrderItems(ctx context.Context, items []entities.AnalysisOrderItem) error {
+func (r *AnalysisOrderRepositoryImpl) UpsertOrderItems(ctx context.Context, items []entities.AnalysisOrderItem) error {
+	op := "repo.AnalysisOrder.UpsertOrderItems"
 	if len(items) == 0 {
 		return nil
 	}
-	return r.GetDB(ctx).CreateInBatches(items, 100).Error
-}
 
-// UpdateOrderItem обновляет указанные поля item'а
-func (r *AnalysisOrderRepositoryImpl) UpdateOrderItem(ctx context.Context, item entities.AnalysisOrderItem) error {
-	return r.GetDB(ctx).Model(&entities.AnalysisOrderItem{}).
-		Where("id = ?", item.ID).
-		Select("is_completed", "completed_at", "updated_at").
-		Updates(item).Error
-}
+	err := r.GetDB(ctx).Clauses(clause.OnConflict{
+		Columns: []clause.Column{
+			{Name: "order_id"},
+			{Name: "analysis_id"},
+		},
+		DoUpdates: clause.AssignmentColumns([]string{"is_completed", "completed_at", "updated_at"}),
+	}).Create(&items).Error
 
-// DeleteOrderItems удаляет item'ы по ID
-func (r *AnalysisOrderRepositoryImpl) DeleteOrderItems(ctx context.Context, itemIDs []uint) error {
-	if len(itemIDs) == 0 {
-		return nil
+	if err != nil {
+		return errors.NewDBError(op, err)
 	}
-	return r.GetDB(ctx).Where("id IN ?", itemIDs).Delete(&entities.AnalysisOrderItem{}).Error
+	return nil
 }

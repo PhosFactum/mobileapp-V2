@@ -66,13 +66,6 @@ func ProvideRouter(h *Handler, cfg *config.Config, swagCfg *swagger.Config) http
 	protected := baseRouter.Group("/")
 	protected.Use(jwtMiddleware.JWTAuth(cfg.JWTSecret))
 
-	// // Приёмы больницы
-	// hospitalGroup := protected.Group("/hospital")
-	// hospitalGroup.GET("/receptions/patients/:pat_id", h.GetAllReceptionsByPatientID) // Все приемы пациента
-	// hospitalGroup.GET("/receptions/:doc_id", h.GetReceptionsHospitalByDoctorID)      // Все приемы доктора
-	// hospitalGroup.GET("/receptions/:doc_id/:hosp_id", h.GetReceptionHosptalById)
-	// hospitalGroup.PUT("/receptions/:recep_id", h.UpdateReceptionHospitalByReceptionID)
-
 	// Поправить пациента на транзакцию
 
 	// Руты рабочие для новго проекта
@@ -88,12 +81,11 @@ func ProvideRouter(h *Handler, cfg *config.Config, swagCfg *swagger.Config) http
 
 	//Списки пациентов
 	patientGroupsGroup := protected.Group("/groups")
-	patientGroupsGroup.GET("/:organization_id", h.GetPatientGroupsByOrganizationID) //arg search по группе
+	patientGroupsGroup.GET("/by-organization/:organization_id", h.GetPatientGroupsByOrganizationID) //arg search по группе
+	patientGroupsGroup.GET("/:group_id/patients", h.GetPatientsByGroup)
 
-	// Пациенты
-	patientGroup := baseRouter.Group("/patients")
-	patientGroup.GET("/:group_id", h.GetPatientsByGroup)
-	patientGroup.POST("/:group_id/create", h.CreatePatient)
+	patientGroup := protected.Group("/patients")
+	patientGroup.POST("/", h.CreatePatient)
 
 	// Справочники
 	manualGroup := baseRouter.Group("/manuals")

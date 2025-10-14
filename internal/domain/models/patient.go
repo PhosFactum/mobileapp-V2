@@ -16,8 +16,8 @@ type PatientResponse struct {
 	PatientGroupID uint `json:"patient_group_id"`
 
 	// Вложенные объекты
-	ExaminationType string `json:"examination_type,omitempty"`
-	ExaminationView string `json:"examination_view,omitempty"`
+	ExaminationTypeID uint `json:"examination_type,omitempty"`
+	ExaminationViewID uint `json:"examination_view,omitempty"`
 
 	HarmPoint     HarmPointResponse          `json:"harm_point"`
 	PersonalInfo  PersonalInfoResponse       `json:"personal_info"`
@@ -44,7 +44,7 @@ type PersonalInfoResponse struct {
 	SNILS     string `json:"snils"`
 	OMS       string `json:"oms"`
 
-	DocumentType string `json:"document_type,omitempty"`
+	DocumentTypeID uint `json:"document_type,omitempty"`
 }
 
 type ContactInfoResponse struct {
@@ -75,6 +75,7 @@ type CreatePatientRequest struct {
 	Division          string    `json:"division" binding:"required"`
 	ExaminationTypeID uint      `json:"examination_type_id" binding:"required"`
 	ExaminationViewID uint      `json:"examination_view_id" binding:"required"`
+	GroupID           uint      `json:"group_id" binding:"required"`
 
 	// Обязательные связи
 	HarmPointID uint `json:"harm_point_id" binding:"required"`

@@ -22,21 +22,17 @@ import (
 // @Failure 500 {object} ResultError "Внутренняя ошибка сервера"
 // @Router /analysis-orders [patch]
 func (h *Handler) UpdateAnalysisOrder(c *gin.Context) {
-	// 1. Биндим JSON
-	var request models.UpdateAnalysisOrderRequest
-	if err := c.ShouldBindJSON(&request); err != nil {
+	var req models.UpdateAnalysisOrderRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
 		h.ErrorResponse(c, err, http.StatusBadRequest, "invalid request body", true)
 		return
 	}
 
-	// 2. Вызываем юзкейс
-	ctx := c.Request.Context()
-	appErr := h.usecase.UpdateAnalysisOrder(ctx, &request)
+	appErr := h.usecase.UpdateAnalysisOrder(c.Request.Context(), &req)
 	if appErr != nil {
 		h.ErrorResponse(c, appErr.Err, appErr.Code, appErr.Message, appErr.IsUserFacing)
 		return
 	}
 
-	// 3. Успешный ответ
 	c.Status(http.StatusNoContent)
 }
