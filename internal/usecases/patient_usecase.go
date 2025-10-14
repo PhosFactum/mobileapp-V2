@@ -34,7 +34,7 @@ func NewPatientUsecase(repo interfaces.PatientRepository, manualRepo interfaces.
 }
 
 // CreatePatient создаёт нового пациента со всеми связанными сущностями
-func (u *PatientUsecase) CreatePatient(ctx context.Context, req *models.CreatePatientRequest, groupID uint) (*entities.Patient, *errors.AppError) {
+func (u *PatientUsecase) CreatePatient(ctx context.Context, req models.CreatePatientRequest) (*entities.Patient, *errors.AppError) {
 	op := "usecase.Patient.CreatePatient"
 
 	// Начинаем транзакцию
@@ -152,7 +152,7 @@ func (u *PatientUsecase) CreatePatient(ctx context.Context, req *models.CreatePa
 		ExaminationTypeID: req.ExaminationTypeID,
 		ExaminationViewID: req.ExaminationViewID,
 		HarmPointID:       req.HarmPointID,
-		PatientGroupID:    groupID,
+		PatientGroupID:    req.GroupID,
 		PersonalInfoID:    personalInfo.ID,
 		ContactInfoID:     contactInfo.ID,
 		AnalysisOrderID:   analysisOrder.ID,
@@ -263,7 +263,7 @@ func (u *PatientUsecase) GetPatientsByGroup(ctx context.Context, groupID uint) (
 	// Преобразуем сущности → DTO
 	var response []models.PatientResponse
 	for _, p := range patients {
-		resp, err := u.buildPatientResponse(ctx, p)
+		resp, err := u.buildPatientResponse(p)
 		if err != nil {
 			return nil, err
 		}
@@ -273,7 +273,7 @@ func (u *PatientUsecase) GetPatientsByGroup(ctx context.Context, groupID uint) (
 	return response, nil
 }
 
-func (u *PatientUsecase) buildPatientResponse(ctx context.Context, p entities.Patient) (models.PatientResponse, *errors.AppError) {
+func (u *PatientUsecase) buildPatientResponse(p entities.Patient) (models.PatientResponse, *errors.AppError) {
 	receptions, err := u.MapReceptions(p.Receptions)
 	if err != nil {
 		return models.PatientResponse{}, err

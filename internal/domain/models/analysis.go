@@ -24,9 +24,7 @@ type AnalysisResponse struct {
 }
 
 type UpdateAnalysisOrderItemDTO struct {
-	ID          uint       `json:"id"`     // всегда присутствует
-	IsNew       bool       `json:"is_new"` // true = новый item
-	AnalysisID  uint       `json:"analysis_id" binding:"required"`
+	AnalysisID  uint       `json:"analysis_id" binding:"required,min=1"`
 	IsCompleted bool       `json:"is_completed"`
 	CompletedAt *time.Time `json:"completed_at,omitempty"`
 }

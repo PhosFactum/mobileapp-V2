@@ -75,6 +75,7 @@ type CreatePatientRequest struct {
 	Division          string    `json:"division" binding:"required"`
 	ExaminationTypeID uint      `json:"examination_type_id" binding:"required"`
 	ExaminationViewID uint      `json:"examination_view_id" binding:"required"`
+	GroupID           uint      `json:"group_id" binding:"required"`
 
 	// Обязательные связи
 	HarmPointID uint `json:"harm_point_id" binding:"required"`

@@ -57,13 +57,6 @@ func (h *Handler) GetPatientsByGroup(c *gin.Context) {
 // handlers/patient_handler.go
 // POST /patients - создание пациента
 func (h *Handler) CreatePatient(c *gin.Context) {
-	// 1. Парсим group_id из URL
-	groupID, err := h.service.ParseUintString(c.Param("group_id"))
-	if err != nil {
-		h.ErrorResponse(c, err, http.StatusBadRequest, "parameter 'group_id' must be an uint", false)
-		return
-	}
-
 	// 2. Биндим JSON
 	var request models.CreatePatientRequest // ← обновлённое имя модели
 	if err := c.ShouldBindJSON(&request); err != nil {
@@ -78,15 +71,11 @@ func (h *Handler) CreatePatient(c *gin.Context) {
 	}
 
 	// 4. Вызываем юзкейс с контекстом из Gin
-	ctx := c.Request.Context() // ← БЕРИ КОНТЕКСТ ОТСЮДА
-	patient, appErr := h.usecase.CreatePatient(ctx, &request, groupID)
+	patient, appErr := h.usecase.CreatePatient(c.Request.Context(), request)
 	if appErr != nil {
 		h.ErrorResponse(c, appErr.Err, appErr.Code, appErr.Message, appErr.IsUserFacing)
 		return
 	}
-
-	// // 5. Маппим сущность в ответную модель
-	// response := h.usecase.MapPatient(*patient) // ← предполагается, что у юзкейса есть метод маппинга
 
 	// 6. Возвращаем результат
 	h.ResultResponse(c, "Patient created successfully", Object, patient)

@@ -72,9 +72,7 @@ type AnalysisOrderRepository interface {
 
 	GetByID(ctx context.Context, id uint) (*entities.AnalysisOrder, error)
 	GetOrderItemsByOrderID(ctx context.Context, orderID uint) ([]entities.AnalysisOrderItem, error)
-	CreateOrderItems(ctx context.Context, items []entities.AnalysisOrderItem) error
-	UpdateOrderItem(ctx context.Context, item entities.AnalysisOrderItem) error
-	DeleteOrderItems(ctx context.Context, itemIDs []uint) error
+	UpsertOrderItems(ctx context.Context, items []entities.AnalysisOrderItem) error
 }
 
 // updated to match the new structured
