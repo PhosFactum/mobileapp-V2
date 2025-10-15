@@ -66,8 +66,6 @@ func ProvideRouter(h *Handler, cfg *config.Config, swagCfg *swagger.Config) http
 	protected := baseRouter.Group("/")
 	protected.Use(jwtMiddleware.JWTAuth(cfg.JWTSecret))
 
-	// Поправить пациента на транзакцию
-
 	// Руты рабочие для новго проекта
 
 	// Авторизация
@@ -75,46 +73,47 @@ func ProvideRouter(h *Handler, cfg *config.Config, swagCfg *swagger.Config) http
 	authGroup.POST("/login", h.LoginDoctor)
 	authGroup.POST("/logout", jwtMiddleware.JWTAuth(cfg.JWTSecret), h.LogoutDoctor)
 
-	// Организации (страховые)
-	organizationGroup := protected.Group("/organization")
-	organizationGroup.GET("/getAll", h.GetAllDoctorOrganizations) //arg search по орге
+	// Организации
+	organizationGroup := protected.Group("/organizations")
+	organizationGroup.GET("", h.GetAllDoctorOrganizations)
 
-	//Списки пациентов
-	patientGroupsGroup := protected.Group("/groups")
-	patientGroupsGroup.GET("/by-organization/:organization_id", h.GetPatientGroupsByOrganizationID) //arg search по группе
+	// Группы пациентов
+	patientGroupsGroup := protected.Group("/patient-groups")
+	patientGroupsGroup.GET("/by-organization/:organization_id", h.GetPatientGroupsByOrganizationID)
 	patientGroupsGroup.GET("/:group_id/patients", h.GetPatientsByGroup)
 
-	//Пациенты
-	patientGroup := protected.Group("/patients")
-	patientGroup.POST("/", h.CreatePatient)
+	// Пациенты
+	patientGroup := baseRouter.Group("/patients")
+	patientGroup.POST("", h.CreatePatient)
 
-	//Флюрографии
-	flgGroup := baseRouter.Group("/flgs")
-	flgGroup.POST("/", h.CreatePatient)
+	// Флюрографии
+	flgGroup := baseRouter.Group("/flg")
+	flgGroup.POST("", h.CreateFlgWithPhoto)
 
 	// Справочники
 	manualGroup := baseRouter.Group("/manuals")
-	manualGroup.GET("/getAll", h.GetAllManuals)
+	manualGroup.GET("", h.GetAllManuals)
 
 	// Приемы
 	receptionGroup := baseRouter.Group("/receptions")
 	receptionGroup.POST("/update", h.UpdateReceptionData)
 
-	// Анализы
-	analysisGroup := baseRouter.Group("/analisys")
+	// Анализы ← исправлена опечатка!
+	analysisGroup := baseRouter.Group("/analysis")
 	analysisGroup.POST("/update", h.UpdateAnalysisOrder)
 
-	// Справочники
+	// Вакцины
 	vaccineGroup := baseRouter.Group("/vaccines")
-	vaccineGroup.GET("/getAll", h.GetAllManuals)
-	vaccineGroup.POST("/vaccines", h.CreateVaccine)
-	vaccineGroup.POST("/vaccine-refusals", h.CreateVaccineRefusal)
-	vaccineGroup.POST("/vaccine-withdrawals", h.CreateVaccineWithdrawal)
+	vaccineGroup.POST("", h.CreateVaccine)
+	vaccineGroup.POST("/refusals", h.CreateVaccineRefusal)
+	vaccineGroup.POST("/withdrawals", h.CreateVaccineWithdrawal)
 	vaccineGroup.POST("/titrs", h.CreateTitr)
+
 	// Доктора
 	doctorGroup := protected.Group("/doctors")
 	doctorGroup.GET("/current", h.GetDoctorByID)
 
+	// Согласия
 	consentGroup := protected.Group("/consent")
 	consentGroup.GET("/personal-data", h.GetPersonalDataConsent)
 	consentGroup.GET("/medical-exam", h.GetMedicalExamConsent)

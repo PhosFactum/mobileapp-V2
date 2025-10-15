@@ -14,12 +14,12 @@ import (
 // @Accept json
 // @Produce json
 // @Security BearerAuth
-// @Param info body models.CreateReceptionRequest true "Данные приёма"
-// @Success 201 {object} entities.Reception "Созданный приём"
-// @Failure 400 {object} errors.AppError "Неверный формат запроса или данные"
-// @Failure 404 {object} errors.AppError "Шаблон или пациент не найден"
-// @Failure 500 {object} errors.AppError "Внутренняя ошибка сервера"
-// @Router /receptions [post]
+// @Param info body models.UpdateReceptionDataRequest true "Данные приёма"
+// @Success 201 {object} ResultResponse "Приём обновлен"
+// @Failure 400 {object} ResultError "Неверный формат запроса или данные"
+// @Failure 404 {object} ResultError "Шаблон или пациент не найден"
+// @Failure 500 {object} ResultError "Внутренняя ошибка сервера"
+// @Router /receptions/update [post]
 func (h *Handler) UpdateReceptionData(c *gin.Context) {
 	// 1. Биндим JSON
 	var request models.UpdateReceptionDataRequest
@@ -40,20 +40,6 @@ func (h *Handler) UpdateReceptionData(c *gin.Context) {
 	h.ResultResponse(c, "Reception created successfully", Object, nil)
 }
 
-// // UpdateReceptionData godoc
-// // @Summary Обновить данные приёма
-// // @Description Обновляет данные приёма по его ID. Данные валидируются против схемы шаблона, привязанного к приёму.
-// // @Tags Reception
-// // @Accept json
-// // @Produce json
-// // @Security BearerAuth
-// // @Param info body models.UpdateReceptionDataRequest true "Данные для обновления"
-// // @Success 204 "Данные успешно обновлены"
-// // @Failure 400 {object} IncorrectFormatError "Неверный формат запроса"
-// // @Failure 422 {object} ValidationError "Данные не прошли валидацию по схеме"
-// // @Failure 404 {object} NotFoundError "Приём не найден"
-// // @Failure 500 {object} InternalServerError "Внутренняя ошибка сервера"
-// // @Router /receptions/data [patch]
 // func (h *Handler) UpdateReceptionData(c *gin.Context) {
 // 	// 1. Биндим JSON
 // 	var request models.UpdateReceptionDataRequest

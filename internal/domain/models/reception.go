@@ -8,7 +8,7 @@ type ReceptionResponse struct {
 	SpecializationID uint                      `json:"specialization_id"`
 	Specialization   SpecializationResponse    `json:"specialization,omitempty"`
 	Template         ReceptionTemplateResponse `json:"template"`
-	Data             json.RawMessage           `json:"data"`
+	Data             json.RawMessage           `json:"data" swaggerignore:"true"`
 }
 
 type ReceptionTemplateResponse struct {
@@ -19,7 +19,7 @@ type ReceptionTemplateResponse struct {
 
 type UpdateReceptionDataRequest struct {
 	ID                    uint            `json:"id" binding:"required,min=1"`
-	Data                  json.RawMessage `json:"data" binding:"required"`
+	Data                  json.RawMessage `json:"data" binding:"required" swaggerignore:"true"`
 	TemplateSchemaVersion string          `json:"template_schema_version,omitempty"`
 }
 

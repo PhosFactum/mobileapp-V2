@@ -28,7 +28,7 @@ import (
 // @Failure 404 {object} ResultError
 // @Failure 422 {object} ResultError
 // @Failure 500 {object} ResultError
-// @Router /flg [post]
+// @Router /flgs/ [post]
 func (h *Handler) CreateFlgWithPhoto(c *gin.Context) {
 	// 1. Получение файла
 	file, err := c.FormFile("file")
