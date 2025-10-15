@@ -15,13 +15,14 @@ type UseCases struct {
 	interfaces.DoctorUsecase
 	interfaces.PatientUsecase
 	interfaces.AuthUsecase
-	interfaces.OrganizationUseCase
-	interfaces.PatientGroupUseCase
+	interfaces.OrganizationUsecase
+	interfaces.PatientGroupUsecase
 	interfaces.ReceptionUsecase
 	interfaces.ConsentUsecase
-	interfaces.ManualUseCase
+	interfaces.ManualUsecase
 	interfaces.VaccineUsecase
 	interfaces.AnalysisOrderUsecase
+	interfaces.FlgUsecase
 }
 
 func NewUsecases(r interfaces.Repository, s interfaces.Service, conf *config.Config) interfaces.Usecases {
@@ -37,6 +38,7 @@ func NewUsecases(r interfaces.Repository, s interfaces.Service, conf *config.Con
 		NewManualUseCase(r),
 		NewVaccineUsecase(r),
 		NewAnalysisOrderUsecase(r, r, s),
+		NewFlgUseсase(r),
 	}
 
 }

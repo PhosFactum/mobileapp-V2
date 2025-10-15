@@ -3,6 +3,7 @@ package usecases
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/AlexanderMorozov1919/mobileapp/internal/domain/entities"
@@ -34,7 +35,7 @@ func NewPatientUsecase(repo interfaces.PatientRepository, manualRepo interfaces.
 }
 
 // CreatePatient создаёт нового пациента со всеми связанными сущностями
-func (u *PatientUsecase) CreatePatient(ctx context.Context, req models.CreatePatientRequest) (*entities.Patient, *errors.AppError) {
+func (u *PatientUsecase) CreatePatient(ctx context.Context, req models.CreatePatientRequest) (*models.PatientResponse, *errors.AppError) {
 	op := "usecase.Patient.CreatePatient"
 
 	// Начинаем транзакцию
@@ -245,7 +246,15 @@ func (u *PatientUsecase) CreatePatient(ctx context.Context, req models.CreatePat
 		return nil, errors.NewDBError(op, err)
 	}
 
-	return createdPatient, nil
+	// 🔁 Преобразуем сущность в ответную модель
+	resp, err := u.buildPatientResponse(*createdPatient)
+	log.Printf("err is nil: %v", err == nil)
+	log.Printf("err type: %T", err)
+	if err != nil {
+		log.Printf("err string: '%s'", err.Error())
+		log.Printf("err detailed: '%+v'", err)
+	}
+	return &resp, nil
 }
 
 // GetPatientsByGroup — основной метод
@@ -278,6 +287,35 @@ func (u *PatientUsecase) buildPatientResponse(p entities.Patient) (models.Patien
 	if err != nil {
 		return models.PatientResponse{}, err
 	}
+
+	// if p.HarmPoint == nil {
+	// 	return models.PatientResponse{}, errors.NewInternalError(
+	// 		"buildPatientResponse",
+	// 		fmt.Sprintf("harm_point not found for patient.id=%d, harm_point_id=%d", p.ID, p.HarmPointID),
+	// 		nil,
+	// 	)
+	// }
+	// if p.PersonalInfo == nil {
+	// 	return models.PatientResponse{}, errors.NewInternalError(
+	// 		"buildPatientResponse",
+	// 		fmt.Sprintf("personal_info not found for patient.id=%d, personal_info_id=%d", p.ID, p.PersonalInfoID),
+	// 		nil,
+	// 	)
+	// }
+	// if p.ContactInfo == nil {
+	// 	return models.PatientResponse{}, errors.NewInternalError(
+	// 		"buildPatientResponse",
+	// 		fmt.Sprintf("contact_info not found for patient.id=%d, contact_info_id=%d", p.ID, p.ContactInfoID),
+	// 		nil,
+	// 	)
+	// }
+	// if p.Statistics == nil {
+	// 	return models.PatientResponse{}, errors.NewInternalError(
+	// 		"buildPatientResponse",
+	// 		fmt.Sprintf("statistics not found for patient.id=%d", p.ID),
+	// 		nil,
+	// 	)
+	// }
 
 	return models.PatientResponse{
 		ID:                p.ID,
@@ -527,6 +565,14 @@ func (u *PatientUsecase) MapReceptions(receptions []entities.Reception) ([]model
 
 	result := make([]models.ReceptionResponse, len(receptions))
 	for i, r := range receptions {
+		if r.Template.ID == 0 {
+			return nil, errors.NewInternalError(
+				"MapReception",
+				fmt.Sprintf("template not loaded for reception.id=%d", r.ID),
+				nil,
+			)
+		}
+
 		receptionResp, err := u.MapReception(r)
 		if err != nil {
 			return nil, err

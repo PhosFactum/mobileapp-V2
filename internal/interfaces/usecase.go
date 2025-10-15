@@ -13,25 +13,31 @@ type Usecases interface {
 	PatientUsecase
 	ReceptionUsecase
 	AuthUsecase
-	OrganizationUseCase
-	PatientGroupUseCase
-	ManualUseCase
+	OrganizationUsecase
+	PatientGroupUsecase
+	ManualUsecase
 	VaccineUsecase
 	AnalysisOrderUsecase
+	FlgUsecase
 }
+
+type FlgUsecase interface {
+	CreateFlgWithPhoto(ctx context.Context, req *models.CreateFlgRequest) (*models.FlgResponse, *errors.AppError)
+}
+
 type AnalysisOrderUsecase interface {
 	UpdateAnalysisOrder(ctx context.Context, req *models.UpdateAnalysisOrderRequest) *errors.AppError
 }
 
-type ManualUseCase interface {
+type ManualUsecase interface {
 	GetAllManuals(ctx context.Context) ([]models.ManualResponse, *errors.AppError)
 }
 
-type PatientGroupUseCase interface {
+type PatientGroupUsecase interface {
 	GetPatientGroupsByOrganizationID(orgID uint, search string, page, perPage int) (*models.FilterResponse[[]models.PatientGroupShortResponse], *errors.AppError)
 }
 
-type OrganizationUseCase interface {
+type OrganizationUsecase interface {
 	GetAllDoctorOrganizations(doctorID uint, search string, page, perPage int) (*models.FilterResponse[[]models.OrganizationShortResponse], *errors.AppError)
 }
 
@@ -51,7 +57,7 @@ type DoctorUsecase interface {
 }
 
 type PatientUsecase interface {
-	CreatePatient(ctx context.Context, req models.CreatePatientRequest) (*entities.Patient, *errors.AppError)
+	CreatePatient(ctx context.Context, req models.CreatePatientRequest) (*models.PatientResponse, *errors.AppError)
 	GetPatientsByGroup(ctx context.Context, groupID uint) ([]models.PatientResponse, *errors.AppError)
 }
 

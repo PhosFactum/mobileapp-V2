@@ -10,14 +10,14 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// GetPersonalDataConsent возвращает PDF согласия на обработку персональных данных
+// GetPersonalDataConsent godoc
 // @Summary Получить PDF согласия на обработку персональных данных
 // @Description Возвращает PDF-файл для ознакомления
 // @Tags Consent
 // @Security BearerAuth
 // @Produce application/pdf
-// @Success 200 {file} file "PDF документ"
-// @Failure 500 {object} map[string]interface{} "Ошибка при чтении файла"
+// @Success 200 "PDF документ"
+// @Failure 500 {object} ResultError "Ошибка при чтении файла"
 // @Router /consent/personal-data [get]
 func (h *Handler) GetPersonalDataConsent(c *gin.Context) {
 	filePath := "static/docs/consent_personal_data.pdf"
@@ -38,14 +38,14 @@ func (h *Handler) GetPersonalDataConsent(c *gin.Context) {
 	}
 }
 
-// GetMedicalExamConsent возвращает PDF согласия на медосмотр
+// GetMedicalExamConsent godoc
 // @Summary Получить PDF согласия на медицинский осмотр
 // @Description Возвращает PDF-файл для ознакомления
 // @Tags Consent
 // @Security BearerAuth
 // @Produce application/pdf
-// @Success 200 {file} file "PDF документ"
-// @Failure 500 {object} map[string]interface{} "Ошибка при чтении файла"
+// @Success 200 "PDF документ"
+// @Failure 500 {object} ResultError "Ошибка при чтении файла"
 // @Router /consent/medical-exam [get]
 func (h *Handler) GetMedicalExamConsent(c *gin.Context) {
 	filePath := "static/docs/consent_medical_exam.pdf"
@@ -66,18 +66,18 @@ func (h *Handler) GetMedicalExamConsent(c *gin.Context) {
 	}
 }
 
-// SaveSignature сохраняет подпись пациента
+// SaveSignature godoc
 // @Summary Сохранить подпись пациента
 // @Description Принимает изображение подписи и сохраняет его как подтверждение согласия
 // @Tags Consent
 // @Accept multipart/form-data
 // @Produce json
 // @Security BearerAuth
-// @Param recep_id path string true "ID пациента"
+// @Param recep_id path integer true "ID приёма" minimum(1)
 // @Param signature formData file true "Изображение подписи (PNG/JPG)"
 // @Success 200 {object} map[string]interface{} "Подпись сохранена"
-// @Failure 400 {object} map[string]interface{} "Неверный ID пациента или отсутствует файл"
-// @Failure 500 {object} map[string]interface{} "Ошибка сервера"
+// @Failure 400 {object} ResultError "Неверный ID или отсутствует файл"
+// @Failure 500 {object} ResultError "Ошибка сервера"
 // @Router /consent/signature/{recep_id} [post]
 func (h *Handler) SaveSignature(c *gin.Context) {
 	patientID, err := h.service.ParseUintString(c.Param("recep_id"))
@@ -123,9 +123,9 @@ func (h *Handler) SaveSignature(c *gin.Context) {
 // @Param recep_id path string true "ID пациента"
 // @Success 200 {object} map[string]interface{} "Подпись получена"
 // @Success 200 {string} signatureBase64.Base64 "Base64-кодированное изображение"
-// @Failure 400 {object} map[string]interface{} "Неверный ID пациента"
-// @Failure 404 {object} map[string]interface{} "Подпись не найдена"
-// @Failure 500 {object} map[string]interface{} "Ошибка сервера"
+// @Failure 400 {object} ResultError "Неверный ID пациента"
+// @Failure 404 {object} ResultError "Подпись не найдена"
+// @Failure 500 {object} ResultError "Ошибка сервера"
 // @Router /consent/signature/{recep_id} [get]
 func (h *Handler) GetSignature(c *gin.Context) {
 	patientID, err := h.service.ParseUintString(c.Param("recep_id"))

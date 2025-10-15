@@ -42,10 +42,3 @@ type UpdateDoctorRequest struct {
 	PasswordHash     string `json:"-"` // Убрали из JSON, чтобы не принималось извне
 	SpecializationID uint   `json:"specialization_id" example:"1"`
 }
-
-// DoctorShortResponse - краткая информация о враче
-type DoctorShortResponse struct {
-	ID             uint   `json:"id"`
-	FullName       string `json:"full_name" example:"Петров Петр Петрович"`
-	Specialization string `json:"specialization" example:"Терапевт"`
-}

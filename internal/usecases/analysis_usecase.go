@@ -46,7 +46,7 @@ func (u *AnalysisOrderUsecase) UpdateAnalysisOrder(
 	// 1. Проверка заказа
 	order, appErr := u.analysisOrderRepo.GetByID(ctx, req.ID)
 	if appErr != nil {
-		return errors.NewDBError(op, err)
+		return errors.NewDBError(op, appErr)
 	}
 	if order.PatientID != req.PatientID {
 		return errors.NewForbiddenError(op, "order does not belong to patient")
@@ -55,7 +55,7 @@ func (u *AnalysisOrderUsecase) UpdateAnalysisOrder(
 	// 2. Получение валидных анализов
 	analysisIDs, appErr := u.analysisRepo.GetAllAnalysisIDs(ctx)
 	if appErr != nil {
-		return errors.NewDBError(op, err)
+		return errors.NewDBError(op, appErr)
 	}
 	analysisMap := make(map[uint]entities.Analysis)
 	for _, id := range analysisIDs {

@@ -20,7 +20,7 @@ import (
 // @Failure 422 {object} ResultError "Ошибка валидации данных"
 // @Failure 404 {object} ResultError "Направление не найдено"
 // @Failure 500 {object} ResultError "Внутренняя ошибка сервера"
-// @Router /analysis-orders [patch]
+// @Router /analysis/update [patch]
 func (h *Handler) UpdateAnalysisOrder(c *gin.Context) {
 	var req models.UpdateAnalysisOrderRequest
 	if err := c.ShouldBindJSON(&req); err != nil {

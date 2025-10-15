@@ -16,20 +16,20 @@ type PatientResponse struct {
 	PatientGroupID uint `json:"patient_group_id"`
 
 	// Вложенные объекты
-	ExaminationTypeID uint `json:"examination_type,omitempty"`
-	ExaminationViewID uint `json:"examination_view,omitempty"`
+	ExaminationTypeID uint `json:"examination_type"`
+	ExaminationViewID uint `json:"examination_view"`
 
 	HarmPoint     HarmPointResponse          `json:"harm_point"`
 	PersonalInfo  PersonalInfoResponse       `json:"personal_info"`
 	ContactInfo   ContactInfoResponse        `json:"contact_info"`
 	AnalysisOrder AnalysisOrderResponse      `json:"analysis_order"`
-	Statistics    *PatientStatisticsResponse `json:"statistics,omitempty"`
+	Statistics    *PatientStatisticsResponse `json:"statistics"`
 	Flg           *FlgResponse               `json:"flg,omitempty"`
 
 	// Связанные коллекции
 	Vaccines        []VaccineAllResponse     `json:"vaccines,omitempty"`
-	Receptions      []ReceptionResponse      `json:"receptions,omitempty"`
-	Specializations []SpecializationResponse `json:"specializations,omitempty"`
+	Receptions      []ReceptionResponse      `json:"receptions"`
+	Specializations []SpecializationResponse `json:"specializations"`
 }
 
 type HarmPointResponse struct {

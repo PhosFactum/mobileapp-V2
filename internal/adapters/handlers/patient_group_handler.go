@@ -17,10 +17,10 @@ import (
 // @Param search query string false "Поиск по коду группы (case-insensitive)"
 // @Param page query int false "Номер страницы" default(1)
 // @Param perPage query int false "Количество записей на страницу" default(10)
-// @Success 200 {object} models.FilterResponse[[]models.PatientGroupShortResponse] "Список групп"
-// @Failure 400 {object} errors.AppError "Некорректный запрос"
-// @Failure 500 {object} errors.AppError "Внутренняя ошибка"
-// @Router /organizations/{organization_id}/patient-groups [get]
+// @Success 200 {object} ResultResponse{data=[]models.PatientGroupShortResponse} "Список групп"
+// @Failure 400 {object} ResultError "Некорректный запрос"
+// @Failure 500 {object} ResultError "Внутренняя ошибка"
+// @Router /patient-groups/by-organization/{organization_id} [get]
 func (h *Handler) GetPatientGroupsByOrganizationID(c *gin.Context) {
 	// 1. Получаем organization_id из пути
 	orgIDStr := c.Param("organization_id")

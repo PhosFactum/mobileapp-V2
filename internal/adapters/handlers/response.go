@@ -81,22 +81,40 @@ func RespondWithJSON(w http.ResponseWriter, code int, payload interface{}) {
 	w.Write(response)
 }
 
-// ResultResponse структура успешного ответа
+// ResultResponse represents a successful API response
+// @Description Standard wrapper for successful responses
 type ResultResponse struct {
-	Status   string `json:"status" example:"ok"` // ok
+	// Overall status of the response
+	// @example "success"
+	Status string `json:"status"`
+	// Response payload container
 	Response struct {
-		Message string      `json:"message" example:"Success operation"`
-		Type    string      `json:"type" example:"object"` // [AVALIABLE]: object, array, empty
-		Data    interface{} `json:"data,omitempty"`        // [AVALIABLE]: object, array of objects, empty
+		// Human-readable success message
+		// @example "Patient created successfully"
+		Message string `json:"message"`
+		// Type of data: "object", "array", or "empty"
+		// @example "object"
+		// @enum object array empty
+		Type string `json:"type"`
+		// Actual data (optional)
+		Data interface{} `json:"data,omitempty"`
 	} `json:"response"`
 }
 
-// ResultError структура ошибки
+// ResultError represents a standard API error response
+// @Description Generic error response format used across the API
 type ResultError struct {
-	Status   string `json:"status" example:"error"` // error
+	// Always "error" for error responses
+	// @example "error"
+	Status string `json:"status"`
+	// Error details
 	Response struct {
-		Code    int    `json:"code" example:"400"` // [RULE]: must be one of codes from table (Check DEV.PAGE)
-		Message string `json:"message" example:"Bad request"`
+		// HTTP status code
+		// @example 400
+		Code int `json:"code"`
+		// Human-readable error message
+		// @example "Invalid request body"
+		Message string `json:"message"`
 	} `json:"response"`
 }
 

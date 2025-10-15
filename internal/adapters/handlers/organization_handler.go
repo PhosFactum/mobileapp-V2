@@ -16,10 +16,10 @@ import (
 // @Param search query string false "Поиск по названию организации"
 // @Param page query int false "Номер страницы" default(1)
 // @Param perPage query int false "Количество записей на страницу" default(5)
-// @Success 200 {object} models.FilterResponse[[]models.OrganizationShortResponse] "Список организаций"
-// @Failure 400 {object} errors.AppError "Неверный формат запроса"
-// @Failure 401 {object} errors.AppError "Не авторизован"
-// @Failure 500 {object} errors.AppError "Внутренняя ошибка сервера"
+// @Success 200 {object} ResultResponse{data=[]models.OrganizationShortResponse} "Список организаций"
+// @Failure 400 {object} ResultError "Неверный формат запроса"
+// @Failure 401 {object} ResultError "Не авторизован"
+// @Failure 500 {object} ResultError "Внутренняя ошибка сервера"
 // @Router /organizations [get]
 func (h *Handler) GetAllDoctorOrganizations(c *gin.Context) {
 	// 1. Получаем doctor_id из контекста
