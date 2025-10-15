@@ -70,3 +70,11 @@ func (s *ImageService) GetPresignedURL(ctx context.Context, key string) (string,
 	}
 	return req.URL, nil
 }
+
+func (s *ImageService) DeleteObject(ctx context.Context, key string) error {
+	_, err := s.client.DeleteObject(ctx, &s3.DeleteObjectInput{
+		Bucket: aws.String(s.bucketName),
+		Key:    aws.String(key),
+	})
+	return err
+}

@@ -9,15 +9,15 @@ import (
 	"github.com/AlexanderMorozov1919/mobileapp/pkg/errors"
 )
 
-type ManualUseCase struct {
+type ManualUsecase struct {
 	repo interfaces.ManualRepository
 }
 
-func NewManualUseCase(repo interfaces.ManualRepository) interfaces.ManualUseCase {
-	return &ManualUseCase{repo: repo}
+func NewManualUseCase(repo interfaces.ManualRepository) interfaces.ManualUsecase {
+	return &ManualUsecase{repo: repo}
 }
 
-func (u *ManualUseCase) GetAllManuals(ctx context.Context) ([]models.ManualResponse, *errors.AppError) {
+func (u *ManualUsecase) GetAllManuals(ctx context.Context) ([]models.ManualResponse, *errors.AppError) {
 	manuals, err := u.repo.GetAllManuals(ctx)
 	if err != nil {
 		return nil, errors.NewAppError(

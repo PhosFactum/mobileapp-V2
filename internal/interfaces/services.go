@@ -45,4 +45,5 @@ type TxManager interface {
 type ImageService interface {
 	UploadObject(ctx context.Context, key, contentType string, data []byte) error
 	GetPresignedURL(ctx context.Context, key string) (string, error)
+	DeleteObject(ctx context.Context, key string) error
 }

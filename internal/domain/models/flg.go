@@ -1,22 +1,24 @@
 package models
 
-import "mime/multipart"
+// CreateFlgRequest — данные для создания FLG (уже без multipart!)
+type CreateFlgRequest struct {
+	PatientID    uint   `json:"patient_id"`
+	Organization string `json:"organization"`
+	Number       string `json:"number"`
+	Result       string `json:"result"`
+	Date         string `json:"date"` // "2025-10-14"
 
-type FlgResponse struct {
-	ID           uint   `json:"id"`
-	Organization string `json:"organization" example:"Stavropol"`
-	Number       string `json:"number" example:"984212"`
-	Result       string `json:"result" example:"COVID"`
-	Date         string `json:"date" example:"2023-10-15T14:30:00Z"`
-	PhotoURL     string `json:"photo_url"` // ← временный URL для просмотра
+	// Данные изображения
+	FileData    []byte `json:"-"` // не сериализуется в JSON
+	ContentType string `json:"-"` // например: "image/jpeg"
 }
 
-// CreateFlgWithPhotoRequest — multipart-запрос
-type CreateFlgWithPhotoRequest struct {
-	PatientID    uint                  `form:"patient_id" binding:"required"`
-	Organization string                `form:"organization" binding:"required"`
-	Number       string                `form:"number" binding:"required"`
-	Result       string                `form:"result" binding:"required"`
-	Date         string                `form:"date" binding:"required,datetime=2006-01-02"`
-	File         *multipart.FileHeader `form:"file" binding:"required"`
+// FlgResponse — ответ
+type FlgResponse struct {
+	ID           uint   `json:"id"`
+	Organization string `json:"organization"`
+	Number       string `json:"number"`
+	Result       string `json:"result"`
+	Date         string `json:"date"`
+	PhotoURL     string `json:"photo_url"` // временный URL
 }

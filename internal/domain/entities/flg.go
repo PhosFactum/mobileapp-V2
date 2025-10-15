@@ -6,6 +6,7 @@ type Flg struct {
 	ID        uint      `gorm:"primarykey" json:"id" example:"1"`
 	CreatedAt time.Time `json:"-"`
 
+	PatientID    uint      `gorm:"index" json:"patient_id"`
 	Organization string    `gorm:"not null" json:"organization" example:"Stavropol"`
 	Number       string    `gorm:"not null" json:"number" example:"984212"`
 	Result       string    `gorm:"not null" json:"result" example:"COVID"`

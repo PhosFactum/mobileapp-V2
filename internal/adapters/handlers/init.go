@@ -84,8 +84,13 @@ func ProvideRouter(h *Handler, cfg *config.Config, swagCfg *swagger.Config) http
 	patientGroupsGroup.GET("/by-organization/:organization_id", h.GetPatientGroupsByOrganizationID) //arg search по группе
 	patientGroupsGroup.GET("/:group_id/patients", h.GetPatientsByGroup)
 
+	//Пациенты
 	patientGroup := protected.Group("/patients")
 	patientGroup.POST("/", h.CreatePatient)
+
+	//Флюрографии
+	flgGroup := baseRouter.Group("/flgs")
+	flgGroup.POST("/", h.CreatePatient)
 
 	// Справочники
 	manualGroup := baseRouter.Group("/manuals")

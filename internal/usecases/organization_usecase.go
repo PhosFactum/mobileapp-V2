@@ -13,7 +13,7 @@ type OrganizationUsecase struct {
 	repo interfaces.OrganizationRepository
 }
 
-func NewOrganizationUsecase(repo interfaces.OrganizationRepository) interfaces.OrganizationUseCase {
+func NewOrganizationUsecase(repo interfaces.OrganizationRepository) interfaces.OrganizationUsecase {
 	return &OrganizationUsecase{
 		repo: repo}
 }
