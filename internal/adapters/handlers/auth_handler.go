@@ -8,17 +8,17 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-// LoginDoctor аутентифицирует врача
+// LoginDoctor godoc
 // @Summary Вход в систему
 // @Description Аутентифицирует врача по номеру телефона и паролю
 // @Tags Auth
 // @Accept json
 // @Produce json
 // @Param input body models.DoctorLoginRequest true "Данные для входа"
-// @Success 200 {object} models.DoctorAuthResponse "Успешное создание"
-// @Failure 400 {object} IncorrectFormatError "Неверный формат запроса"
-// @Failure 401 {object} IncorrectDataError "Неверные учётные данные"
-// @Failure 500 {object} InternalServerError "Внутренняя ошибка сервера"
+// @Success 200 {object} models.DoctorAuthResponse
+// @Failure 400 {object} ResultError "Неверный формат запроса"
+// @Failure 401 {object} ResultError "Незарегистрирован"
+// @Failure 500 {object} ResultError "Внутренняя ошибка"
 // @Router /auth/login [post]
 func (h *Handler) LoginDoctor(c *gin.Context) {
 	var req models.DoctorLoginRequest
@@ -45,13 +45,13 @@ func (h *Handler) LoginDoctor(c *gin.Context) {
 	})
 }
 
-// LogoutDoctor осуществляет выход из системы
+// LogoutDoctor godoc
 // @Summary Выход из системы
-// @Description Удаляет токен на клиенте
+// @Description Уведомляет сервер о выходе (клиент должен удалить токен)
 // @Tags Auth
 // @Produce json
 // @Security BearerAuth
-// @Success 200 {object} ResultResponse "Успешный выход"
+// @Success 200 {object} map[string]interface{} "Успешный выход"
 // @Router /auth/logout [post]
 func (h *Handler) LogoutDoctor(c *gin.Context) {
 	// Просто логируем факт выхода и возвращаем успех

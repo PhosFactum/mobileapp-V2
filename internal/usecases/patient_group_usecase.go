@@ -14,7 +14,7 @@ type PatientGroupUsecase struct {
 	repo interfaces.PatientGroupRepository
 }
 
-func NewPatientGroupUsecase(repo interfaces.PatientGroupRepository) interfaces.PatientGroupUseCase {
+func NewPatientGroupUsecase(repo interfaces.PatientGroupRepository) interfaces.PatientGroupUsecase {
 	return &PatientGroupUsecase{
 		repo: repo}
 }

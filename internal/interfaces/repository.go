@@ -20,6 +20,13 @@ type Repository interface {
 	ManualRepository
 	AnalysisRepository
 	AnalysisOrderRepository
+	FlgRepository
+}
+
+type FlgRepository interface {
+	CreateFlg(ctx context.Context, flg *entities.Flg) error
+	GetFlgByPatientID(ctx context.Context, patientID uint) ([]entities.Flg, error)
+	Delete(ctx context.Context, id uint) error
 }
 
 type PatientGroupRepository interface {

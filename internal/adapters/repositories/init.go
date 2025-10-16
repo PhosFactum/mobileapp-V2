@@ -13,6 +13,7 @@ import (
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/auth"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/consent_signatures"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/doctor"
+	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/flg"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/manual"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/organization"
 	"github.com/AlexanderMorozov1919/mobileapp/internal/adapters/repositories/patient"
@@ -37,6 +38,7 @@ type Repository struct {
 	interfaces.AnalysisRepository
 	interfaces.VaccineRepository
 	interfaces.AnalysisOrderRepository
+	interfaces.FlgRepository
 }
 
 func NewRepository(db *gorm.DB) (interfaces.Repository, error) {
@@ -58,6 +60,7 @@ func NewRepository(db *gorm.DB) (interfaces.Repository, error) {
 		analysis.NewAnalysisRepository(db),
 		vaccine.NewVaccineRepository(db),
 		analysisOrder.NewAnalysisOrderRepository(db),
+		flg.NewFlgRepository(db),
 	}, nil
 
 }

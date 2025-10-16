@@ -43,6 +43,10 @@ func ProvideLoggers(cfg *config.Config) *logging.Logger {
 	return logger
 }
 
+func ProvideS3Config(cfg *config.Config) config.S3Config {
+	return cfg.S3
+}
+
 var LoggingModule = fx.Module("logging_module",
 	fx.Provide(
 		ProvideLoggers,
@@ -90,7 +94,10 @@ var DBModule = fx.Module("db_module",
 )
 
 var ServiceModule = fx.Module("service_module",
-	fx.Provide(services.NewService),
+	fx.Provide(
+		ProvideS3Config,
+		services.NewService,
+	),
 )
 
 var RepositoryModule = fx.Module("postgres_module",

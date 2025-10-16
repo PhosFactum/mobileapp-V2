@@ -16,10 +16,10 @@ import (
 // @Security BearerAuth
 // @Param doc_id path uint true "ID врача"
 // @Success 200 {object} entities.Doctor "Данные врача"
-// @Failure 400 {object} IncorrectDataError "Некорректный ID"
-// @Failure 404 {object} NotFoundError "Врач не найден"
-// @Failure 500 {object} InternalServerError "Внутренняя ошибка"
-// @Router /doctors/{doc_id} [get]
+// @Failure 400 {object} ResultError "Некорректный ID"
+// @Failure 404 {object} ResultError "Врач не найден"
+// @Failure 500 {object} ResultError "Внутренняя ошибка"
+// @Router /doctors/current [get]
 func (h *Handler) GetDoctorByID(c *gin.Context) {
 	doctorIDAny, exists := c.Get("user_id")
 	if !exists {

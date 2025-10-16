@@ -20,10 +20,10 @@ import (
 // @Param count query int false "Количество записей на странице\n(по умолчанию 0 — без ограничения)"
 // @Param filter query string false "Фильтр в формате field.operation.value.\nПримеры:\nfull_name.like.Иван - имя содержит 'Иван',\nbirth_date.eq.1988-07-14 - точная дата рождения"
 // @Param order query string false "Сортировка в формате field.direction.\nПримеры:\nfull_name.asc - по алфавиту,\nid.desc - по убыванию ID пациента"
-// @Success 200 {object} models.PatientsListResponse "Список пациентов"
+// @Success 200 {object} ResultResponse{data=[]models.PatientResponse} "Список пациентов"
 // @Failure 400 {object} ResultError "Некорректные данные"
 // @Failure 500 {object} ResultError "Внутренняя ошибка"
-// @Router /patients [get]
+// @Router /patient-groups/{group_id}/patients [get]
 func (h *Handler) GetPatientsByGroup(c *gin.Context) {
 	group_id, err := h.service.ParseUintString(c.Param("group_id"))
 	if err != nil {
@@ -49,10 +49,10 @@ func (h *Handler) GetPatientsByGroup(c *gin.Context) {
 // @Produce json
 // @Security BearerAuth
 // @Param info body models.CreatePatientRequest true "Данные пациента"
-// @Success 201 {object} entities.Patient "Созданный пациент"
-// @Failure 400 {object} IncorrectFormatError "Неверный формат запроса"
-// @Failure 422 {object} ValidationError "Ошибка валидации"
-// @Failure 500 {object} InternalServerError "Внутренняя ошибка сервера"
+// @Success 201 {object} ResultResponse{data=models.PatientResponse} "Созданный пациент"
+// @Failure 400 {object} ResultError "Неверный формат запроса"
+// @Failure 422 {object} ResultError "Ошибка валидации"
+// @Failure 500 {object} ResultError "Внутренняя ошибка сервера"
 // @Router /patients [post]
 // handlers/patient_handler.go
 // POST /patients - создание пациента

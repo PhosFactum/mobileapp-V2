@@ -83,7 +83,21 @@ func (r *PatientRepositoryImpl) CreatePatientStatistics(ctx context.Context, sta
 func (r *PatientRepositoryImpl) PreloadPatientWithSpecializations(ctx context.Context, patientID uint) (*entities.Patient, error) {
 	op := "repo.Patient.PreloadPatientWithSpecializations"
 	var patient entities.Patient
-	if err := r.GetDB(ctx).WithContext(ctx).Preload("Specializations").First(&patient, patientID).Error; err != nil {
+	if err := r.GetDB(ctx).WithContext(ctx).
+		Preload("HarmPoint").
+		Preload("PersonalInfo").
+		Preload("ContactInfo").
+		Preload("Flg").
+		Preload("AnalysisOrder.OrderItems.Analysis").
+		Preload("Vaccines").
+		Preload("VaccineRefusals").
+		Preload("VaccineWithdrawals").
+		Preload("Titers").
+		Preload("Receptions.Specialization").
+		Preload("Receptions.Template").
+		Preload("Specializations").
+		Preload("Statistics").
+		First(&patient, patientID).Error; err != nil {
 		return nil, errors.NewDBError(op, err)
 	}
 	return &patient, nil
